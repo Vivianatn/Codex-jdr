@@ -330,7 +330,13 @@ export function createGameActions(t: Messages, campaign: Campaign, rng?: Rng) {
     /** Melee (Strength) or ranged (Dexterity) attack; damage is applied to the target on a hit. */
     attack(
       attackerId: string,
-      options: { kind: 'melee' | 'ranged'; targetId: string | null; mode?: RollMode },
+      options: {
+        kind: 'melee' | 'ranged'
+        targetId: string | null
+        mode?: RollMode
+        /** Damage dice chosen by the GM; defaults to the weapon / unarmed rule. '' = no damage roll. */
+        damage?: string
+      },
     ) {
       const attacker = get(attackerId)
       if (!attacker) return null
@@ -348,15 +354,20 @@ export function createGameActions(t: Messages, campaign: Campaign, rng?: Rng) {
         return { ...result, damage: null }
       }
       const weapon = equippedWeapon(attacker)
-      let expression = weapon?.damage || rules.combat.unarmedDamage
+      let expression = (options.damage ?? (weapon?.damage || rules.combat.unarmedDamage)).trim()
+      const target = options.targetId ? get(options.targetId) : null
+      if (!expression) {
+        // No damage rule and nothing typed: the GM resolves the hit by hand.
+        toast.success(target ? t.attack.hitNoDamage(entityName(target)) : t.attack.hitPlain)
+        return { ...result, damage: null }
+      }
       if (options.kind === 'melee' && rules.combat.strengthDamageBonus) {
         const bonus = statModifier(result.check.value)
         if (bonus) expression = `${expression}${bonus > 0 ? '+' : ''}${bonus}`
       }
-      const weaponName = weapon?.name ?? t.attack.unarmed(rules.combat.unarmedDamage)
+      const weaponName = weapon?.name ?? t.attack.noWeapon
       const damage = dieRecord(attackerId, t.attack.damageLabel(weaponName), expression, 'damage')
       const amount = Math.max(0, damage.total)
-      const target = options.targetId ? get(options.targetId) : null
       if (target) {
         actions.applyHp(target.id, {
           kind: 'damage',

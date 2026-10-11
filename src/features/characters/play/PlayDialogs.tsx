@@ -15,6 +15,8 @@ import { STAT_KEYS, type Entity, type StatKey } from '@/domain/types'
 import { RollCard } from '@/features/dice/RollCard'
 import { useGameActions } from '@/features/game/useGameActions'
 import { useCampaign } from '@/features/shell/campaignContext'
+import { validateDice } from '@/dice'
+import { diceErrorMessage } from '@/features/game/diceErrors'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { parseNumber } from '@/lib/numbers'
@@ -135,13 +137,20 @@ export function AttackDialog({
   const [targetId, setTargetId] = useState(targets.find((e) => e.kind === 'enemy')?.id ?? '')
   const [mode, setMode] = useState<RollMode>('normal')
   const weapon = equippedWeapon(entity)
+  const [damage, setDamage] = useState(weapon?.damage || campaign.rules.combat.unarmedDamage)
+  const [damageError, setDamageError] = useState<string | null>(null)
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()} title={t.attack.title(entityName(entity))}>
       <form
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault()
-          actions.attack(entity.id, { kind, targetId: targetId || null, mode })
+          try {
+            if (damage.trim()) validateDice(damage)
+          } catch (err) {
+            return setDamageError(diceErrorMessage(t, err))
+          }
+          actions.attack(entity.id, { kind, targetId: targetId || null, mode, damage })
           onClose()
         }}
       >
@@ -149,12 +158,20 @@ export function AttackDialog({
           <span className="font-medium">{kind === 'melee' ? t.attack.melee : t.attack.ranged}</span>
           <br />
           <span className="text-ink-muted">
-            {t.attack.weapon} :{' '}
-            {weapon
-              ? `${weapon.name} (${weapon.damage})`
-              : t.attack.unarmed(campaign.rules.combat.unarmedDamage)}
+            {t.attack.weapon} : {weapon ? weapon.name : t.attack.noWeapon}
           </span>
         </p>
+        <TextField
+          label={t.attack.damage}
+          hint={t.attack.damageHint}
+          value={damage}
+          error={damageError}
+          inputClassName="font-mono"
+          onChange={(e) => {
+            setDamage(e.target.value)
+            setDamageError(null)
+          }}
+        />
         <SelectField<string>
           label={t.attack.target}
           value={targetId}

@@ -1,3 +1,4 @@
+import { starterConditions } from '@/domain/conditions'
 import type { RollRecord } from '@/domain/rolls'
 import type { ConditionTemplate, Entity } from '@/domain/types'
 import type { RulesConfig } from '@/rules'
@@ -28,12 +29,13 @@ export interface CampaignLibrary {
   macros: DiceMacro[]
 }
 
+/** Library of a new campaign: the editable starter conditions, no macros. */
 export function emptyLibrary(): CampaignLibrary {
-  return { conditions: [], macros: [] }
+  return { conditions: starterConditions(), macros: [] }
 }
 
 /** Current version of the campaign export file. Bump it when the shape changes. */
-export const CAMPAIGN_EXPORT_VERSION = 3
+export const CAMPAIGN_EXPORT_VERSION = 4
 export const CAMPAIGN_EXPORT_FORMAT = 'codex-campaign'
 
 export interface CampaignExport {

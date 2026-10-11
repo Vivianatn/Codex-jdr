@@ -29,6 +29,15 @@ test('scenario 3 (without initiative): poison expires over turns, a skill goes o
   page,
 }) => {
   await createCampaign(page, 'Combat')
+  // Nothing is imposed: the GM gives the starter Empoisonné a duration and an effect.
+  await page.getByRole('link', { name: 'États', exact: true }).click()
+  await page.getByRole('button', { name: 'Modifier : Empoisonné' }).click()
+  const edit = page.getByRole('dialog')
+  await edit.getByLabel(/^Durée \(tours\)/).fill('3')
+  await edit.getByLabel('Effet à chaque tour').selectOption({ label: 'Dégâts' })
+  await edit.getByLabel('Dés de l’effet').fill('1d4')
+  await edit.getByRole('button', { name: 'Enregistrer' }).click()
+  await expect(page.getByRole('dialog')).toBeHidden()
   await addGoblin(page)
   await importCharacter(page, 'Joueurs', { name: 'Gorak', hp: 30, stats: 14 })
 
@@ -94,9 +103,10 @@ test('scenario 6: undo the last 5 actions restores the exact state', async ({ pa
   await field.press('Enter')
   await page.getByRole('button', { name: 'Passer un tour' }).first().click()
   await page.getByRole('tab', { name: 'Inventaire' }).click()
-  await page.getByLabel(/Ajouter ou retirer de l’argent/).fill('+5 po')
+  // No currency defined: the purse is a plain number.
+  await page.getByLabel(/Ajouter ou retirer de l’argent/).fill('+5')
   await page.getByLabel(/Ajouter ou retirer de l’argent/).press('Enter')
-  await expect(page.getByText('5 po')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Bourse' })).toContainText('5')
 
   await page.getByRole('heading', { level: 1, name: 'Lyra' }).click()
   for (let i = 0; i < 5; i++) await page.keyboard.press('Control+z')

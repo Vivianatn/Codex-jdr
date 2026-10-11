@@ -257,7 +257,9 @@ function Purse({ entity }: { entity: Entity }) {
         >
           <TextField
             label={t.inventory.purseChange}
-            hint={t.inventory.purseHint}
+            hint={
+              campaign.rules.currency.length ? t.inventory.purseHint : t.inventory.purseHintPlain
+            }
             value={value}
             error={error}
             onChange={(e) => {

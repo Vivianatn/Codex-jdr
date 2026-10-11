@@ -100,7 +100,7 @@ describe('export / import', () => {
 
 describe('schema', () => {
   it('opens at the current version with the expected tables', async () => {
-    expect(db.verno).toBe(3)
+    expect(db.verno).toBe(4)
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'bestiary',
       'campaigns',

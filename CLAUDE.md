@@ -6,6 +6,7 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 
 - Work phase by phase (SPEC §12). End of phase = tests green, app launches, one clear git commit, then a summary of done / remaining.
 - Every game rule (formulas, rounding, thresholds) lives in `src/rules/` and is configurable per campaign. Never hard-code a rule in a component.
+- **Codex imposes no mechanic (D-217).** Any new optional mechanic ships disabled (0 / empty / false) and its UI stays hidden until the GM enables it in Préparation › Règles. Only the rules the GM confirmed (D-101) are on by default. Tests of optional mechanics use `configuredRules()` from `src/test/fixtures.ts`.
 - Write tests with the code, not after.
 - Code and comments in English. **All UI text in French**, through `src/i18n/locales/fr.ts` (typed: `const t = useT(); t.nav.players`). Address the GM with « tu ».
 - During play: no blocking modals (except delete confirmations) — use drawers and toasts.
@@ -36,7 +37,7 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 - `src/app/` — providers (`AppProviders`), routes (hash router, Tauri-friendly), preference effects.
 - `src/features/<domain>/` — screens and domain components (campaigns, shell, prep, play, settings).
 - `src/components/ui/` — generic accessible primitives on top of Radix (Button, Dialog, SegmentedControl…).
-- `src/db/` — Dexie schema, v3: campaigns (+ library), entities, shared bestiary and item library, rolls (`db.ts`, never edit an existing `version()` block, add a new one + migration test) and repositories.
+- `src/db/` — Dexie schema, v4: campaigns (+ library), entities, shared bestiary and item library, rolls (`db.ts`, never edit an existing `version()` block, add a new one + migration test) and repositories.
 - `src/stores/` — Zustand stores. `history.ts` is the undo/redo middleware (`createHistory` + `withHistory`) every game-action store must use. `campaignStore.ts` holds the open campaign's characters in memory (source of truth) and auto-saves them to Dexie; call `flushAutosave()` before reading Dexie directly.
 - `src/styles/tokens.css` — raw design tokens (`--codex-*`), mapped to Tailwind utilities in `index.css` (`bg-surface`, `text-ink-muted`, `bg-stat-strength`…). Use the `*-text` variants (`text-accent-text`, `text-gold-text`, `text-hp-text`) for coloured text so AA contrast holds in both themes.
 - Tests: unit/component tests sit next to the code (`*.test.ts(x)`); `src/test/renderApp.tsx` renders the whole app on a memory router; e2e in `e2e/`.

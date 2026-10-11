@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Ornament } from '@/components/Brand'
 import { Button, IconButton } from '@/components/ui/Button'
 import { campaignRepository } from '@/db/campaigns'
-import { BUILTIN_CONDITIONS, emptyConditionTemplate } from '@/domain/conditions'
+import { emptyConditionTemplate } from '@/domain/conditions'
 import type { ConditionTemplate } from '@/domain/types'
 import { ConditionDialog } from '@/features/characters/ConditionDialog'
 import {
@@ -16,7 +16,7 @@ import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 
-/** Condition library: built-in (read-only) and campaign-specific (SPEC §4.10). */
+/** The campaign condition list (SPEC §4.10): every entry, starters included, is the GM's to edit. */
 export function ConditionsPage() {
   const t = useT()
   const campaign = useCampaign()
@@ -42,21 +42,35 @@ export function ConditionsPage() {
       </div>
       <Ornament className="my-6 max-w-sm" />
 
-      {custom.length > 0 && (
+      {custom.length === 0 ? (
+        <p className="mb-6 text-sm text-ink-muted">{t.sections.conditions.emptyBody}</p>
+      ) : (
         <ConditionGrid
-          title={t.conditions.customBadge}
+          title={t.conditions.pageTitle}
           conditions={custom}
           actions={(c) => (
             <>
               <IconButton
                 size="sm"
-                label={`${t.common.edit} : ${c.name}`}
+                label={t.common.edit + ' : ' + c.name}
                 icon={<Pencil />}
                 onClick={() => setEditing(c)}
               />
               <IconButton
                 size="sm"
-                label={`${t.common.delete} : ${c.name}`}
+                label={t.conditions.duplicate(c.name)}
+                icon={<Copy />}
+                onClick={() =>
+                  setEditing({
+                    ...structuredClone(c),
+                    id: crypto.randomUUID(),
+                    name: t.conditions.copyName(c.name),
+                  })
+                }
+              />
+              <IconButton
+                size="sm"
+                label={t.common.delete + ' : ' + c.name}
                 icon={<Trash />}
                 onClick={async () => {
                   await save(custom.filter((x) => x.id !== c.id))
@@ -67,28 +81,6 @@ export function ConditionsPage() {
           )}
         />
       )}
-      {custom.length === 0 && (
-        <p className="mb-6 text-sm text-ink-muted">{t.sections.conditions.emptyBody}</p>
-      )}
-
-      <ConditionGrid
-        title={t.conditions.builtin}
-        conditions={BUILTIN_CONDITIONS}
-        actions={(c) => (
-          <IconButton
-            size="sm"
-            label={t.conditions.duplicate(c.name)}
-            icon={<Copy />}
-            onClick={() =>
-              setEditing({
-                ...structuredClone(c),
-                id: crypto.randomUUID(),
-                name: t.conditions.copyName(c.name),
-              })
-            }
-          />
-        )}
-      />
 
       <ConditionDialog
         template={editing}

@@ -1,18 +1,19 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '@/db/db'
 import { emptyLibrary, type Campaign } from '@/db/types'
-import { BUILTIN_CONDITIONS, conditionFromTemplate } from '@/domain/conditions'
+import { conditionFromTemplate } from '@/domain/conditions'
+import { defaultRules } from '@/rules'
+import { configuredRules, TEST_CONDITIONS } from '@/test/fixtures'
 import { createEntity, normalizeSkill } from '@/domain/entity'
 import { equip, newItem } from '@/domain/items'
 import type { Entity } from '@/domain/types'
 import { getMessages } from '@/i18n'
-import { defaultRules } from '@/rules'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
 import { createGameActions } from './gameActions'
 
 const t = getMessages('fr')
-const rules = defaultRules()
+const rules = configuredRules()
 const campaign: Campaign = {
   id: 'c1',
   name: 'Test',
@@ -99,7 +100,7 @@ describe('game actions', () => {
     const g = hero()
     g.conditions = [
       {
-        ...conditionFromTemplate(BUILTIN_CONDITIONS.find((c) => c.id === 'poisoned')!),
+        ...conditionFromTemplate(TEST_CONDITIONS.poisoned),
         remaining: 1,
       },
     ]
@@ -150,6 +151,31 @@ describe('game actions', () => {
     const result = actions.attack(armed.id, { kind: 'melee', targetId: goblin.id })!
     expect(result.damage?.total).toBe(10)
     expect(entity(goblin.id).hp.current).toBe(21 - 10)
+  })
+
+  it('with no damage rule and no weapon, a hit applies nothing: the GM decides', async () => {
+    const g = hero()
+    const goblin = createEntity('enemy', 'c1', rules, {
+      identity: { pseudo: 'Gobelin 1' },
+      hpRoll: 10,
+    })
+    await setup(g, goblin)
+    const free = { ...campaign, rules: defaultRules() }
+    const result = createGameActions(t, free, d20(5)).attack(g.id, {
+      kind: 'melee',
+      targetId: goblin.id,
+    })!
+    expect(result.check?.outcome.success).toBe(true)
+    expect(result.damage).toBeNull()
+    expect(entity(goblin.id).hp.current).toBe(21)
+    // …or types the damage: no Strength bonus is added when the rule is off.
+    const typed = createGameActions(t, free, d20(5, 20)).attack(g.id, {
+      kind: 'melee',
+      targetId: goblin.id,
+      damage: '1d6',
+    })!
+    expect(typed.damage?.total).toBe(6)
+    expect(entity(goblin.id).hp.current).toBe(15)
   })
 
   it('launches a skill: check, effect on every target, cooldown, one undo', async () => {

@@ -1,7 +1,8 @@
 import { newId } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
 import type { ConditionTemplate, Entity } from '@/domain/types'
-import { defaultRules, withDefaultRules, type RulesConfig } from '@/rules'
+import { starterConditions } from '@/domain/conditions'
+import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules, type RulesConfig } from '@/rules'
 import { db as defaultDb, type CodexDB } from './db'
 import { normalizeEntity } from './normalize'
 import {
@@ -202,14 +203,19 @@ export function parseExport(input: string | unknown): CampaignExport {
   if (data.entities !== undefined && !Array.isArray(data.entities))
     throw new CampaignImportError('invalidCampaign')
 
+  const legacy = data.version < 4
   const library = isRecord(data.campaign.library) ? data.campaign.library : {}
   const campaign: Campaign = {
     ...data.campaign,
-    rules: withDefaultRules(data.campaign.rules),
+    // Files written before v4 carry the invented phase-2 defaults (D-217).
+    rules: legacy
+      ? dropLegacyPhase2Defaults(data.campaign.rules)
+      : withDefaultRules(data.campaign.rules),
     library: {
-      conditions: Array.isArray(library.conditions)
-        ? (library.conditions as ConditionTemplate[])
-        : [],
+      conditions:
+        Array.isArray(library.conditions) && (library.conditions.length > 0 || !legacy)
+          ? (library.conditions as ConditionTemplate[])
+          : starterConditions(),
       macros: Array.isArray(library.macros) ? (library.macros as DiceMacro[]) : [],
     },
   }

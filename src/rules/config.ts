@@ -50,39 +50,63 @@ export interface RulesConfig {
   grid: {
     cellMeters: number
   }
+  /*
+   * Everything below is OFF by default: Codex imposes no mechanic the GM has
+   * not chosen (D-217). 0, '' or false = feature disabled / hidden.
+   */
   combat: {
-    /** Melee damage gets the Strength modifier, floor((FOR − 10) / 2). */
+    /** Add floor((FOR − 10) / 2) to melee damage. */
     strengthDamageBonus: boolean
-    /** Damage dice when no weapon is equipped. */
+    /** Damage dice when no weapon is equipped; '' = the GM types the damage. */
     unarmedDamage: string
   }
+  defense: {
+    /** Defense = (effective Dexterity if enabled) + (equipment bonuses if enabled). Both off = hidden. */
+    fromDexterity: boolean
+    fromEquipment: boolean
+  }
   carry: {
-    /** Carrying capacity in kg per point of effective Strength. */
+    /** Capacity in kg per point of Strength; 0 = no capacity, no "Surchargé". */
     kgPerStrength: number
-    /** Dexterity malus while "Surchargé". */
+    /** Dexterity malus while "Surchargé"; 0 = none. */
     overloadedDexPenalty: number
   }
   fatigue: {
+    /** 0 = no exhaustion tracker. */
     maxExhaustion: number
-    /** Malus applied to every check per exhaustion level. */
+    /** Malus to every check per exhaustion level. */
     checkPenaltyPerLevel: number
-    /** HP recovered by a short rest (dice expression). A long rest restores everything. */
+  }
+  rests: {
+    /** HP healed by a short rest (dice); '' = no short rest button. */
     shortRestHeal: string
+    /** What a long rest does; all false = no long rest button. */
+    longRest: {
+      fullHp: boolean
+      clearTempHp: boolean
+      reduceExhaustion: boolean
+      restoreLuck: boolean
+      restoreSkills: boolean
+    }
   }
   luck: {
-    /** One luck point per N points of effective Luck. */
+    /** One luck point per N points of effective Luck; 0 = no luck points. */
     pointsPerLuck: number
   }
   xp: {
-    /** XP needed to go from level L to L + 1 = perLevel × L. */
+    /** none: XP is only a counter, levels change by hand. */
+    mode: 'none' | 'linear' | 'table'
+    /** linear: going from level N to N+1 costs perLevel × N XP. */
     perLevel: number
+    /** table: total XP needed for level 2, 3, 4… */
+    table: number[]
   }
   disposition: {
-    /** Gauge steps moved by a social check (success / major critical). */
+    /** Gauge steps moved by a social check (success / major critical); 0 = the GM moves it by hand. */
     step: number
     criticalStep: number
   }
-  /** Coins, largest first; `value` in the smallest unit. */
+  /** Coins, any order; `value` in the smallest unit. Empty = the purse is a plain number. */
   currency: { id: string; name: string; short: string; value: number }[]
 }
 
@@ -104,18 +128,24 @@ export const DEFAULT_RULES: RulesConfig = {
     enforceOnCreation: ['player'],
   },
   grid: { cellMeters: 1 },
-  // Phase 2 defaults (not decided by the GM yet, see DECISIONS D-201).
-  combat: { strengthDamageBonus: true, unarmedDamage: '1d4' },
-  carry: { kgPerStrength: 5, overloadedDexPenalty: 2 },
-  fatigue: { maxExhaustion: 6, checkPenaltyPerLevel: 1, shortRestHeal: '1d6' },
-  luck: { pointsPerLuck: 5 },
-  xp: { perLevel: 100 },
-  disposition: { step: 1, criticalStep: 2 },
-  currency: [
-    { id: 'gold', name: 'Or', short: 'po', value: 100 },
-    { id: 'silver', name: 'Argent', short: 'pa', value: 10 },
-    { id: 'copper', name: 'Cuivre', short: 'pc', value: 1 },
-  ],
+  combat: { strengthDamageBonus: false, unarmedDamage: '' },
+  defense: { fromDexterity: false, fromEquipment: false },
+  carry: { kgPerStrength: 0, overloadedDexPenalty: 0 },
+  fatigue: { maxExhaustion: 0, checkPenaltyPerLevel: 0 },
+  rests: {
+    shortRestHeal: '',
+    longRest: {
+      fullHp: false,
+      clearTempHp: false,
+      reduceExhaustion: false,
+      restoreLuck: false,
+      restoreSkills: false,
+    },
+  },
+  luck: { pointsPerLuck: 0 },
+  xp: { mode: 'none', perLevel: 0, table: [] },
+  disposition: { step: 0, criticalStep: 0 },
+  currency: [],
 }
 
 export function defaultRules(): RulesConfig {
@@ -139,5 +169,42 @@ export function withDefaultRules(input: unknown): RulesConfig {
     }
     return typeof value === typeof base ? value : base
   }
-  return merge(defaultRules(), input) as RulesConfig
+  const merged = merge(defaultRules(), input) as RulesConfig
+  if (!['none', 'linear', 'table'].includes(merged.xp.mode)) merged.xp.mode = 'none'
+  return merged
+}
+
+/**
+ * Phase-2 builds wrote invented defaults into every campaign. The GM rejected
+ * them all (D-217): any rule group still equal to those values is reset to
+ * "off". Used once — by the v4 migration and when importing a v3 file —
+ * never at runtime, so a GM who later picks the same numbers keeps them.
+ */
+export function dropLegacyPhase2Defaults(input: unknown): RulesConfig {
+  if (!isRecord(input)) return withDefaultRules(input)
+  const legacy: Record<string, unknown> = {
+    combat: { strengthDamageBonus: true, unarmedDamage: '1d4' },
+    carry: { kgPerStrength: 5, overloadedDexPenalty: 2 },
+    fatigue: { maxExhaustion: 6, checkPenaltyPerLevel: 1, shortRestHeal: '1d6' },
+    luck: { pointsPerLuck: 5 },
+    xp: { perLevel: 100 },
+    disposition: { step: 1, criticalStep: 2 },
+    currency: [
+      { id: 'gold', name: 'Or', short: 'po', value: 100 },
+      { id: 'silver', name: 'Argent', short: 'pa', value: 10 },
+      { id: 'copper', name: 'Cuivre', short: 'pc', value: 1 },
+    ],
+  }
+  const cleaned = { ...input }
+  for (const [key, value] of Object.entries(legacy))
+    if (JSON.stringify(cleaned[key]) === JSON.stringify(value)) delete cleaned[key]
+  // An old "linear" XP curve with a custom value keeps working.
+  const xp = cleaned.xp
+  if (isRecord(xp) && typeof xp.perLevel === 'number' && xp.perLevel > 0 && !('mode' in xp))
+    cleaned.xp = { ...xp, mode: 'linear' }
+  // An old custom short rest moves to the new place.
+  const fatigue = cleaned.fatigue
+  if (isRecord(fatigue) && typeof fatigue.shortRestHeal === 'string' && !isRecord(cleaned.rests))
+    cleaned.rests = { shortRestHeal: fatigue.shortRestHeal }
+  return withDefaultRules(cleaned)
 }

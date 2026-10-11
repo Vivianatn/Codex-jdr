@@ -87,7 +87,22 @@ function strengthModifiers(entity: Entity) {
   ].filter((m) => m.stat === 'strength')
 }
 
+/** Defense from the GM's formula, or null when the rule is off. */
+export function defenseValue(entity: Entity, rules: RulesConfig, dexterity: number): number | null {
+  const { fromDexterity, fromEquipment } = rules.defense
+  if (!fromDexterity && !fromEquipment) return null
+  return (
+    (fromDexterity ? dexterity : 0) +
+    (fromEquipment ? equippedItems(entity).reduce((sum, i) => sum + i.defense, 0) : 0)
+  )
+}
+
+export function hasCarryCapacity(rules: RulesConfig): boolean {
+  return rules.carry.kgPerStrength > 0
+}
+
 export function isOverloaded(entity: Entity, rules: RulesConfig): boolean {
+  if (!hasCarryCapacity(rules)) return false
   return carriedWeight(entity) > carryCapacity(entity, rules)
 }
 
@@ -143,6 +158,7 @@ export function transferItem<A extends Entity, B extends Entity>(
 
 /** 342 → "3 po 4 pa 2 pc" (zero coins hidden; "0 pc" when empty). */
 export function formatPurse(amount: number, currency: RulesConfig['currency']): string {
+  if (currency.length === 0) return String(Math.round(amount))
   const coins = [...currency].sort((a, b) => b.value - a.value)
   let rest = Math.max(0, Math.round(amount))
   const parts: string[] = []
@@ -163,7 +179,12 @@ export function parseMoney(text: string, currency: RulesConfig['currency']): num
   if (!cleaned) return null
   const sign = cleaned.startsWith('-') ? -1 : 1
   const body = cleaned.replace(/^[+-]\s*/, '')
-  const smallest = [...currency].sort((a, b) => a.value - b.value)[0]
+  const smallest = [...currency].sort((a, b) => a.value - b.value)[0] ?? {
+    id: '',
+    name: '',
+    short: '',
+    value: 1,
+  }
   const pattern = /(\d+(?:\.\d+)?)\s*([a-zà-ÿ]*)/g
   let total = 0
   let matched = false

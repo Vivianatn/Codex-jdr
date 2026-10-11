@@ -1,9 +1,9 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { seededRng } from '@/dice'
-import { defaultRules } from '@/rules'
 import { opposedWinner, parseHpInput, performCheck } from './checks'
-import { BUILTIN_CONDITIONS, conditionFromTemplate, startOfTurn } from './conditions'
+import { configuredRules, TEST_CONDITIONS } from '@/test/fixtures'
+import { conditionFromTemplate, startOfTurn } from './conditions'
 import {
   createEntity,
   effectiveStats,
@@ -35,8 +35,8 @@ import {
 } from './progress'
 import type { Entity } from './types'
 
-const rules = defaultRules()
-const template = (id: string) => BUILTIN_CONDITIONS.find((c) => c.id === id)!
+const rules = configuredRules()
+const template = (id: keyof typeof TEST_CONDITIONS) => TEST_CONDITIONS[id]
 
 function hero(): Entity {
   return createEntity('player', 'c1', rules, {
@@ -247,7 +247,7 @@ describe('progress', () => {
     expect(levelForXp(299, rules)).toBe(2)
     expect(levelForXp(300, rules)).toBe(3)
     expect(xpProgress(2, 250, rules)).toMatchObject({ into: 150, span: 200, pendingLevels: 0 })
-    expect(xpProgress(2, 450, rules).pendingLevels).toBe(1)
+    expect(xpProgress(2, 450, rules)?.pendingLevels).toBe(1)
   })
 
   it('luck points come from Luck and are restored by a long rest', () => {

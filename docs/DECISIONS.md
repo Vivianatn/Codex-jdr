@@ -4,9 +4,33 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Principe — Codex n'impose aucune règle (2026-10-11)
+
+### D-217 · Toutes les mécaniques optionnelles sont désactivées par défaut
+
+Le MJ a refusé toutes les valeurs par défaut proposées en D-201 : « chaque MJ décide, le logiciel doit être très libre ». En conséquence :
+
+- **Remplace D-201.** Aucune mécanique de la phase 2 n'est active dans une nouvelle campagne. Chacune s'active et se règle dans **Préparation › Règles** : vide, 0 ou décoché = désactivé, et l'élément d'interface correspondant n'apparaît pas.
+  - Attaques : pas de bonus de Force. Pas de dés à mains nues : le champ « Dégâts » de l'attaque est prérempli avec l'arme équipée, sinon vide ; vide = pas de jet de dégâts, le MJ applique ce qu'il veut.
+  - Défense : calculée seulement si le MJ coche « à partir de la Dextérité » et/ou « bonus de l'équipement ».
+  - Charge : 0 kg par point de Force = pas de capacité ni d'état « Surchargé ».
+  - Fatigue : 0 niveau maximum = pas de compteur d'épuisement ; malus aux tests au choix du MJ.
+  - Repos : le repos court n'existe que si le MJ donne des dés de soin ; le repos long ne fait que ce que le MJ coche (PV max, PV temporaires, épuisement, chance, compétences).
+  - Points de chance : 0 = aucun (et pas de relance).
+  - XP : par défaut un simple compteur, le niveau change à la main. Au choix : progression régulière (N × valeur) ou **table personnalisée** (XP totale pour les niveaux 2, 3, 4…).
+  - Disposition : 0 = les tests sociaux ne déplacent pas la jauge, le MJ la règle à la main.
+  - Monnaie : aucune pièce ; la bourse est un simple nombre jusqu'à ce que le MJ définisse ses pièces (nom, abréviation, valeur).
+- **États.** Il n'y a plus d'états prédéfinis figés dans le code. Chaque campagne reçoit une **liste de départ** (Empoisonné, En feu…) : nom, icône et couleur seulement, **sans durée ni effet chiffré**. Le MJ peut tout modifier, dupliquer ou supprimer.
+- **Restent actives** les règles confirmées par le MJ (D-101 : 2d20/2, PV, critiques, rappel de compétence, case de 1 m) et les seuils de PV du cahier des charges (§4.2). Elles restent modifiables.
+- **Données existantes** : le schéma passe en v4. Pour chaque campagne, un groupe de règles encore égal aux anciennes valeurs inventées est remis à « désactivé », tandis qu'une valeur changée par le MJ est conservée. La liste d'états de départ est ajoutée si la campagne n'en avait pas. Le même nettoyage s'applique à l'import d'un fichier de version 3 ou antérieure. L'export passe en version 4.
+- Tests : le principe est vérifié par `src/domain/freedom.test.ts`. Les tests des mécaniques utilisent un jeu de règles « MJ qui a tout activé » (`src/test/fixtures.ts`), jamais les valeurs par défaut.
+- Au passage : les dialogues défilent quand ils dépassent la hauteur de l'écran (le bouton « Enregistrer » de l'éditeur d'état était inaccessible sur petit écran).
+
+---
+
 ## Phase 2 — Dés et statistiques (2026-10-11)
 
-### D-201 · Règles par défaut à valider par le MJ
+### D-201 · Règles par défaut à valider par le MJ — **remplacée par D-217**
 
 Ces règles n'étaient pas fixées par le cahier des charges ni par tes réponses. Elles ont toutes une valeur par défaut raisonnable et se modifient dans **Préparation › Règles** :
 

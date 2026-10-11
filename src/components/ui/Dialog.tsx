@@ -44,7 +44,7 @@ export function Dialog({
         <RadixDialog.Content asChild {...(description ? {} : { 'aria-describedby': undefined })}>
           <motion.div
             className={cn(
-              'fixed top-1/2 left-1/2 z-50 w-[calc(100vw-2rem)] max-w-md rounded-lg border border-line bg-surface p-6 shadow-overlay',
+              'fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md overflow-y-auto rounded-lg border border-line bg-surface p-6 shadow-overlay',
               className,
             )}
             initial={{ opacity: 0, x: '-50%', y: 'calc(-50% + 8px)', scale: 0.98 }}

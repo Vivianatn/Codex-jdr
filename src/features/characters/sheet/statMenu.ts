@@ -26,6 +26,7 @@ export function statMenu(
   stat: StatKey,
   actions: GameActions,
   openDialog: (dialog: StatDialog) => void,
+  luckPoints = false,
 ): MenuEntry[][] {
   const name = t.stats.names[stat]
   const labelled = (action: string, extra: Parameters<GameActions['check']>[2] = {}) => ({
@@ -80,7 +81,10 @@ export function statMenu(
       },
       labelled(t.checks.mental),
     ],
-    luck: [{ label: t.checks.luckReroll, onSelect: () => actions.luckReroll(entity.id) }],
+    // Only when the GM enabled luck points (Règles › Chance).
+    luck: luckPoints
+      ? [{ label: t.checks.luckReroll, onSelect: () => actions.luckReroll(entity.id) }]
+      : [],
   }
-  return [generic, specific[stat]]
+  return [generic, specific[stat]].filter((group) => group.length > 0)
 }

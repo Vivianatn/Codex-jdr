@@ -1,8 +1,9 @@
-import { RotateCcw } from 'lucide-react'
+import { Plus, RotateCcw, Trash } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { Ornament } from '@/components/Brand'
-import { Button } from '@/components/ui/Button'
+import { Button, IconButton } from '@/components/ui/Button'
+import { TextField } from '@/components/ui/TextField'
 import { CheckboxField, CommitInput, NumberInput, SelectField } from '@/components/ui/fields'
 import { campaignRepository } from '@/db/campaigns'
 import { ENTITY_KINDS } from '@/domain/types'
@@ -262,6 +263,10 @@ export function RulesPage() {
             </div>
           </Section>
 
+          <p className="rounded-md border border-line bg-surface-2 px-4 py-3 text-sm text-ink">
+            {t.rulesPage.optionalIntro}
+          </p>
+
           <Section title={t.rulesPage.combat}>
             <CheckboxField
               label={t.rulesPage.strengthDamageBonus}
@@ -271,8 +276,22 @@ export function RulesPage() {
             />
             <DiceRuleField
               label={t.rulesPage.unarmedDamage}
+              hint={t.rulesPage.emptyOff}
               value={rules.combat.unarmedDamage}
               onCommit={(unarmedDamage) => patch('combat', { unarmedDamage })}
+            />
+          </Section>
+
+          <Section title={t.rulesPage.defense}>
+            <CheckboxField
+              label={t.rulesPage.defenseFromDexterity}
+              checked={rules.defense.fromDexterity}
+              onChange={(fromDexterity) => patch('defense', { fromDexterity })}
+            />
+            <CheckboxField
+              label={t.rulesPage.defenseFromEquipment}
+              checked={rules.defense.fromEquipment}
+              onChange={(fromEquipment) => patch('defense', { fromEquipment })}
             />
           </Section>
 
@@ -280,6 +299,7 @@ export function RulesPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <NumberInput
                 label={t.rulesPage.kgPerStrength}
+                hint={t.rulesPage.zeroOff}
                 value={rules.carry.kgPerStrength}
                 min={0}
                 max={1000}
@@ -288,6 +308,7 @@ export function RulesPage() {
               />
               <NumberInput
                 label={t.rulesPage.overloadedDexPenalty}
+                hint={t.rulesPage.zeroOff}
                 value={rules.carry.overloadedDexPenalty}
                 min={0}
                 max={20}
@@ -297,9 +318,10 @@ export function RulesPage() {
           </Section>
 
           <Section title={t.rulesPage.fatigue}>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <NumberInput
                 label={t.rulesPage.maxExhaustion}
+                hint={t.rulesPage.zeroOff}
                 value={rules.fatigue.maxExhaustion}
                 min={0}
                 max={20}
@@ -307,37 +329,79 @@ export function RulesPage() {
               />
               <NumberInput
                 label={t.rulesPage.checkPenaltyPerLevel}
+                hint={t.rulesPage.zeroOff}
                 value={rules.fatigue.checkPenaltyPerLevel}
                 min={0}
                 max={20}
                 onCommit={(checkPenaltyPerLevel) => patch('fatigue', { checkPenaltyPerLevel })}
               />
-              <DiceRuleField
-                label={t.rulesPage.shortRestHeal}
-                value={rules.fatigue.shortRestHeal}
-                onCommit={(shortRestHeal) => patch('fatigue', { shortRestHeal })}
-              />
             </div>
           </Section>
 
-          <Section title={`${t.rulesPage.luck} · ${t.rulesPage.xp} · ${t.rulesPage.disposition}`}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <NumberInput
-                label={t.rulesPage.pointsPerLuck}
-                value={rules.luck.pointsPerLuck}
-                min={0}
-                max={40}
-                onCommit={(pointsPerLuck) => patch('luck', { pointsPerLuck })}
-              />
+          <Section title={t.rulesPage.rests}>
+            <DiceRuleField
+              label={t.rulesPage.shortRestHeal}
+              hint={t.rulesPage.emptyOff}
+              value={rules.rests.shortRestHeal}
+              onCommit={(shortRestHeal) => patch('rests', { shortRestHeal })}
+            />
+            <fieldset className="space-y-2">
+              <legend className="mb-1 text-sm font-medium text-ink">{t.rulesPage.longRest}</legend>
+              {LONG_REST_KEYS.map((key) => (
+                <CheckboxField
+                  key={key}
+                  label={t.rulesPage.longRestEffects[key]}
+                  checked={rules.rests.longRest[key]}
+                  onChange={(checked) =>
+                    patch('rests', { longRest: { ...rules.rests.longRest, [key]: checked } })
+                  }
+                />
+              ))}
+            </fieldset>
+          </Section>
+
+          <Section title={t.rulesPage.luck}>
+            <NumberInput
+              label={t.rulesPage.pointsPerLuck}
+              hint={t.rulesPage.zeroOff}
+              value={rules.luck.pointsPerLuck}
+              min={0}
+              max={40}
+              className="max-w-sm"
+              onCommit={(pointsPerLuck) => patch('luck', { pointsPerLuck })}
+            />
+          </Section>
+
+          <Section title={t.rulesPage.xp}>
+            <SelectField<RulesConfig['xp']['mode']>
+              label={t.rulesPage.xpMode}
+              value={rules.xp.mode}
+              onChange={(mode) => patch('xp', { mode })}
+              options={(['none', 'linear', 'table'] as const).map((m) => ({
+                value: m,
+                label: t.rulesPage.xpModes[m],
+              }))}
+            />
+            {rules.xp.mode === 'linear' && (
               <NumberInput
                 label={t.rulesPage.xpPerLevel}
                 value={rules.xp.perLevel}
                 min={0}
-                max={100000}
+                max={1_000_000}
+                className="max-w-sm"
                 onCommit={(perLevel) => patch('xp', { perLevel })}
               />
+            )}
+            {rules.xp.mode === 'table' && (
+              <XpTableField value={rules.xp.table} onCommit={(table) => patch('xp', { table })} />
+            )}
+          </Section>
+
+          <Section title={t.rulesPage.disposition}>
+            <div className="grid gap-4 sm:grid-cols-2">
               <NumberInput
                 label={t.rulesPage.dispositionStep}
+                hint={t.rulesPage.dispositionManual}
                 value={rules.disposition.step}
                 min={0}
                 max={4}
@@ -345,6 +409,7 @@ export function RulesPage() {
               />
               <NumberInput
                 label={t.rulesPage.dispositionCriticalStep}
+                hint={t.rulesPage.dispositionManual}
                 value={rules.disposition.criticalStep}
                 min={0}
                 max={4}
@@ -354,24 +419,10 @@ export function RulesPage() {
           </Section>
 
           <Section title={t.rulesPage.currency}>
-            <p className="text-xs text-ink-muted">{t.rulesPage.currencyHint}</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {rules.currency.map((coin, index) => (
-                <NumberInput
-                  key={coin.id}
-                  label={`${coin.name} (${coin.short})`}
-                  value={coin.value}
-                  min={1}
-                  max={1_000_000}
-                  onCommit={(value) =>
-                    save({
-                      ...rules,
-                      currency: rules.currency.map((c, i) => (i === index ? { ...c, value } : c)),
-                    })
-                  }
-                />
-              ))}
-            </div>
+            <CurrencyEditor
+              currency={rules.currency}
+              onChange={(currency) => save({ ...rules, currency })}
+            />
           </Section>
         </div>
       </div>
@@ -382,10 +433,12 @@ export function RulesPage() {
 /** Dice expression rule field: refuses invalid notation instead of saving it. */
 function DiceRuleField({
   label,
+  hint,
   value,
   onCommit,
 }: {
   label: string
+  hint?: string
   value: string
   onCommit: (value: string) => void
 }) {
@@ -394,11 +447,13 @@ function DiceRuleField({
   return (
     <CommitInput
       label={label}
+      hint={hint}
       value={value}
       error={error}
       onCommit={(next) => {
         try {
-          validateDice(next, { requireDice: true })
+          // Empty = rule disabled.
+          if (next.trim()) validateDice(next, { requireDice: true })
           setError(null)
           onCommit(next)
         } catch (e) {
@@ -406,5 +461,143 @@ function DiceRuleField({
         }
       }}
     />
+  )
+}
+
+const LONG_REST_KEYS = [
+  'fullHp',
+  'clearTempHp',
+  'reduceExhaustion',
+  'restoreLuck',
+  'restoreSkills',
+] as const satisfies readonly (keyof RulesConfig['rests']['longRest'])[]
+
+/** Total XP for level 2, 3, 4…, typed as a list ("100, 300, 600"). */
+function XpTableField({
+  value,
+  onCommit,
+}: {
+  value: number[]
+  onCommit: (table: number[]) => void
+}) {
+  const t = useT()
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <CommitInput
+      label={t.rulesPage.xpTable}
+      hint={t.rulesPage.xpTableHint}
+      value={value.join(', ')}
+      error={error}
+      onCommit={(text) => {
+        const table = text
+          .split(/[,;\s]+/)
+          .filter(Boolean)
+          .map(Number)
+        const ok = table.every(
+          (n, i) => Number.isFinite(n) && n > 0 && (i === 0 || n > table[i - 1]!),
+        )
+        if (!ok) return setError(t.rulesPage.xpTableInvalid)
+        setError(null)
+        onCommit(table)
+      }}
+    />
+  )
+}
+
+/** Coins defined by the GM; none = the purse is a plain number. */
+function CurrencyEditor({
+  currency,
+  onChange,
+}: {
+  currency: RulesConfig['currency']
+  onChange: (currency: RulesConfig['currency']) => void
+}) {
+  const t = useT()
+  const [name, setName] = useState('')
+  const [short, setShort] = useState('')
+  const [value, setValue] = useState('')
+  const set = (index: number, patch: Partial<RulesConfig['currency'][number]>) =>
+    onChange(currency.map((c, i) => (i === index ? { ...c, ...patch } : c)))
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-ink-muted">{t.rulesPage.currencyHint}</p>
+      {currency.length === 0 && (
+        <p className="text-sm text-ink-muted">{t.rulesPage.currencyNone}</p>
+      )}
+      <ul className="space-y-2">
+        {currency.map((coin, index) => (
+          <li key={coin.id} className="flex flex-wrap items-end gap-2">
+            <CommitInput
+              label={t.rulesPage.coinName}
+              value={coin.name}
+              onCommit={(v) => v && set(index, { name: v })}
+              className="min-w-32 flex-1"
+            />
+            <CommitInput
+              label={t.rulesPage.coinShort}
+              value={coin.short}
+              onCommit={(v) => v && set(index, { short: v })}
+              className="w-24"
+            />
+            <NumberInput
+              label={t.rulesPage.coinValue}
+              value={coin.value}
+              min={1}
+              max={1_000_000}
+              className="w-40"
+              onCommit={(v) => set(index, { value: v })}
+            />
+            <IconButton
+              label={`${t.common.remove} : ${coin.name}`}
+              icon={<Trash />}
+              onClick={() => onChange(currency.filter((_, i) => i !== index))}
+            />
+          </li>
+        ))}
+      </ul>
+      <form
+        className="flex flex-wrap items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          const v = Number(value)
+          if (!name.trim() || !short.trim() || !(v >= 1)) return
+          onChange([
+            ...currency,
+            {
+              id: crypto.randomUUID(),
+              name: name.trim(),
+              short: short.trim(),
+              value: Math.round(v),
+            },
+          ])
+          setName('')
+          setShort('')
+          setValue('')
+        }}
+      >
+        <TextField
+          label={t.rulesPage.coinName}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="min-w-32 flex-1"
+        />
+        <TextField
+          label={t.rulesPage.coinShort}
+          value={short}
+          onChange={(e) => setShort(e.target.value)}
+          className="w-24"
+        />
+        <TextField
+          label={t.rulesPage.coinValue}
+          value={value}
+          inputMode="numeric"
+          onChange={(e) => setValue(e.target.value)}
+          className="w-40"
+        />
+        <Button type="submit" icon={<Plus />}>
+          {t.rulesPage.addCoin}
+        </Button>
+      </form>
+    </div>
   )
 }

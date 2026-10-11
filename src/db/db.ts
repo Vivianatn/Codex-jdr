@@ -2,7 +2,8 @@ import Dexie, { type EntityTable } from 'dexie'
 import { normalizeEntityShape } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
 import type { EnemyTemplate, Entity, Item } from '@/domain/types'
-import { defaultRules, withDefaultRules } from '@/rules'
+import { starterConditions } from '@/domain/conditions'
+import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules } from '@/rules'
 import { emptyLibrary, type Campaign } from './types'
 
 export const DB_NAME = 'codex'
@@ -18,6 +19,13 @@ export const SCHEMA = {
     bestiary: 'id, updatedAt',
   },
   3: {
+    campaigns: 'id, name, updatedAt, lastOpenedAt',
+    entities: 'id, campaignId, [campaignId+kind]',
+    bestiary: 'id, updatedAt',
+    rolls: 'id, campaignId, [campaignId+at]',
+    itemLibrary: 'id, name',
+  },
+  4: {
     campaigns: 'id, name, updatedAt, lastOpenedAt',
     entities: 'id, campaignId, [campaignId+kind]',
     bestiary: 'id, updatedAt',
@@ -69,6 +77,21 @@ export class CodexDB extends Dexie {
         await tx.table('entities').toCollection().modify(upgrade)
         await tx.table('bestiary').toCollection().modify(upgrade)
       })
+    // v4: no imposed mechanics (D-217) — invented phase-2 defaults are switched off,
+    // and every campaign gets its own editable starter condition list.
+    this.version(4)
+      .stores(SCHEMA[4])
+      .upgrade((tx) =>
+        tx
+          .table('campaigns')
+          .toCollection()
+          .modify((campaign: Campaign) => {
+            campaign.rules = dropLegacyPhase2Defaults(campaign.rules)
+            campaign.library ??= emptyLibrary()
+            if (campaign.library.conditions.length === 0)
+              campaign.library.conditions = starterConditions()
+          }),
+      )
   }
 }
 

@@ -1,169 +1,115 @@
 import { roll, type Rng } from '@/dice'
 import type { RulesConfig } from '@/rules'
 import { applyHpDelta } from '@/rules'
-import type { Condition, ConditionEffects, ConditionTemplate, Entity, StatModifier } from './types'
-
-const mod = (stat: StatModifier['stat'], value: number, label: string): StatModifier => ({
-  id: `builtin-${label}-${stat}`,
-  stat,
-  value,
-  label,
-})
-
-const base: Omit<ConditionEffects, 'icon' | 'color'> = {
-  modifiers: [],
-  perTurn: null,
-  save: null,
-  concentration: false,
-}
+import type { Condition, ConditionTemplate, Entity } from './types'
 
 /**
- * Built-in condition library (SPEC §4.10). Read-only; the GM can duplicate and
- * adapt any of them in Préparation › États. Numbers are sensible defaults.
+ * Starter condition list (SPEC §4.10), copied into every new campaign where
+ * the GM can rename, change or delete each entry. Names, icons and colours
+ * only: no duration and no numeric effect — the GM decides those (D-217).
  */
-export const BUILTIN_CONDITIONS: ConditionTemplate[] = [
+const STARTERS: Pick<ConditionTemplate, 'id' | 'name' | 'icon' | 'color' | 'description'>[] = [
   {
-    ...base,
     id: 'poisoned',
     name: 'Empoisonné',
     icon: 'skull',
     color: 'green',
-    description: 'Le poison ronge le corps : 1d4 dégâts au début de chaque tour.',
-    duration: 3,
-    perTurn: { kind: 'damage', expression: '1d4' },
-    save: 'constitution',
+    description: 'Le poison ronge le corps.',
   },
   {
-    ...base,
     id: 'burning',
     name: 'En feu',
     icon: 'flame',
     color: 'orange',
-    description: '1d6 dégâts au début de chaque tour, tant que le feu n’est pas éteint.',
-    duration: 3,
-    perTurn: { kind: 'damage', expression: '1d6' },
-    save: 'dexterity',
+    description: 'Les flammes le dévorent.',
   },
   {
-    ...base,
     id: 'bleeding',
     name: 'Saignement',
     icon: 'droplet',
     color: 'red',
-    description: '1d4 dégâts au début de chaque tour.',
-    duration: 3,
-    perTurn: { kind: 'damage', expression: '1d4' },
-    save: 'constitution',
+    description: 'Une blessure qui ne se referme pas.',
   },
   {
-    ...base,
     id: 'stunned',
     name: 'Étourdi',
     icon: 'zap',
     color: 'yellow',
-    description: 'Ne peut ni agir ni réagir.',
-    duration: 1,
-    modifiers: [mod('dexterity', -2, 'Étourdi')],
+    description: 'Sonné, il peine à agir.',
   },
   {
-    ...base,
     id: 'blinded',
     name: 'Aveuglé',
     icon: 'eye-off',
     color: 'gray',
     description: 'Ne voit plus rien.',
-    duration: 2,
-    modifiers: [mod('dexterity', -2, 'Aveuglé'), mod('wisdom', -2, 'Aveuglé')],
   },
   {
-    ...base,
     id: 'charmed',
     name: 'Charmé',
     icon: 'heart',
     color: 'pink',
     description: 'Considère celui qui l’a charmé comme un ami.',
-    duration: 3,
-    save: 'wisdom',
   },
   {
-    ...base,
     id: 'frightened',
     name: 'Effrayé',
     icon: 'ghost',
     color: 'violet',
-    description: 'Ne peut pas s’approcher de la source de sa peur.',
-    duration: 2,
-    modifiers: [mod('charisma', -2, 'Effrayé')],
-    save: 'wisdom',
+    description: 'La peur le paralyse.',
   },
   {
-    ...base,
     id: 'invisible',
     name: 'Invisible',
     icon: 'eye',
     color: 'blue',
     description: 'Impossible à voir sans magie.',
-    duration: null,
   },
+  { id: 'prone', name: 'Au sol', icon: 'arrow-down', color: 'gray', description: 'Renversé.' },
   {
-    ...base,
-    id: 'prone',
-    name: 'Au sol',
-    icon: 'arrow-down',
-    color: 'gray',
-    description: 'Renversé : se relever coûte un déplacement.',
-    duration: null,
-  },
-  {
-    ...base,
     id: 'slowed',
     name: 'Ralenti',
     icon: 'snail',
     color: 'blue',
-    description: 'Se déplace moitié moins vite.',
-    duration: 2,
-    modifiers: [mod('dexterity', -2, 'Ralenti')],
+    description: 'Ses mouvements sont entravés.',
   },
   {
-    ...base,
     id: 'frozen',
     name: 'Gelé',
     icon: 'snowflake',
     color: 'blue',
-    description: 'Le froid engourdit les membres.',
-    duration: 2,
-    modifiers: [mod('dexterity', -2, 'Gelé'), mod('strength', -1, 'Gelé')],
-    save: 'constitution',
+    description: 'Le froid engourdit ses membres.',
   },
   {
-    ...base,
     id: 'blessed',
     name: 'Béni',
     icon: 'sparkles',
     color: 'yellow',
     description: 'Une faveur divine guide ses gestes.',
-    duration: 3,
-    modifiers: [mod('luck', 2, 'Béni')],
   },
   {
-    ...base,
     id: 'concentration',
     name: 'Concentration',
     icon: 'brain',
     color: 'violet',
-    description:
-      'Maintient un sort ou une capacité : subir des dégâts demande un test de Constitution.',
-    duration: null,
-    concentration: true,
+    description: 'Maintient un sort ou une capacité.',
   },
 ]
 
-export function allConditionTemplates(custom: readonly ConditionTemplate[]): ConditionTemplate[] {
-  return [...BUILTIN_CONDITIONS, ...custom]
+export function starterConditions(): ConditionTemplate[] {
+  return STARTERS.map((c) => ({
+    ...c,
+    duration: null,
+    modifiers: [],
+    perTurn: null,
+    save: null,
+    concentration: false,
+  }))
 }
 
-export function isBuiltinCondition(id: string): boolean {
-  return BUILTIN_CONDITIONS.some((c) => c.id === id)
+/** The campaign's condition library (the GM's list, starters included). */
+export function allConditionTemplates(library: readonly ConditionTemplate[]): ConditionTemplate[] {
+  return [...library]
 }
 
 export function conditionFromTemplate(template: ConditionTemplate, note = ''): Condition {

@@ -5,13 +5,14 @@ import { db } from '@/db/db'
 import { createEntity, normalizeSkill } from '@/domain/entity'
 import { newItem } from '@/domain/items'
 import type { Entity } from '@/domain/types'
-import { defaultRules } from '@/rules'
+import { starterConditions } from '@/domain/conditions'
+import { configuredRules, TEST_CONDITIONS } from '@/test/fixtures'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
 import { useUiStore } from '@/stores/uiStore'
 import { renderApp } from '@/test/renderApp'
 
-const rules = defaultRules()
+const rules = configuredRules()
 const entity = (id: string) => useCampaignStore.getState().entities[id]!
 
 beforeEach(async () => {
@@ -29,6 +30,12 @@ beforeEach(async () => {
 
 async function openSheet(e: Entity, tab?: string) {
   const c = await campaignRepository.create({ name: 'Test' })
+  // A GM who enabled the optional mechanics and defined a condition with effects.
+  await campaignRepository.updateRules(c.id, rules)
+  await campaignRepository.updateLibrary(c.id, {
+    conditions: [...starterConditions(), { ...TEST_CONDITIONS.stunned, id: 'stunned-1-turn' }],
+    macros: [],
+  })
   await db.entities.add({ ...e, campaignId: c.id })
   const app = renderApp(`/c/${c.id}/prep/players/e/${e.id}`)
   await screen.findByRole('heading', { level: 1, name: e.identity.pseudo })
@@ -86,6 +93,7 @@ describe('conditions', () => {
   it('adds a condition from the library and lets it expire when a turn passes', async () => {
     const g = gorak()
     const { user } = await openSheet(g, 'État')
+    // The starter 'Étourdi' has no duration; the GM-defined one (same name) lasts 1 turn.
     await user.selectOptions(screen.getByLabelText('Depuis la bibliothèque'), 'Étourdi (1 tour)')
     await user.click(screen.getAllByRole('button', { name: 'Ajouter' })[0]!)
     expect(entity(g.id).conditions.map((c) => c.name)).toEqual(['Étourdi'])
