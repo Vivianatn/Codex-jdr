@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Gem, Gift, Pencil, Plus, Trash } from 'lucide-react'
+import { Gift, Pencil, Plus, Trash } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
@@ -17,6 +17,7 @@ import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
+import { ChestIllustration } from '@/components/illustrations'
 
 const MENU_ITEM =
   'flex min-h-9 cursor-pointer items-center rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2'
@@ -71,7 +72,8 @@ export function ItemsPage() {
 
       {items === undefined ? null : items.length === 0 ? (
         <EmptyState
-          icon={<Gem />}
+          illustration={<ChestIllustration label={t.illustrations.chest} />}
+          eyebrow={t.nav.items}
           title={t.sections.items.emptyTitle}
           body={t.sections.items.emptyBody}
           actions={newButton}

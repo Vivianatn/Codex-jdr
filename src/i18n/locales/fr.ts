@@ -272,7 +272,8 @@ export const fr = {
     playing: 'En jeu',
     size: (cols: number, rows: number) => `${cols} × ${rows} cases`,
     tokensCount: (n: number) => (n === 1 ? '1 jeton' : `${n} jetons`),
-    empty: 'Aucune carte. Crée ta première carte, puis importe une image de fond ou dessine-la.',
+    emptyTitle: 'Aucune carte',
+    empty: 'Importe une image de carte ou dessine une salle avec l’éditeur.',
     back: 'Retour aux cartes',
     breadcrumb: 'Fil d’Ariane',
     canvas: (name: string) => `Carte ${name}`,
@@ -510,6 +511,18 @@ export const fr = {
     freeCamera: 'Caméra libre',
     fullscreen: 'Plein écran',
     waiting: 'En attente d’une carte…',
+  },
+  illustrations: {
+    candle: 'Une chandelle éteinte sur un pupitre, un filet de fumée',
+    grimoire: 'Un grimoire ouvert aux pages vierges, une plume posée dessus',
+    medallions: 'Trois médaillons vides, celui du milieu doré, une plume au-dessus',
+    lantern: 'Une lanterne et une petite empreinte de patte',
+    chest: 'Un coffre ouvert et vide, deux étincelles dorées',
+    hourglass: 'Un sablier à moitié écoulé',
+    mapRoll: 'Une carte à demi déroulée avec une rose des vents dorée',
+    inkwell: 'Un encrier, une plume et une page avec une seule ligne',
+    spellbook: 'Un livre fermé marqué d’une étoile dorée',
+    magnifier: 'Une loupe posée sur une page vierge',
   },
   mini: {
     title: (name: string) => `Mini-fiche — ${name}`,
@@ -781,6 +794,7 @@ export const fr = {
       n > 0
         ? `Elle sera retirée des ${n} personnages qui l’ont. Tu pourras annuler avec Ctrl+Z.`
         : 'Tu pourras annuler avec Ctrl+Z.',
+    libraryEmptyTitle: 'Aucune compétence pour l’instant',
     libraryEmpty: 'Aucune compétence dans la bibliothèque. Crée la première !',
     launchSkill: (name: string) => `Lancer ${name}`,
     launchTitle: (name: string) => `Lancer « ${name} »`,

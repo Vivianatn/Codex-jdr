@@ -1,9 +1,11 @@
-import { Copy, Map as MapIcon, Pencil, Play, Plus, Trash } from 'lucide-react'
+import { Copy, Pencil, Play, Plus, Trash } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button, IconButton } from '@/components/ui/Button'
+import { MapRollIllustration } from '@/components/illustrations'
 import { Dialog } from '@/components/ui/Dialog'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { NumberInput } from '@/components/ui/fields'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { TextField } from '@/components/ui/TextField'
@@ -161,12 +163,13 @@ export function MapsPage() {
 function EmptyMaps({ action }: { action: React.ReactNode }) {
   const t = useT()
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-line px-6 py-12 text-center">
-      <MapIcon className="size-8 text-ink-muted" aria-hidden />
-      <p className="font-medium text-ink">{t.maps.pageTitle}</p>
-      <p className="max-w-md text-sm text-ink-muted">{t.maps.empty}</p>
-      {action}
-    </div>
+    <EmptyState
+      illustration={<MapRollIllustration label={t.illustrations.mapRoll} />}
+      eyebrow={t.maps.pageTitle}
+      title={t.maps.emptyTitle}
+      body={t.maps.empty}
+      actions={action}
+    />
   )
 }
 

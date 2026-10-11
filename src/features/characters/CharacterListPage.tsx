@@ -28,11 +28,13 @@ export function CharacterListPage({
   groups,
   emptyTitle,
   emptyBody,
+  illustration,
 }: {
   title: string
   groups: ListGroup[]
   emptyTitle: string
   emptyBody: string
+  illustration?: React.ReactNode
 }) {
   const t = useT()
   const campaign = useCampaign()
@@ -70,6 +72,8 @@ export function CharacterListPage({
       {entities.length === 0 ? (
         <EmptyState
           icon={<Users />}
+          illustration={illustration}
+          eyebrow={title}
           title={emptyTitle}
           body={emptyBody}
           actions={

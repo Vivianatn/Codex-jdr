@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { CornerOrnament } from '@/components/Brand'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   CircleDot,
@@ -578,11 +579,17 @@ function ItemDetails({
       <motion.article
         key={item.id}
         aria-label={t.inventory.detailsOf(item.name)}
-        className={cn('rounded-lg border-2 bg-surface p-4', frame.frame)}
+        className={cn('relative rounded-xl border-2 bg-surface p-4', frame.frame)}
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.18 }}
       >
+        {item.rarity === 'legendary' && (
+          <>
+            <CornerOrnament className="absolute top-2.5 left-2.5" />
+            <CornerOrnament mirrored className="absolute top-2.5 right-2.5" />
+          </>
+        )}
         <div className="flex gap-4">
           <span className={cn('size-20 shrink-0 rounded-md border-2', frame.frame)}>
             <ItemArt item={item} />

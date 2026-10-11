@@ -12,6 +12,12 @@ import { useT } from '@/i18n'
 import type { PrepSection } from '@/stores/uiStore'
 import { DashboardPage } from './DashboardPage'
 import { SECTION_ICONS, sectionLabel } from './sections'
+import {
+  InkwellIllustration,
+  LanternIllustration,
+  MapRollIllustration,
+  MedallionsIllustration,
+} from '@/components/illustrations'
 
 type PlaceholderSection = Exclude<
   PrepSection,
@@ -41,6 +47,7 @@ export function PrepSectionPage() {
           title={t.nav.players}
           emptyTitle={t.sections.players.emptyTitle}
           emptyBody={t.sections.players.emptyBody}
+          illustration={<MedallionsIllustration label={t.illustrations.medallions} />}
           groups={[
             { kind: 'player', title: t.nav.players, newLabel: t.characters.newPlayer, empty: '' },
           ]}
@@ -53,6 +60,7 @@ export function PrepSectionPage() {
           title={t.nav.allies}
           emptyTitle={t.sections.allies.emptyTitle}
           emptyBody={t.sections.allies.emptyBody}
+          illustration={<LanternIllustration label={t.illustrations.lantern} />}
           groups={[
             {
               kind: 'ally',
@@ -94,7 +102,19 @@ function Placeholder({ section }: { section: PlaceholderSection }) {
     <PageTransition key={section} className="px-4 py-8 sm:px-8">
       <h1 className="type-screen-title text-ink">{sectionLabel(t, section)}</h1>
       <div className="h-8" aria-hidden />
-      <EmptyState icon={<Icon />} title={copy.emptyTitle} body={copy.emptyBody} />
+      <EmptyState
+        icon={<Icon />}
+        illustration={
+          section === 'quests' ? (
+            <MapRollIllustration label={t.illustrations.mapRoll} />
+          ) : (
+            <InkwellIllustration label={t.illustrations.inkwell} />
+          )
+        }
+        eyebrow={sectionLabel(t, section)}
+        title={copy.emptyTitle}
+        body={copy.emptyBody}
+      />
     </PageTransition>
   )
 }

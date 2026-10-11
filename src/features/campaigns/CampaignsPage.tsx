@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { motion } from 'framer-motion'
-import { BookOpen, Plus, Upload } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { LogoMark, Ornament, Wordmark } from '@/components/Brand'
+import { CandleDeskIllustration } from '@/components/illustrations'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -78,7 +79,7 @@ export function CampaignsPage() {
 
           {campaigns === undefined ? null : campaigns.length === 0 ? (
             <EmptyState
-              icon={<BookOpen />}
+              illustration={<CandleDeskIllustration label={t.illustrations.candle} />}
               title={t.campaigns.emptyTitle}
               body={t.campaigns.emptyBody}
               actions={

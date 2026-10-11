@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { motion } from 'framer-motion'
-import { ClipboardPaste, Plus, Skull } from 'lucide-react'
+import { ClipboardPaste, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useShallow } from 'zustand/react/shallow'
@@ -15,6 +15,7 @@ import { selectEntitiesOfKinds, useCampaignStore } from '@/stores/campaignStore'
 import { CharacterCard } from './CharacterCard'
 import { DiscordImportDialog } from './DiscordImportDialog'
 import { SpawnButton } from './SpawnDialog'
+import { GrimoireIllustration } from '@/components/illustrations'
 
 const listVariants = { visible: { transition: { staggerChildren: 0.03 } } }
 
@@ -53,7 +54,8 @@ export function BestiaryPage() {
 
       {templates === undefined ? null : templates.length === 0 && enemies.length === 0 ? (
         <EmptyState
-          icon={<Skull />}
+          illustration={<GrimoireIllustration label={t.illustrations.grimoire} />}
+          eyebrow={t.nav.bestiary}
           title={t.sections.bestiary.emptyTitle}
           body={t.sections.bestiary.emptyBody}
           actions={

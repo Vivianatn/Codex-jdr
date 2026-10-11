@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { CornerOrnament } from '@/components/Brand'
 import { Crown, Swords } from 'lucide-react'
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -410,7 +411,10 @@ export function LevelUpDialog({
   const milestone = skillMilestonesReached(entity.level, targetLevel, rules).length > 0
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()} title={t.levelUp.title(entityName(entity))}>
-      <div className="flex flex-col items-center gap-4 py-2 text-center">
+      <div className="relative flex flex-col items-center gap-4 py-2 text-center">
+        {/* Illuminated corners: a level is a moment (DA §6.2). */}
+        <CornerOrnament className="absolute -top-1 left-0" />
+        <CornerOrnament mirrored className="absolute -top-1 right-0" />
         <div className="relative flex size-28 items-center justify-center">
           <motion.span
             className="absolute inset-0 rounded-full bg-gold/30 blur-xl"

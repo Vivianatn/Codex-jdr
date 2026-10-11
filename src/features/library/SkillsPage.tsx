@@ -1,4 +1,4 @@
-import { Link2, Pencil, Plus, Trash, WandSparkles } from 'lucide-react'
+import { Link2, Pencil, Plus, Trash } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
@@ -23,6 +23,7 @@ import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
+import { SpellbookIllustration } from '@/components/illustrations'
 
 const GROUPS: SkillKind[] = ['class', 'active', 'passive']
 
@@ -79,8 +80,9 @@ export function SkillsPage() {
 
       {list.length === 0 ? (
         <EmptyState
-          icon={<WandSparkles />}
-          title={t.skills.pageTitle}
+          illustration={<SpellbookIllustration label={t.illustrations.spellbook} />}
+          eyebrow={t.nav.skills}
+          title={t.skills.libraryEmptyTitle}
           body={t.skills.libraryEmpty}
           actions={newButton}
         />
