@@ -161,6 +161,34 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
   expect((await maps(page))[0]!.fog.revealed).toContain('1')
   await expectNoSeriousA11yViolations(page)
 
+  // Mini sheet above the token (D-234): -2 HP, -2 Dexterity in a few keystrokes.
+  await click(page, centre(6, 4))
+  const mini = page.getByRole('region', { name: 'Mini-fiche — Lyra' })
+  await expect(mini).toBeVisible()
+  await mini.getByLabel('Modifier les PV de Lyra').fill('-2')
+  await mini.getByLabel('Modifier les PV de Lyra').press('Enter')
+  await mini.getByRole('button', { name: /^Dextérité : 12/ }).click()
+  await mini.getByLabel(/Nouvelle valeur de Dextérité/).fill('-2')
+  await mini.getByLabel(/Nouvelle valeur de Dextérité/).press('Enter')
+  await expect(mini.getByRole('button', { name: /^Dextérité : 10/ })).toBeVisible()
+  await expect
+    .poll(async () => {
+      const [lyra] = (await dumpTable(page, 'entities')) as {
+        hp: { current: number }
+        stats: { dexterity: number }
+      }[]
+      return [lyra!.hp.current, lyra!.stats.dexterity]
+    })
+    .toEqual([23, 10])
+  await expectNoSeriousA11yViolations(page)
+  await mini.getByRole('button', { name: 'Fermer la mini-fiche' }).click()
+  await page.getByRole('checkbox', { name: 'Mini-fiches des joueurs' }).check()
+  await expect(page.getByRole('button', { name: 'Ouvrir la mini-fiche de Lyra' })).toContainText(
+    '23/25',
+  )
+  await expectNoSeriousA11yViolations(page)
+  await page.getByRole('checkbox', { name: 'Mini-fiches des joueurs' }).uncheck()
+
   // The token cannot cross the wall (closed door); it moves freely on its side.
   await drag(page, centre(6, 4), centre(2, 4))
   await expect(page.getByText('Un mur bloque le passage', { exact: false })).toBeVisible()
@@ -191,7 +219,7 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
       async () =>
         ((await dumpTable(page, 'entities')) as { hp: { current: number } }[])[0]!.hp.current,
     )
-    .toBe(22)
+    .toBe(20)
   await expectNoSeriousA11yViolations(page)
 
   // --- Players' window -----------------------------------------------------

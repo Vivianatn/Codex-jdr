@@ -72,6 +72,10 @@ interface MapViewState {
   pings: Ping[]
   /** Centre the camera on whoever plays (turns, D-226). */
   followTurn: boolean
+  /** Character whose mini sheet is open above its token (D-234). */
+  sheetId: string | null
+  /** Compact mini sheets above every player token. */
+  pinPlayerSheets: boolean
   /** Size of the map viewport in screen pixels (for zoom buttons and fit). */
   viewport: { width: number; height: number }
   setViewport: (viewport: { width: number; height: number }) => void
@@ -86,6 +90,8 @@ interface MapViewState {
   addPing: (p: Point) => Ping
   dropPing: (id: string) => void
   setFollowTurn: (follow: boolean) => void
+  openSheet: (entityId: string | null) => void
+  setPinPlayerSheets: (pin: boolean) => void
 }
 
 export const useMapViewStore = create<MapViewState>()((set) => ({
@@ -101,6 +107,8 @@ export const useMapViewStore = create<MapViewState>()((set) => ({
   pings: [],
   followTurn: true,
   viewport: { width: 0, height: 0 },
+  sheetId: null,
+  pinPlayerSheets: false,
   setViewport: (viewport) => set({ viewport }),
   setTool: (tool) => set({ tool, area: null }),
   setPlaceKind: (placeKind) => set({ placeKind, tool: 'place' }),
@@ -122,4 +130,6 @@ export const useMapViewStore = create<MapViewState>()((set) => ({
   },
   dropPing: (id) => set((s) => ({ pings: s.pings.filter((p) => p.id !== id) })),
   setFollowTurn: (followTurn) => set({ followTurn }),
+  openSheet: (sheetId) => set({ sheetId }),
+  setPinPlayerSheets: (pinPlayerSheets) => set({ pinPlayerSheets }),
 }))

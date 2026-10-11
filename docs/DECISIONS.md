@@ -35,6 +35,14 @@ Les fonds de carte et les images d'ambiance sont stockés à part (table `assets
 - La caméra du MJ et les signalements (ping, Alt + clic) passent par un `BroadcastChannel` (`codex-view-<campagne>`). La vue joueurs suit la caméra du MJ, ajustée à la taille de sa fenêtre, ou passe en caméra libre.
 - Le MJ choisit ce qu'affichent les joueurs : la carte, une image d'ambiance ou une pause. Les joueurs ne voient ni le calque MJ, ni les éléments cachés, ni les pièges non repérés, ni les PV des ennemis.
 
+### D-234 · Mini-fiches au-dessus des jetons
+
+- En jeu, cliquer un jeton ouvre sa mini-fiche juste au-dessus de lui (ou en dessous près du bord haut) : PV avec le champ rapide (« -2 », « +5 », « t+4 »), les sept caractéristiques avec −/+, et un clic sur une valeur pour taper « -2 », « +1 » ou « 14 ». Les états s'ajoutent et se retirent au même endroit. Chaque modification est une étape annulable.
+- La case « Mini-fiches des joueurs » affiche en permanence une version compacte en lecture seule (PV, caractéristiques, états) au-dessus de chaque joueur. Un clic l'ouvre en version complète.
+- Les mini-fiches sont en HTML par-dessus le canevas, pas en Konva : texte net, champs de saisie natifs, accessibilité. Elles suivent la caméra. Échap ferme la mini-fiche ouverte.
+- Le panneau rapide complet (objets, armes) reste accessible depuis la mini-fiche et depuis les groupes.
+- Les mini-fiches ne s'affichent jamais dans la vue joueurs.
+
 ### D-233 · Rendu et performances
 
 - Le plateau utilise Konva (react-konva 18, compatible React 18), réparti en calques : statique (fond, grille, décor, objets, murs), jetons, brouillard et dessins, puis superpositions.

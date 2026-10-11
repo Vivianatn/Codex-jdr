@@ -14,11 +14,11 @@ import { fitImage, imageFromFile } from '@/lib/images'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useMapViewStore, type MapTool } from '@/stores/mapViewStore'
-import { useUiStore } from '@/stores/uiStore'
 import { cameraControls } from './cameraControls'
 import { MapCanvas, type MapChange } from './MapCanvas'
 import { AreaPanel, ElementPanel, WallPanel } from './MapPanels'
 import { MapToolbar } from './MapToolbar'
+import { TokenSheets } from './TokenSheets'
 import { useCanvasLabels } from './useCanvasLabels'
 import { openViewChannel } from './viewChannel'
 
@@ -49,7 +49,7 @@ export function PlayMap() {
   const entities = useCampaignStore((s) => s.entities)
   const updateMap = useCampaignStore((s) => s.updateMap)
   const updatePlay = useCampaignStore((s) => s.updatePlay)
-  const openQuick = useUiStore((s) => s.openQuick)
+  const pinSheets = useMapViewStore((s) => s.pinPlayerSheets)
   const selection = useMapViewStore((s) => s.selection)
   const area = useMapViewStore((s) => s.area)
   const followTurn = useMapViewStore((s) => s.followTurn)
@@ -92,6 +92,7 @@ export function PlayMap() {
   useEffect(() => {
     const view = useMapViewStore.getState()
     view.select({ type: 'none' })
+    view.openSheet(null)
     // Editor-only tools (walls, palette…) do not carry over into play.
     if (!PLAY_TOOLS.includes(view.tool)) view.setTool('select')
     else view.setArea(null)
@@ -176,6 +177,18 @@ export function PlayMap() {
           />
           {t.maps.followTurn}
         </label>
+        <label
+          className="flex items-center gap-1.5 text-xs text-ink-muted"
+          title={t.mini.pinPlayersHint}
+        >
+          <input
+            type="checkbox"
+            checked={pinSheets}
+            onChange={(e) => useMapViewStore.getState().setPinPlayerSheets(e.target.checked)}
+            className="size-4 accent-[var(--codex-accent)]"
+          />
+          {t.mini.pinPlayers}
+        </label>
         <PlayerViewMenu campaignId={campaign.id} display={play.display} />
       </MapToolbar>
       <div className="relative min-h-0 flex-1">
@@ -188,7 +201,10 @@ export function PlayMap() {
           labels={labels}
           activeEntityId={activeEntityId}
           onChange={onChange}
-          onTokenOpen={openQuick}
+          onTokenOpen={(id) => {
+            const view = useMapViewStore.getState()
+            view.openSheet(view.sheetId === id ? null : id)
+          }}
           onDoorOpen={(id) => useMapViewStore.getState().select({ type: 'wall', id })}
           onTokenMove={(tokenId, cell) => actions.moveToken(map.id, tokenId, cell)}
           onDropEntity={(entityId, cell) => actions.placeToken(map.id, entityId, cell)}
@@ -198,6 +214,7 @@ export function PlayMap() {
             channel.current?.post({ type: 'ping', mapId: map.id, point })
           }}
         />
+        <TokenSheets map={map} entities={entities} />
         {area ? (
           <AreaPanel map={map} area={area} />
         ) : element ? (

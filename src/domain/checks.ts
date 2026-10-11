@@ -94,3 +94,14 @@ export function parseHpInput(text: string): HpInput | null {
   if (t.startsWith('-')) return t.length > 1 ? { kind: 'damage', expression: t.slice(1) } : null
   return { kind: 'damage', expression: t }
 }
+
+/**
+ * Quick characteristic edit (D-234): "-2" / "+1" change the base value,
+ * a bare number sets it. Returns the new base value, or null if unreadable.
+ */
+export function parseStatInput(text: string, base: number): number | null {
+  const m = text.trim().replace(/\s+/g, '').match(/^([+-]?)(\d{1,3})$/)
+  if (!m) return null
+  const n = Number(m[2])
+  return m[1] === '+' ? base + n : m[1] === '-' ? base - n : n
+}
