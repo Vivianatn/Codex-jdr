@@ -1,141 +1,57 @@
-import { Map, Skull, Star, Users } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { Map } from 'lucide-react'
 import { Link } from 'react-router'
 import { buttonClasses } from '@/components/ui/buttonStyles'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
-import { useShallow } from 'zustand/react/shallow'
-import { entityHpMax, entityName } from '@/domain/entity'
-import type { Entity } from '@/domain/types'
-import { HpBar } from '@/features/characters/HpBar'
-import { Portrait } from '@/features/characters/Portrait'
-import { HpQuickInput } from '@/features/characters/HpQuickInput'
-import { StatusPills } from '@/features/characters/StatusPills'
 import { useT } from '@/i18n'
-import { useUiStore } from '@/stores/uiStore'
+import { GroupsPanel } from './GroupsPanel'
 import { PlaySheetDrawer } from './PlaySheetDrawer'
-import { selectEntitiesOfKinds, useCampaignStore } from '@/stores/campaignStore'
+import { QuickPanel } from './QuickPanel'
+import { TurnBanner } from './TurnBanner'
 
 /**
- * "En jeu" mode: the map takes the whole screen, with a slim quick-access
- * sidebar. Everything else (sheets, menus) will float over the map.
+ * "En jeu" mode: the turn banner on top (D-226), the map, and the groups in
+ * the sidebar. Sheets and the quick panel slide over the map.
  */
 export function PlayLayout() {
   const t = useT()
   const campaign = useCampaign()
-  const party = useCampaignStore(useShallow((s) => selectEntitiesOfKinds(s.entities, ['player'])))
-  const enemies = useCampaignStore(useShallow((s) => selectEntitiesOfKinds(s.entities, ['enemy'])))
 
   return (
     <PageTransition className="flex-row">
-      <main
-        id="main"
-        aria-label={t.play.mapRegion}
-        className="relative flex min-w-0 flex-1 items-center justify-center overflow-hidden bg-surface-2"
-      >
-        <MapBackdrop />
-        <div className="glass relative rounded-lg border border-line shadow-lifted">
-          <EmptyState
-            icon={<Map />}
-            title={t.play.noMapTitle}
-            body={t.play.noMapBody}
-            actions={
-              <Link to={`/c/${campaign.id}/prep/maps`} className={buttonClasses('secondary')}>
-                {t.play.goToMaps}
-              </Link>
-            }
-          />
-        </div>
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TurnBanner />
+        <main
+          id="main"
+          aria-label={t.play.mapRegion}
+          className="relative flex min-w-0 flex-1 items-center justify-center overflow-hidden bg-surface-2"
+        >
+          <MapBackdrop />
+          <div className="glass relative rounded-lg border border-line shadow-lifted">
+            <EmptyState
+              icon={<Map />}
+              title={t.play.noMapTitle}
+              body={t.play.noMapBody}
+              actions={
+                <Link to={`/c/${campaign.id}/prep/maps`} className={buttonClasses('secondary')}>
+                  {t.play.goToMaps}
+                </Link>
+              }
+            />
+          </div>
+        </main>
+      </div>
 
       <aside
         aria-label={t.play.quickAccess}
-        className="hidden w-72 shrink-0 flex-col gap-6 overflow-y-auto border-l border-line bg-bg p-4 lg:flex"
+        className="hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-line bg-bg p-4 lg:flex"
       >
-        <QuickSection
-          icon={<Users />}
-          title={t.play.party}
-          empty={t.play.partyEmpty}
-          entities={party}
-        />
-        <QuickSection
-          icon={<Skull />}
-          title={t.play.enemies}
-          empty={t.play.enemiesEmpty}
-          entities={enemies}
-        />
-        <QuickSection
-          icon={<Star />}
-          title={t.play.favorites}
-          empty={t.play.favoritesEmpty}
-          entities={[]}
-        />
+        <GroupsPanel />
       </aside>
       <PlaySheetDrawer />
+      <QuickPanel />
     </PageTransition>
-  )
-}
-
-function QuickSection({
-  icon,
-  title,
-  empty,
-  entities,
-}: {
-  icon: ReactNode
-  title: string
-  empty: string
-  entities: Entity[]
-}) {
-  const t = useT()
-  const campaign = useCampaign()
-  const openSheet = useUiStore((s) => s.openPlaySheet)
-  return (
-    <section>
-      <h2 className="mb-2 flex items-center gap-2 font-sans text-xs font-semibold tracking-wider text-ink-muted uppercase [&>svg]:size-3.5">
-        {icon}
-        {title}
-      </h2>
-      {entities.length === 0 ? (
-        <p className="rounded-md border border-dashed border-line px-3 py-4 text-center text-sm text-ink-muted">
-          {empty}
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {entities.map((e) => (
-            <li key={e.id} className="space-y-2 rounded-md bg-surface px-2.5 py-2 shadow-soft">
-              <div className="flex items-center gap-2.5">
-                <Portrait src={e.identity.portrait} name={entityName(e)} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <button
-                    type="button"
-                    onClick={() => openSheet(e.id)}
-                    className="block max-w-full truncate text-left text-sm font-medium text-ink hover:text-accent-text hover:underline"
-                    aria-label={t.sheet.open(entityName(e))}
-                  >
-                    {entityName(e)}
-                  </button>
-                  <HpBar
-                    current={e.hp.current}
-                    max={entityHpMax(e, campaign.rules)}
-                    size="sm"
-                    showLabel={false}
-                    thresholds={campaign.rules.hp}
-                    entityId={e.id}
-                  />
-                </div>
-                <span className="tabular text-xs text-ink-muted">
-                  {e.hp.current}/{entityHpMax(e, campaign.rules)}
-                </span>
-              </div>
-              <StatusPills entity={e} rules={campaign.rules} limit={3} />
-              <HpQuickInput entityId={e.id} name={entityName(e)} compact />
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   )
 }
 

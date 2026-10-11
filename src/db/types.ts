@@ -1,5 +1,6 @@
 import { starterConditions } from '@/domain/conditions'
 import type { RollRecord } from '@/domain/rolls'
+import type { PlayState } from '@/domain/turns'
 import type {
   ConditionTemplate,
   EnemyTemplate,
@@ -17,6 +18,8 @@ export interface Campaign {
   rules: RulesConfig
   /** GM-made library entries and saved rolls, specific to this campaign. */
   library: CampaignLibrary
+  /** Groups and turn of the game in progress (D-226); missing on older records. */
+  play?: PlayState
   createdAt: number
   updatedAt: number
   lastOpenedAt: number | null

@@ -9,7 +9,16 @@ import {
 } from '@/domain/checks'
 import { allConditionTemplates, conditionFromTemplate, startOfTurn } from '@/domain/conditions'
 import { entityHpMax, entityName, withJournal } from '@/domain/entity'
-import { equippedWeapon, formatPurse, removeUnits, transferItem } from '@/domain/items'
+import {
+  equip,
+  equippedWeapon,
+  formatPurse,
+  removeUnits,
+  slotsFor,
+  transferItem,
+  unequip,
+} from '@/domain/items'
+import { nextTurn, resumeTurns, startTurns, stopTurns, type TurnState } from '@/domain/turns'
 import {
   levelForXp,
   longRest,
@@ -21,7 +30,7 @@ import {
   spendSkill,
 } from '@/domain/progress'
 import type { RollRecord } from '@/domain/rolls'
-import type { Entity, StatKey } from '@/domain/types'
+import type { Entity, Item, StatKey } from '@/domain/types'
 import type { Campaign } from '@/db/types'
 import type { Messages } from '@/i18n/locales/fr'
 import { applyHpDelta, hpBand, statModifier, type RulesConfig } from '@/rules'
@@ -670,6 +679,139 @@ export function createGameActions(t: Messages, campaign: Campaign, rng?: Rng) {
         ),
       )
     },
+
+    // -----------------------------------------------------------------------
+    // Turns by groups (D-226). Each step is ONE undoable change: the turn
+    // moves and the new character's start-of-turn effects are applied.
+    // -----------------------------------------------------------------------
+
+    /** Round 1: the first character of the first group plays. */
+    startTurns() {
+      const play = startTurns(store().play)
+      if (play === store().play) return
+      campaignHistory.getState().transaction(t.turns.started, () => {
+        store().updatePlay(() => play, t.turns.started)
+        beginTurn(play.turn)
+      })
+    },
+
+    /** The next character plays; after the last group comes the GM's turn. */
+    nextTurn() {
+      const current = store().play
+      const { turn } = nextTurn(current)
+      if (turn === current.turn) return
+      const label = turn.status === 'gm' ? t.turns.gmTurn : t.turns.next
+      campaignHistory.getState().transaction(label, () => {
+        store().updatePlay((p) => ({ ...p, turn }), label)
+        beginTurn(turn)
+      })
+    },
+
+    /** The GM gives the hand back: next round, from the first group. */
+    resumeTurns() {
+      const play = resumeTurns(store().play)
+      if (play === store().play) return
+      const label = t.turns.resumed(play.turn.status === 'playing' ? play.turn.round : 0)
+      campaignHistory.getState().transaction(label, () => {
+        store().updatePlay(() => play, label)
+        beginTurn(play.turn)
+      })
+    },
+
+    stopTurns() {
+      store().updatePlay(stopTurns, t.turns.stopped)
+    },
+
+    // -----------------------------------------------------------------------
+    // Quick edits during play (D-227): simple, one undo step each.
+    // -----------------------------------------------------------------------
+
+    /** Adds `delta` to a characteristic's base value (kept within the rules' range). */
+    nudgeStat(entityId: string, stat: StatKey, delta: number) {
+      const entity = get(entityId)
+      if (!entity) return
+      const from = entity.stats[stat]
+      const to = Math.min(rules.stats.max, Math.max(rules.stats.min, from + delta))
+      if (to === from) return
+      store().updateEntity(
+        entityId,
+        (e) =>
+          withJournal(
+            { ...e, stats: { ...e.stats, [stat]: to } },
+            'stats',
+            t.journal.stat(statName(stat), from, to),
+          ),
+        t.journal.stat(statName(stat), from, to),
+      )
+    },
+
+    /** Adds an item (a weapon goes straight into a free hand when `equip` is set). */
+    quickAddItem(entityId: string, item: Item, equipIt = false) {
+      const entity = get(entityId)
+      if (!entity) return
+      const name = entityName(entity)
+      store().updateEntity(
+        entityId,
+        (e) => {
+          let next = withJournal(
+            { ...e, inventory: [...e.inventory, item] },
+            'item',
+            t.journal.itemAdded(item.name, item.quantity),
+          )
+          if (equipIt) {
+            const slot = slotsFor(item.type).find((s) => !next.inventory.some((i) => i.slot === s))
+            if (slot) next = equip(next, item.id, slot)
+          }
+          return next
+        },
+        t.inventory.addedTo(item.name, name),
+      )
+    },
+
+    quickRemoveItem(entityId: string, itemId: string) {
+      const entity = get(entityId)
+      const item = entity?.inventory.find((i) => i.id === itemId)
+      if (!entity || !item) return
+      store().updateEntity(
+        entityId,
+        (e) =>
+          withJournal(
+            { ...e, inventory: e.inventory.filter((i) => i.id !== itemId) },
+            'item',
+            t.journal.itemRemoved(item.name),
+          ),
+        t.journal.itemRemoved(item.name),
+      )
+    },
+
+    /** Equips in the first compatible slot, or unequips. */
+    toggleEquip(entityId: string, itemId: string) {
+      const entity = get(entityId)
+      const item = entity?.inventory.find((i) => i.id === itemId)
+      if (!entity || !item) return
+      store().updateEntity(
+        entityId,
+        (e) => {
+          if (item.slot) return unequip(e, itemId)
+          const slots = slotsFor(item.type)
+          const slot = slots.find((s) => !e.inventory.some((i) => i.slot === s)) ?? slots[0]
+          return slot ? equip(e, itemId, slot) : e
+        },
+        item.slot ? t.inventory.unequip : t.inventory.equipped,
+      )
+    },
+  }
+
+  /** Start-of-turn effects for whoever now plays, and an announcement. */
+  function beginTurn(turn: TurnState) {
+    if (turn.status === 'playing') {
+      const entity = get(turn.memberId)
+      if (!entity) return
+      actions.passTurn(turn.memberId)
+      toast(t.turns.yourTurn(entityName(entity)), { duration: 4000 })
+    } else if (turn.status === 'gm') {
+      toast(t.turns.gmTurnToast, { duration: 6000 })
+    }
   }
   return actions
 }

@@ -172,7 +172,13 @@ for (const theme of ['light', 'dark'] as const) {
       .getByRole('radiogroup', { name: 'Mode' })
       .getByRole('radio', { name: 'En jeu' })
       .click()
-    await page.getByRole('button', { name: 'Ouvrir la fiche de Gorak' }).click()
+    // Quick panel, then the full sheet over the map.
+    await page.getByRole('button', { name: 'Manipuler Gorak' }).click()
+    await expect(
+      page.getByRole('complementary', { name: 'Manipulation rapide — Gorak' }),
+    ).toBeVisible()
+    await expectNoSeriousA11yViolations(page)
+    await page.getByRole('button', { name: 'Fiche complète' }).click()
     await expect(
       page.getByRole('complementary', { name: 'Ouvrir la fiche de Gorak' }),
     ).toBeVisible()

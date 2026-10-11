@@ -4,6 +4,33 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Phase 3 — Tours par groupes (2026-10-11)
+
+### D-226 · Le suivi de combat est remplacé par des tours par groupes
+
+À la demande du MJ, la phase 3 du cahier des charges (§6 : initiative, combat, XP de fin de combat, butin) est **abandonnée**. Elle est remplacée par un système de tours plus simple, en mode **En jeu** :
+
+- Le MJ crée des **groupes** dans la barre latérale (nom libre) et y place n'importe quels personnages : joueurs, ennemis, alliés, familiers. Un personnage appartient à un seul groupe à la fois. Groupes et membres se réordonnent avec ▲▼, se renomment et se suppriment.
+- Les tours suivent l'ordre : les **groupes l'un après l'autre**, et dans le groupe actif **ses personnages l'un après l'autre** (« Tour suivant »). Quand tous les groupes ont joué vient le **tour du MJ** : rien ne bouge tant qu'il ne clique pas sur « Reprendre », ce qui lance le round suivant depuis le premier groupe.
+- Un **bandeau** en haut de l'écran indique le round, le groupe qui joue, ses personnages (celui dont c'est le tour est mis en avant, ceux qui ont déjà joué sont estompés) et les groupes suivants jusqu'au tour du MJ.
+- Quand c'est au tour d'un personnage, ses **effets de début de tour** sont appliqués (D-208 : effets des états, durées, recharges). Ils n'existent que si le MJ les a définis (D-217).
+- Chaque étape (tour suivant, reprendre, changement de groupe) est **une** action annulable par Ctrl+Z, avec ses effets. Les groupes et le tour en cours sont enregistrés avec la campagne, survivent au rechargement et partent avec l'export.
+- Supprimer le personnage qui joue fait passer le tour au suivant ; supprimer son groupe passe au groupe suivant.
+- L'initiative, le partage d'XP et le butin de fin de combat ne sont pas faits. Les §11.3 scénarios 3 et 4 du cahier des charges s'appuient désormais sur ce système.
+
+### D-227 · Manipulation rapide pendant la partie
+
+Un clic sur un personnage (bandeau ou groupes) ouvre un **panneau de manipulation rapide** par-dessus la carte, identique pour joueurs, ennemis, alliés et familiers :
+
+- les **PV** (champ « -7, +5, t+4 ») ;
+- les **sept caractéristiques** avec des boutons −1 / +1 sur la valeur de base, dans les bornes des règles (1 à 20 par défaut) ;
+- les **objets et armes** : ajout en une ligne (nom, case « Arme » avec ses dégâts, équipement immédiat dans une main libre), équiper / déséquiper, retirer ;
+- les **états** : ajout depuis la liste de la campagne, retrait d'un clic.
+
+Chaque clic est une action annulable. Le bouton « Fiche complète » ouvre la fiche entière dans le tiroir.
+
+---
+
 ## Demandes du MJ (2026-10-11, suite de la phase 2)
 
 ### D-218 · Compétences indépendantes

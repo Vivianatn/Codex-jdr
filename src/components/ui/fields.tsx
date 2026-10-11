@@ -38,6 +38,8 @@ export interface CommitInputProps
     Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'className'> {
   value: string
   onCommit: (value: string) => void
+  /** Classes for the input itself (`className` sizes the whole field). */
+  inputClassName?: string
 }
 
 export function CommitInput({
@@ -45,6 +47,7 @@ export function CommitInput({
   hint,
   hideLabel,
   className,
+  inputClassName,
   error,
   value,
   onCommit,
@@ -68,7 +71,7 @@ export function CommitInput({
     >
       <input
         id={id}
-        className={cn(FIELD, 'h-10')}
+        className={cn(FIELD, 'h-10', inputClassName)}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}

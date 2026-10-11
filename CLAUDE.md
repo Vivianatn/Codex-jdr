@@ -35,6 +35,7 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 - `src/domain/` also holds gameplay rules on data: `items.ts` (equipment, weight, money), `conditions.ts` (library, `startOfTurn`), `progress.ts` (XP, luck, rests, skills), `checks.ts` (`performCheck`, opposed, quick HP input).
 - `src/features/game/gameActions.ts` — every in-play action (checks, damage, turns, skills, items…): records rolls, applies effects as ONE undoable change, triggers toasts/visual effects. UI calls it through `useGameActions()`.
 - Skills are campaign entities (D-218): `src/domain/skills.ts` (attach / sync / adopt); the library lives in `useCampaignStore().skills` next to the characters so edits are undoable together. Characters hold synced copies (`skill.sourceId`).
+- Play mode (D-226/227): `src/domain/turns.ts` (groups, turn order, GM turn — pure), state in `useCampaignStore().play` (undoable, saved on the campaign record); UI in `src/features/play/` (`TurnBanner`, `GroupsPanel`, `QuickPanel`). Phase 3 combat/initiative of the spec is abandoned.
 - `src/features/characters/` — sheets, creation wizard, bestiary, Discord import. Sheet edits go through `useSheetEditor` (one undo entry + journal line per edit).
 - `src/app/` — providers (`AppProviders`), routes (hash router, Tauri-friendly), preference effects.
 - `src/features/<domain>/` — screens and domain components (campaigns, shell, prep, play, settings).

@@ -187,6 +187,16 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
               ...s,
               sourceId: s.sourceId ? (skillIds.get(s.sourceId) ?? s.sourceId) : null,
             }))
+          // Groups follow the characters' new ids (D-226).
+          if (campaign.play)
+            campaign.play = {
+              ...campaign.play,
+              groups: campaign.play.groups.map((g) => ({
+                ...g,
+                memberIds: g.memberIds.map((m) => ids.get(m) ?? m),
+              })),
+              turn: { status: 'stopped' },
+            }
           await db.campaigns.add(campaign)
           await db.skills.bulkPut(skills)
           await db.entities.bulkAdd(entities)

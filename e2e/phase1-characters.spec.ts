@@ -118,12 +118,12 @@ test('scenario 2 (part): create a Gobelin template and add 5 numbered copies', a
     await expect(instances.getByText(`Gobelin ${n}`, { exact: true })).toBeVisible()
   await expectNoSeriousA11yViolations(page)
 
-  // In play mode, the enemies appear in the quick-access bar.
+  // In play mode, the enemies are listed (not yet in a group) in the side bar.
   await page.getByRole('radio', { name: 'En jeu' }).click()
   await expect(
     page
       .getByRole('complementary', { name: 'Accès rapide' })
-      .getByRole('button', { name: 'Ouvrir la fiche de Gobelin 5' }),
+      .getByRole('button', { name: 'Manipuler Gobelin 5' }),
   ).toBeVisible()
 })
 

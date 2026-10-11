@@ -2,6 +2,13 @@ import { create } from 'zustand'
 import { db } from '@/db/db'
 import { normalizeEntityShape } from '@/domain/entity'
 import { adoptSkills, syncEntitySkills, type SkillLibrary } from '@/domain/skills'
+import {
+  emptyPlayState,
+  normalizePlayState,
+  pruneMembers,
+  removeMember,
+  type PlayState,
+} from '@/domain/turns'
 import type { Entity, Skill, SkillDefinition } from '@/domain/types'
 import { createHistory, withHistory } from './history'
 
@@ -16,6 +23,8 @@ interface Tracked {
   entities: EntityMap
   /** Skill library of the campaign (D-218), undoable together with the characters. */
   skills: SkillLibrary
+  /** Groups and current turn (D-226), undoable together with the characters. */
+  play: PlayState
 }
 
 export interface CampaignDataState extends Tracked {
@@ -33,6 +42,8 @@ export interface CampaignDataState extends Tracked {
   removeSkill: (id: string, label: string) => void
   /** Links loose skills (template, import) to the library, adding definitions as needed. */
   adoptLooseSkills: (skills: Skill[], label: string) => Skill[]
+  /** Changes the groups / turn state as one undoable step. */
+  updatePlay: (recipe: (play: PlayState) => PlayState, label: string) => void
 }
 
 export const campaignHistory = createHistory<Tracked>({ limit: 200 })
@@ -40,22 +51,30 @@ export const campaignHistory = createHistory<Tracked>({ limit: 200 })
 export const useCampaignStore = create<CampaignDataState>()(
   withHistory(
     campaignHistory,
-    { select: ({ entities, skills }) => ({ entities, skills }) },
+    { select: ({ entities, skills, play }) => ({ entities, skills, play }) },
     (set, get) => ({
       campaignId: null,
       status: 'idle',
       entities: {},
       skills: {},
+      play: emptyPlayState(),
 
       load: async (campaignId) => {
         if (get().campaignId === campaignId && get().status !== 'idle') return
         await flushAutosave()
-        campaignHistory
-          .getState()
-          .untracked(() => set({ campaignId, status: 'loading', entities: {}, skills: {} }))
-        const [list, defs] = await Promise.all([
+        campaignHistory.getState().untracked(() =>
+          set({
+            campaignId,
+            status: 'loading',
+            entities: {},
+            skills: {},
+            play: emptyPlayState(),
+          }),
+        )
+        const [list, defs, record] = await Promise.all([
           db.entities.where('campaignId').equals(campaignId).toArray(),
           db.skills.where('campaignId').equals(campaignId).toArray(),
+          db.campaigns.get(campaignId),
         ])
         if (get().campaignId !== campaignId) return // another campaign was opened meanwhile
         const stored = Object.fromEntries(defs.map((d) => [d.id, d]))
@@ -66,7 +85,9 @@ export const useCampaignStore = create<CampaignDataState>()(
         const adopted = adoptSkills(list.map(normalizeEntityShape), stored, campaignId)
         const entities = Object.fromEntries(adopted.entities.map((e) => [e.id, e]))
         const skills = { ...stored, ...Object.fromEntries(adopted.added.map((d) => [d.id, d])) }
-        campaignHistory.getState().untracked(() => set({ status: 'ready', entities, skills }))
+        const play = pruneMembers(normalizePlayState(record?.play), new Set(Object.keys(entities)))
+        lastSavedPlay = play
+        campaignHistory.getState().untracked(() => set({ status: 'ready', entities, skills, play }))
         campaignHistory.getState().clear()
       },
 
@@ -74,9 +95,15 @@ export const useCampaignStore = create<CampaignDataState>()(
         await flushAutosave()
         lastSaved = {}
         lastSavedSkills = {}
-        campaignHistory
-          .getState()
-          .untracked(() => set({ campaignId: null, status: 'idle', entities: {}, skills: {} }))
+        campaignHistory.getState().untracked(() =>
+          set({
+            campaignId: null,
+            status: 'idle',
+            entities: {},
+            skills: {},
+            play: emptyPlayState(),
+          }),
+        )
         campaignHistory.getState().clear()
       },
 
@@ -113,11 +140,13 @@ export const useCampaignStore = create<CampaignDataState>()(
           set((s) => {
             if (!s.entities[id]) return s
             const { [id]: _removed, ...rest } = s.entities
+            // A removed character leaves its group (and hands the turn on if it was playing).
+            const play = removeMember(s.play, id)
             // Familiars of a removed master become free (restored together by undo).
             for (const [key, e] of Object.entries(rest))
               if (e.kind === 'familiar' && e.details.ownerId === id)
                 rest[key] = { ...e, details: { ...e.details, ownerId: null } }
-            return { entities: rest }
+            return { entities: rest, play }
           }),
         ),
 
@@ -152,6 +181,9 @@ export const useCampaignStore = create<CampaignDataState>()(
           }),
         ),
 
+      updatePlay: (recipe, label) =>
+        campaignHistory.getState().transaction(label, () => set((s) => ({ play: recipe(s.play) }))),
+
       adoptLooseSkills: (loose, label) => {
         const s = get()
         const holder = { skills: loose } as Entity
@@ -178,12 +210,13 @@ export const useCampaignStore = create<CampaignDataState>()(
 const AUTOSAVE_DELAY = 250
 let lastSaved: EntityMap = {}
 let lastSavedSkills: SkillLibrary = {}
+let lastSavedPlay: PlayState = emptyPlayState()
 let timer: ReturnType<typeof setTimeout> | null = null
 let pending: Promise<void> = Promise.resolve()
 
 async function save(): Promise<void> {
   timer = null
-  const { entities, skills, campaignId, status } = useCampaignStore.getState()
+  const { entities, skills, play, campaignId, status } = useCampaignStore.getState()
   if (!campaignId || status !== 'ready') return
   const previous = lastSaved
   const changed = Object.values(entities).filter((e) => previous[e.id] !== e)
@@ -191,10 +224,20 @@ async function save(): Promise<void> {
   const previousSkills = lastSavedSkills
   const changedSkills = Object.values(skills).filter((d) => previousSkills[d.id] !== d)
   const removedSkills = Object.keys(previousSkills).filter((id) => !skills[id])
-  if (!changed.length && !removed.length && !changedSkills.length && !removedSkills.length) return
+  const playChanged = play !== lastSavedPlay
+  if (
+    !changed.length &&
+    !removed.length &&
+    !changedSkills.length &&
+    !removedSkills.length &&
+    !playChanged
+  )
+    return
+  lastSavedPlay = play
   lastSaved = entities
   lastSavedSkills = skills
-  await db.transaction('rw', db.entities, db.skills, async () => {
+  await db.transaction('rw', db.entities, db.skills, db.campaigns, async () => {
+    if (playChanged) await db.campaigns.update(campaignId, { play })
     if (changed.length) await db.entities.bulkPut(changed)
     if (removed.length) await db.entities.bulkDelete(removed)
     if (changedSkills.length) await db.skills.bulkPut(changedSkills)
@@ -222,7 +265,9 @@ export async function flushAutosave(): Promise<void> {
 useCampaignStore.subscribe((state, previous) => {
   if (
     state.status === 'ready' &&
-    (state.entities !== previous.entities || state.skills !== previous.skills)
+    (state.entities !== previous.entities ||
+      state.skills !== previous.skills ||
+      state.play !== previous.play)
   )
     schedule()
 })

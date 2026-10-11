@@ -33,6 +33,9 @@ interface UiState {
   /** Character sheet opened over the map in play mode (not persisted). */
   playSheetId: string | null
   openPlaySheet: (id: string | null) => void
+  /** Character in the quick manipulation panel (not persisted). */
+  quickId: string | null
+  openQuick: (id: string | null) => void
 }
 
 export const useUiStore = create<UiState>()(
@@ -42,7 +45,9 @@ export const useUiStore = create<UiState>()(
       diceOpen: false,
       setDiceOpen: (diceOpen) => set({ diceOpen }),
       playSheetId: null,
-      openPlaySheet: (playSheetId) => set({ playSheetId }),
+      openPlaySheet: (playSheetId) => set({ playSheetId, quickId: null }),
+      quickId: null,
+      openQuick: (quickId) => set({ quickId, playSheetId: null }),
       rememberPrepSection: (campaignId, section) =>
         set((s) =>
           s.lastPrepSection[campaignId] === section
