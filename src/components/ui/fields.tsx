@@ -272,7 +272,7 @@ export function CheckboxField({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-4 shrink-0 rounded accent-[var(--codex-accent)]"
+        className="mt-0.5 size-[18px] shrink-0 cursor-pointer rounded-[5px] accent-[var(--codex-accent)]"
       />
       <label htmlFor={id} className="text-sm text-ink">
         {label}

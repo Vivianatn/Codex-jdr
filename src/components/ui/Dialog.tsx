@@ -34,7 +34,7 @@ export function Dialog({
       <RadixDialog.Portal>
         <RadixDialog.Overlay asChild>
           <motion.div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+            className="fixed inset-0 z-40 bg-[var(--codex-scrim)]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.15 }}
@@ -44,12 +44,12 @@ export function Dialog({
         <RadixDialog.Content asChild {...(description ? {} : { 'aria-describedby': undefined })}>
           <motion.div
             className={cn(
-              'fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md overflow-y-auto rounded-lg border border-line bg-surface p-6 shadow-overlay',
+              'fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[480px] overflow-y-auto rounded-[20px] border border-line bg-surface-raised p-6 shadow-overlay',
               className,
             )}
-            initial={{ opacity: 0, x: '-50%', y: 'calc(-50% + 8px)', scale: 0.98 }}
+            initial={{ opacity: 0, x: '-50%', y: '-50%', scale: 0.96 }}
             animate={{ opacity: 1, x: '-50%', y: '-50%', scale: 1 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
@@ -64,7 +64,7 @@ export function Dialog({
               </div>
               <RadixDialog.Close
                 aria-label={t.common.close}
-                className="-mt-1 -mr-2 inline-flex size-8 items-center justify-center rounded-sm text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+                className="-mt-1.5 -mr-2 inline-flex size-9 items-center justify-center rounded-[10px] text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
               >
                 <X className="size-4" />
               </RadixDialog.Close>

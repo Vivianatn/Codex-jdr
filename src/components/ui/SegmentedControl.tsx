@@ -36,7 +36,7 @@ export function SegmentedControl<V extends string>({
       onValueChange={(next) => next && onValueChange(next as V)}
       aria-label={label}
       className={cn(
-        'inline-flex items-center gap-0.5 rounded-md border border-line bg-surface-2 p-0.5',
+        'inline-flex items-center gap-0.5 rounded-[11px] border border-line bg-surface-2 p-[3px]',
         className,
       )}
     >
@@ -47,16 +47,16 @@ export function SegmentedControl<V extends string>({
             key={option.value}
             value={option.value}
             className={cn(
-              'relative inline-flex items-center gap-1.5 rounded-sm font-medium transition-colors duration-150',
-              size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-sm',
-              active ? 'text-ink' : 'text-ink-muted hover:text-ink',
+              'relative inline-flex items-center gap-1.5 rounded-lg transition-colors duration-150',
+              size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3.5 text-[0.8125rem]',
+              active ? 'font-semibold text-ink' : 'font-medium text-ink-muted hover:text-ink',
             )}
           >
             {active && (
               <motion.span
                 layoutId={highlightId}
-                className="absolute inset-0 rounded-sm bg-surface shadow-soft"
-                transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                className="absolute inset-0 rounded-lg bg-surface shadow-soft"
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 aria-hidden
               />
             )}

@@ -20,7 +20,7 @@ import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
 
 const MENU_ITEM =
-  'flex min-h-9 cursor-pointer items-center rounded-sm px-2.5 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2'
+  'flex min-h-9 cursor-pointer items-center rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2'
 
 /** Item library shared by every campaign (SPEC §2.3, §10). */
 export function ItemsPage() {
@@ -113,7 +113,7 @@ export function ItemsPage() {
                     <DropdownMenu.Content
                       align="end"
                       sideOffset={4}
-                      className="z-50 max-h-72 min-w-48 overflow-y-auto rounded-md border border-line bg-surface p-1 shadow-overlay"
+                      className="z-50 max-h-72 min-w-48 overflow-y-auto rounded-xl border border-line bg-surface-raised p-1 shadow-lifted"
                     >
                       {characters.map((c) => (
                         <DropdownMenu.Item

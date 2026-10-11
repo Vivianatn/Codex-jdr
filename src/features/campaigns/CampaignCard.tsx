@@ -8,7 +8,7 @@ import { formatRelativeTime, useIntlLocale, useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 
 const MENU_ITEM =
-  'flex h-9 cursor-pointer items-center gap-2 rounded-sm px-2.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2 [&>svg]:size-4 [&>svg]:text-ink-muted'
+  'flex h-9 cursor-pointer items-center gap-2 rounded-lg px-2.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2 [&>svg]:size-4 [&>svg]:text-ink-muted'
 
 const cardVariants = {
   hidden: { opacity: 0, y: 10 },
@@ -64,7 +64,7 @@ export function CampaignCard({
           <DropdownMenu.Content
             align="end"
             sideOffset={4}
-            className="z-50 min-w-44 rounded-md border border-line bg-surface p-1 shadow-overlay"
+            className="z-50 min-w-44 rounded-xl border border-line bg-surface-raised p-1 shadow-lifted"
           >
             <DropdownMenu.Item className={MENU_ITEM} onSelect={onRename}>
               <Pencil /> {t.common.rename}

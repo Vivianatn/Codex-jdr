@@ -1,8 +1,13 @@
 import { forwardRef, useId, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { CircleAlert } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
+/**
+ * Text field (DA §8.2): 3:1 border, focus = 2 px focus colour + soft halo,
+ * error = 2 px HP colour. The second pixel is an inset shadow (no layout shift).
+ */
 export const FIELD =
-  'w-full rounded-md border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/70 transition-colors hover:border-line-strong focus-visible:border-accent aria-invalid:border-hp'
+  'w-full rounded-[10px] border border-line-strong bg-surface px-3 text-[0.9375rem] text-ink placeholder:text-ink-muted transition-[border-color,box-shadow] duration-150 hover:border-ink-muted focus-visible:border-focus focus-visible:shadow-[inset_0_0_0_1px_var(--codex-focus),0_0_0_3px_var(--codex-accent-soft)] aria-invalid:border-hp aria-invalid:shadow-[inset_0_0_0_1px_var(--codex-hp)] disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-faint'
 
 interface FieldShellProps {
   label: string
@@ -28,14 +33,19 @@ export function FieldShell({
     <div className={cn('space-y-1.5', className)}>
       <label
         htmlFor={id}
-        className={cn('block text-sm font-medium text-ink', hideLabel && 'sr-only')}
+        className={cn('block text-[0.8125rem] font-semibold text-ink', hideLabel && 'sr-only')}
       >
         {label}
         {hint && <span className="ml-1 font-normal text-ink-muted">({hint})</span>}
       </label>
       {children}
       {error && (
-        <p id={`${id}-error`} role="alert" className="text-sm text-hp-text">
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="flex items-start gap-1.5 text-[0.8125rem] font-medium text-hp-text"
+        >
+          <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           {error}
         </p>
       )}

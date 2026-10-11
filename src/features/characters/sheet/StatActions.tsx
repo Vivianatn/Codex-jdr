@@ -6,8 +6,8 @@ import { IconButton } from '@/components/ui/Button'
 import type { MenuEntry } from './statMenu'
 
 const ITEM =
-  'flex min-h-9 cursor-pointer items-center rounded-sm px-2.5 py-1.5 text-sm text-ink outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-surface-2'
-const CONTENT = 'z-50 min-w-56 rounded-md border border-line bg-surface p-1 shadow-overlay'
+  'flex min-h-9 cursor-pointer items-center rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-surface-2'
+const CONTENT = 'z-50 min-w-56 rounded-xl border border-line bg-surface-raised p-1 shadow-lifted'
 
 /** "⋯" button menu (keyboard-friendly twin of the context menu). */
 export function StatMenuButton({ label, groups }: { label: string; groups: MenuEntry[][] }) {

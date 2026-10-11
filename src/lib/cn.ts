@@ -7,7 +7,7 @@ const twMerge = extendTailwindMerge({
   extend: {
     theme: {
       shadow: ['soft', 'lifted', 'overlay'],
-      radius: ['sm', 'md', 'lg'],
+      radius: ['sm', 'md', 'lg', 'xl'],
     },
   },
 })
