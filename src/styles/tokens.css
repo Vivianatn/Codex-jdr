@@ -1,0 +1,104 @@
+/*
+ * Codex design tokens — "Grimoire moderne".
+ * Raw values live here as --codex-* variables; Tailwind utilities are mapped
+ * onto them in index.css (@theme inline) so the theme can switch at runtime.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Base */
+  --codex-bg: #f7f5f0;
+  --codex-surface: #ffffff;
+  --codex-surface-2: #f1eee6;
+  --codex-surface-glass: rgb(255 255 255 / 0.72);
+  --codex-ink: #1f1d2b;
+  --codex-ink-muted: #6b6880;
+  --codex-line: #e4e0d6;
+  --codex-line-strong: #cfc9bb;
+
+  /* Accents */
+  --codex-accent: #6d5bd0;
+  --codex-accent-hover: #5c4ac0;
+  --codex-accent-contrast: #ffffff;
+  --codex-accent-soft: #ece9fa;
+  /* Accent tuned for text on the page background (AA contrast). */
+  --codex-accent-text: #5a48bd;
+  --codex-gold: #d9a441;
+  --codex-gold-soft: #f8edd6;
+  /* Gold is too light for text on ivory; use this when gold must be read. */
+  --codex-gold-text: #8a6417;
+
+  /* Semantic */
+  --codex-hp: #e05252;
+  --codex-hp-text: #b8322f;
+  --codex-heal: #3fa96b;
+  --codex-heal-text: #23774a;
+  --codex-warning: #e8a33d;
+  --codex-info: #4a90d9;
+
+  /* One colour per characteristic */
+  --codex-stat-strength: #b5483a;
+  --codex-stat-constitution: #5e8b4a;
+  --codex-stat-dexterity: #1e9e95;
+  --codex-stat-intelligence: #3e6fd8;
+  --codex-stat-charisma: #d3558f;
+  --codex-stat-wisdom: #8b5cc7;
+  --codex-stat-luck: #d9a441;
+
+  /* Shape & depth */
+  --codex-radius-sm: 8px;
+  --codex-radius: 12px;
+  --codex-radius-lg: 16px;
+  --codex-shadow-soft: 0 1px 2px rgb(31 29 43 / 0.04), 0 4px 16px rgb(31 29 43 / 0.06);
+  --codex-shadow-lifted: 0 2px 4px rgb(31 29 43 / 0.05), 0 12px 32px rgb(31 29 43 / 0.1);
+  --codex-shadow-overlay: 0 8px 40px rgb(31 29 43 / 0.18);
+  --codex-focus-ring: 0 0 0 2px var(--codex-bg), 0 0 0 4px var(--codex-accent);
+
+  /* Motion */
+  --codex-duration-fast: 150ms;
+  --codex-duration: 220ms;
+  --codex-duration-slow: 300ms;
+  --codex-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --codex-bg: #14131c;
+  --codex-surface: #1e1c29;
+  --codex-surface-2: #262435;
+  --codex-surface-glass: rgb(30 28 41 / 0.72);
+  --codex-ink: #edeaf5;
+  --codex-ink-muted: #a9a4bd;
+  --codex-line: #2f2c40;
+  --codex-line-strong: #423e57;
+
+  --codex-accent: #6d5bd0;
+  --codex-accent-hover: #7e6de0;
+  --codex-accent-contrast: #ffffff;
+  --codex-accent-soft: #2a2545;
+  --codex-accent-text: #a99cf2;
+  --codex-gold: #d9a441;
+  --codex-gold-soft: #3a2f1c;
+  --codex-gold-text: #e6bd6a;
+
+  --codex-hp: #e05252;
+  --codex-hp-text: #f08080;
+  --codex-heal: #3fa96b;
+  --codex-heal-text: #6fcf97;
+  --codex-warning: #e8a33d;
+  --codex-info: #4a90d9;
+
+  --codex-stat-strength: #d0675a;
+  --codex-stat-constitution: #7fae6a;
+  --codex-stat-dexterity: #34c0b5;
+  --codex-stat-intelligence: #6b93ec;
+  --codex-stat-charisma: #e57aab;
+  --codex-stat-wisdom: #a782dc;
+  --codex-stat-luck: #e2b65e;
+
+  --codex-shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
+  --codex-shadow-lifted: 0 2px 4px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.4);
+  --codex-shadow-overlay: 0 8px 40px rgb(0 0 0 / 0.55);
+}

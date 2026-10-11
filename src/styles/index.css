@@ -1,0 +1,121 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  --color-bg: var(--codex-bg);
+  --color-surface: var(--codex-surface);
+  --color-surface-2: var(--codex-surface-2);
+  --color-glass: var(--codex-surface-glass);
+  --color-ink: var(--codex-ink);
+  --color-ink-muted: var(--codex-ink-muted);
+  --color-line: var(--codex-line);
+  --color-line-strong: var(--codex-line-strong);
+
+  --color-accent: var(--codex-accent);
+  --color-accent-hover: var(--codex-accent-hover);
+  --color-accent-contrast: var(--codex-accent-contrast);
+  --color-accent-soft: var(--codex-accent-soft);
+  --color-accent-text: var(--codex-accent-text);
+  --color-gold: var(--codex-gold);
+  --color-gold-soft: var(--codex-gold-soft);
+  --color-gold-text: var(--codex-gold-text);
+
+  --color-hp: var(--codex-hp);
+  --color-hp-text: var(--codex-hp-text);
+  --color-heal: var(--codex-heal);
+  --color-heal-text: var(--codex-heal-text);
+  --color-warning: var(--codex-warning);
+  --color-info: var(--codex-info);
+
+  --color-stat-strength: var(--codex-stat-strength);
+  --color-stat-constitution: var(--codex-stat-constitution);
+  --color-stat-dexterity: var(--codex-stat-dexterity);
+  --color-stat-intelligence: var(--codex-stat-intelligence);
+  --color-stat-charisma: var(--codex-stat-charisma);
+  --color-stat-wisdom: var(--codex-stat-wisdom);
+  --color-stat-luck: var(--codex-stat-luck);
+
+  --radius-sm: var(--codex-radius-sm);
+  --radius-md: var(--codex-radius);
+  --radius-lg: var(--codex-radius-lg);
+
+  --shadow-soft: var(--codex-shadow-soft);
+  --shadow-lifted: var(--codex-shadow-lifted);
+  --shadow-overlay: var(--codex-shadow-overlay);
+
+  --font-display: 'Cinzel', 'Times New Roman', serif;
+  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --ease-codex: var(--codex-ease);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--codex-bg);
+    color: var(--codex-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    transition:
+      background-color var(--codex-duration) var(--codex-ease),
+      color var(--codex-duration) var(--codex-ease);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.02em;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--codex-focus-ring);
+  }
+
+  ::selection {
+    background: var(--codex-accent-soft);
+  }
+}
+
+@layer utilities {
+  /* Stat values and counters must not jitter when digits change. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .glass {
+    background: var(--codex-surface-glass);
+    backdrop-filter: blur(12px) saturate(1.2);
+  }
+}
+
+/* Animation preference: the OS setting always wins, then the in-app option. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after,
+:root[data-motion='off'] *,
+:root[data-motion='off'] *::before,
+:root[data-motion='off'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+}

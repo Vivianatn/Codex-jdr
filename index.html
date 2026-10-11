@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr" data-theme="light" data-motion="full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Codex — le compagnon du Maître du Jeu" />
+    <meta name="theme-color" content="#F7F5F0" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Codex</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light/dark flash.
+      try {
+        var saved = JSON.parse(localStorage.getItem('codex.settings') || '{}').state || {}
+        var theme = saved.theme || 'light'
+        if (theme === 'system')
+          theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.theme = theme
+        document.documentElement.dataset.motion = saved.animations || 'full'
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
