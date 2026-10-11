@@ -1,5 +1,6 @@
 import { starterConditions } from '@/domain/conditions'
 import type { RollRecord } from '@/domain/rolls'
+import type { GameMap } from '@/domain/maps'
 import type { PlayState } from '@/domain/turns'
 import type {
   ConditionTemplate,
@@ -43,8 +44,17 @@ export function emptyLibrary(): CampaignLibrary {
   return { conditions: starterConditions(), macros: [] }
 }
 
+/** A picture stored once and referenced by id (map backgrounds, mood images). */
+export interface Asset {
+  id: string
+  campaignId: string
+  /** data: URL */
+  data: string
+  name: string
+}
+
 /** Current version of the campaign export file. Bump it when the shape changes. */
-export const CAMPAIGN_EXPORT_VERSION = 6
+export const CAMPAIGN_EXPORT_VERSION = 7
 export const CAMPAIGN_EXPORT_FORMAT = 'codex-campaign'
 
 export interface CampaignExport {
@@ -59,4 +69,7 @@ export interface CampaignExport {
   /** Enemy templates and item library of the campaign (v6+). */
   bestiary: EnemyTemplate[]
   items: LibraryItem[]
+  /** Battle maps and their pictures (v7+). */
+  maps: GameMap[]
+  assets: Asset[]
 }

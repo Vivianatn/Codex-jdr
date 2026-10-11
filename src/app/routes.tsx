@@ -5,7 +5,13 @@ import { PrepLayout } from '@/features/prep/PrepLayout'
 import { PrepSectionPage } from '@/features/prep/PrepSectionPage'
 import { CampaignLayout } from '@/features/shell/CampaignLayout'
 import { EntitySheetPage, TemplateSheetPage } from '@/features/characters/SheetPages'
-import { ResumePrep, RouteError, WizardRoute } from './RouteHelpers'
+import {
+  MapEditorRoute,
+  PlayerViewRoute,
+  ResumePrep,
+  RouteError,
+  WizardRoute,
+} from './RouteHelpers'
 
 export const routes: RouteObject[] = [
   { path: '/', element: <CampaignsPage />, errorElement: <RouteError /> },
@@ -24,10 +30,12 @@ export const routes: RouteObject[] = [
           { path: 'new', element: <WizardRoute /> },
           { path: 'e/:entityId', element: <EntitySheetPage /> },
           { path: 't/:templateId', element: <TemplateSheetPage /> },
+          { path: 'm/:mapId', element: <MapEditorRoute /> },
         ],
       },
       { path: 'play', element: <PlayLayout /> },
     ],
   },
+  { path: '/c/:campaignId/view', element: <PlayerViewRoute />, errorElement: <RouteError /> },
   { path: '*', element: <Navigate to="/" replace /> },
 ]

@@ -1,3 +1,4 @@
+import { ENTITY_DRAG_TYPE } from '@/features/maps/dragTypes'
 import { ChevronDown, ChevronUp, Plus, Trash, UserPlus, Users, X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -255,6 +256,11 @@ function OpenButton({ entity, current = false }: { entity: Entity; current?: boo
     <button
       type="button"
       onClick={() => openQuick(entity.id)}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData(ENTITY_DRAG_TYPE, entity.id)
+        e.dataTransfer.effectAllowed = 'copyMove'
+      }}
       aria-label={t.turns.open(name)}
       aria-current={current ? 'step' : undefined}
       className={cn(

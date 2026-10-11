@@ -1,8 +1,4 @@
-import { Map } from 'lucide-react'
-import { Link } from 'react-router'
-import { buttonClasses } from '@/components/ui/buttonStyles'
-import { EmptyState } from '@/components/ui/EmptyState'
-import { useCampaign } from '@/features/shell/campaignContext'
+import { lazy, Suspense } from 'react'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
 import { GroupsPanel } from './GroupsPanel'
@@ -10,13 +6,15 @@ import { PlaySheetDrawer } from './PlaySheetDrawer'
 import { QuickPanel } from './QuickPanel'
 import { TurnBanner } from './TurnBanner'
 
+// Konva is heavy: the map loads with the play screen only.
+const PlayMap = lazy(() => import('@/features/maps/PlayMap').then((m) => ({ default: m.PlayMap })))
+
 /**
  * "En jeu" mode: the turn banner on top (D-226), the map, and the groups in
  * the sidebar. Sheets and the quick panel slide over the map.
  */
 export function PlayLayout() {
   const t = useT()
-  const campaign = useCampaign()
 
   return (
     <PageTransition className="flex-row">
@@ -25,21 +23,12 @@ export function PlayLayout() {
         <main
           id="main"
           aria-label={t.play.mapRegion}
-          className="relative flex min-w-0 flex-1 items-center justify-center overflow-hidden bg-surface-2"
+          className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-surface-2"
         >
           <MapBackdrop />
-          <div className="glass relative rounded-lg border border-line shadow-lifted">
-            <EmptyState
-              icon={<Map />}
-              title={t.play.noMapTitle}
-              body={t.play.noMapBody}
-              actions={
-                <Link to={`/c/${campaign.id}/prep/maps`} className={buttonClasses('secondary')}>
-                  {t.play.goToMaps}
-                </Link>
-              }
-            />
-          </div>
+          <Suspense fallback={null}>
+            <PlayMap />
+          </Suspense>
         </main>
       </div>
 

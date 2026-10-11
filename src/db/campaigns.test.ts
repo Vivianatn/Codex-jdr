@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { CampaignImportError, createCampaignRepository, parseExport } from './campaigns'
 import { createEntity } from '@/domain/entity'
 import { newItem } from '@/domain/items'
+import { newElement, newMap } from '@/domain/maps'
 import { defaultRules } from '@/rules'
 import { CodexDB } from './db'
 
@@ -101,12 +102,14 @@ describe('export / import', () => {
 
 describe('schema', () => {
   it('opens at the current version with the expected tables', async () => {
-    expect(db.verno).toBe(6)
+    expect(db.verno).toBe(7)
     expect(db.tables.map((t) => t.name).sort()).toEqual([
+      'assets',
       'bestiary',
       'campaigns',
       'entities',
       'itemLibrary',
+      'maps',
       'rolls',
       'skills',
     ])
@@ -119,7 +122,7 @@ describe('campaign content', () => {
   it('creates campaigns with the default house rules', async () => {
     const c = await repo.create({ name: 'Règles' })
     expect(c.rules).toEqual(rules)
-    const changed = { ...rules, grid: { cellMeters: 1.5 } }
+    const changed = { ...rules, grid: { ...rules.grid, cellMeters: 1.5 } }
     await repo.updateRules(c.id, changed)
     expect((await repo.get(c.id))?.rules.grid.cellMeters).toBe(1.5)
   })
@@ -256,5 +259,54 @@ describe('everything belongs to its campaign (D-224)', () => {
     expect(await db.bestiary.where('campaignId').equals(c.id).count()).toBe(0)
     expect(await db.itemLibrary.where('campaignId').equals(c.id).count()).toBe(0)
     expect(await db.bestiary.where('campaignId').equals(campaign.id).count()).toBe(1)
+  })
+
+  it('export carries maps and their images; a copy relinks tokens, links and the map in play', async () => {
+    const rules = defaultRules()
+    const c = await repo.create({ name: 'Avec cartes' })
+    const hero = createEntity('player', c.id, rules, { identity: { pseudo: 'Lyra' } })
+    await db.entities.add(hero)
+    await db.assets.add({
+      id: 'img',
+      campaignId: c.id,
+      data: 'data:image/png;base64,AA==',
+      name: 'fond.png',
+    })
+    const cellar = newMap(c.id, { name: 'Cave' })
+    const hall = newMap(c.id, { name: 'Salle' })
+    hall.background.assetId = 'img'
+    hall.tokens.push({ id: 'tk', entityId: hero.id, col: 1, row: 1, size: 1, hidden: false })
+    hall.elements.push(newElement('link', { col: 2, row: 2 }, { link: { mapId: cellar.id } }))
+    await db.maps.bulkAdd([cellar, hall])
+    await db.campaigns.update(c.id, {
+      play: {
+        groups: [],
+        turn: { status: 'stopped' },
+        mapId: hall.id,
+        display: { mode: 'map', imageAssetId: null },
+      },
+    })
+
+    const file = await repo.exportCampaign(c.id)
+    expect(file.maps.map((m) => m.name).sort()).toEqual(['Cave', 'Salle'])
+    expect(file.assets.map((a) => a.id)).toEqual(['img'])
+
+    const { campaign } = await repo.importCampaign(file)
+    const maps = await db.maps.where('campaignId').equals(campaign.id).toArray()
+    const [hero2] = await db.entities.where('campaignId').equals(campaign.id).toArray()
+    const [asset2] = await db.assets.where('campaignId').equals(campaign.id).toArray()
+    const hall2 = maps.find((m) => m.name === 'Salle')!
+    const cellar2 = maps.find((m) => m.name === 'Cave')!
+    expect(hall2.id).not.toBe(hall.id)
+    expect(hall2.tokens[0]!.entityId).toBe(hero2!.id)
+    expect(hall2.background.assetId).toBe(asset2!.id)
+    expect(asset2!.id).not.toBe('img')
+    expect(hall2.elements[0]!.link!.mapId).toBe(cellar2.id)
+    expect(campaign.play?.mapId).toBe(hall2.id)
+
+    await repo.remove(c.id)
+    expect(await db.maps.where('campaignId').equals(c.id).count()).toBe(0)
+    expect(await db.assets.where('campaignId').equals(c.id).count()).toBe(0)
+    expect(await db.maps.where('campaignId').equals(campaign.id).count()).toBe(2)
   })
 })

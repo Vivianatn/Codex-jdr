@@ -6,6 +6,7 @@ import { CharacterListPage } from '@/features/characters/CharacterListPage'
 import { ConditionsPage } from '@/features/library/ConditionsPage'
 import { ItemsPage } from '@/features/library/ItemsPage'
 import { SkillsPage } from '@/features/library/SkillsPage'
+import { MapsPage } from '@/features/maps/MapsPage'
 import { RulesPage } from '@/features/rules/RulesPage'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
@@ -15,7 +16,15 @@ import { SECTION_ICONS, sectionLabel } from './sections'
 
 type PlaceholderSection = Exclude<
   PrepSection,
-  'dashboard' | 'players' | 'allies' | 'bestiary' | 'rules' | 'items' | 'conditions' | 'skills'
+  | 'dashboard'
+  | 'players'
+  | 'allies'
+  | 'bestiary'
+  | 'rules'
+  | 'items'
+  | 'conditions'
+  | 'skills'
+  | 'maps'
 >
 
 /** Routes each prep section to its page. Sections not built yet show an informative empty state. */
@@ -71,6 +80,8 @@ export function PrepSectionPage() {
       return <SkillsPage />
     case 'conditions':
       return <ConditionsPage />
+    case 'maps':
+      return <MapsPage />
     default:
       return <Placeholder section={section} />
   }

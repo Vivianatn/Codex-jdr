@@ -1,7 +1,9 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { normalizeEntityShape } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
+import type { GameMap } from '@/domain/maps'
 import type { EnemyTemplate, Entity, Item, LibraryItem, SkillDefinition } from '@/domain/types'
+import type { Asset } from './types'
 import { starterConditions } from '@/domain/conditions'
 import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules } from '@/rules'
 import { emptyLibrary, type Campaign } from './types'
@@ -48,6 +50,16 @@ export const SCHEMA = {
     itemLibrary: 'id, campaignId, name',
     skills: 'id, campaignId',
   },
+  7: {
+    campaigns: 'id, name, updatedAt, lastOpenedAt',
+    entities: 'id, campaignId, [campaignId+kind]',
+    bestiary: 'id, campaignId, updatedAt',
+    rolls: 'id, campaignId, [campaignId+at]',
+    itemLibrary: 'id, campaignId, name',
+    skills: 'id, campaignId',
+    maps: 'id, campaignId',
+    assets: 'id, campaignId',
+  },
 } as const
 
 /**
@@ -65,6 +77,10 @@ export class CodexDB extends Dexie {
   itemLibrary!: EntityTable<LibraryItem, 'id'>
   /** Skill library, per campaign (D-218). */
   skills!: EntityTable<SkillDefinition, 'id'>
+  /** Battle maps of each campaign (D-228). */
+  maps!: EntityTable<GameMap, 'id'>
+  /** Big pictures (map backgrounds, mood images), kept out of frequently saved records. */
+  assets!: EntityTable<Asset, 'id'>
 
   constructor(name: string = DB_NAME) {
     super(name)
@@ -150,6 +166,8 @@ export class CodexDB extends Dexie {
             })
         }
       })
+    // v7 (D-228): battle maps and image assets.
+    this.version(7).stores(SCHEMA[7])
   }
 }
 

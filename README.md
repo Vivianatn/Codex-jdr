@@ -2,7 +2,7 @@
 
 Le compagnon du Maître du Jeu : un logiciel **local-first** pour préparer et mener des parties de jeu de rôle (système maison inspiré de _Donjons & Dragons_). Toutes les données restent sur ton appareil, dans le navigateur (IndexedDB). Tu peux exporter une campagne en JSON à tout moment.
 
-> État : **phase 3 — tours par groupes** terminée (elle remplace le suivi de combat du cahier des charges, voir [DECISIONS D-226](docs/DECISIONS.md)) : groupes de personnages, bandeau des tours, tour du MJ, manipulation rapide en partie. Prochaine étape : le plateau (phase 4).
+> État : **phase 4 — plateau** terminée : cartes à grille carrée ou hexagonale, image de fond, décor, murs et portes, objets interactifs (coffres, pièges, leviers, passages, PNJ), brouillard de guerre, zones d’effet, mesures et vue joueurs sur un second écran (voir [DECISIONS D-228 à D-233](docs/DECISIONS.md)). Les tours par groupes (phase 3) remplacent le suivi de combat du cahier des charges.
 
 ## Démarrer
 
@@ -24,6 +24,7 @@ npm run dev        # http://localhost:5173
 | `npm run typecheck` | TypeScript strict                                       |
 | `npm run test:unit` | Tests unitaires et de composants (Vitest)               |
 | `npm run test:e2e`  | Tests end-to-end et accessibilité (Playwright + axe)    |
+| `npm run test:perf` | Mesure d’images/s du plateau avec 200 jetons            |
 | `npm run format`    | Prettier                                                |
 
 Le hook de pre-commit (Husky) lance le lint, la vérification des types et les tests unitaires.

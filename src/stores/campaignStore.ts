@@ -9,7 +9,10 @@ import {
   removeMember,
   type PlayState,
 } from '@/domain/turns'
+import { normalizeMap, type GameMap } from '@/domain/maps'
 import type { Entity, Skill, SkillDefinition } from '@/domain/types'
+
+export type MapLibrary = Record<string, GameMap>
 import { createHistory, withHistory } from './history'
 
 /**
@@ -25,6 +28,8 @@ interface Tracked {
   skills: SkillLibrary
   /** Groups and current turn (D-226), undoable together with the characters. */
   play: PlayState
+  /** Battle maps (D-228): token moves, fog, objects are undoable like the rest. */
+  maps: MapLibrary
 }
 
 export interface CampaignDataState extends Tracked {
@@ -44,6 +49,10 @@ export interface CampaignDataState extends Tracked {
   adoptLooseSkills: (skills: Skill[], label: string) => Skill[]
   /** Changes the groups / turn state as one undoable step. */
   updatePlay: (recipe: (play: PlayState) => PlayState, label: string) => void
+  addMap: (map: GameMap, label: string) => void
+  /** `recipe` returns the new map; returning the same map records nothing. */
+  updateMap: (id: string, recipe: (map: GameMap) => GameMap, label: string) => void
+  removeMap: (id: string, label: string) => void
 }
 
 export const campaignHistory = createHistory<Tracked>({ limit: 200 })
@@ -51,13 +60,14 @@ export const campaignHistory = createHistory<Tracked>({ limit: 200 })
 export const useCampaignStore = create<CampaignDataState>()(
   withHistory(
     campaignHistory,
-    { select: ({ entities, skills, play }) => ({ entities, skills, play }) },
+    { select: ({ entities, skills, play, maps }) => ({ entities, skills, play, maps }) },
     (set, get) => ({
       campaignId: null,
       status: 'idle',
       entities: {},
       skills: {},
       play: emptyPlayState(),
+      maps: {},
 
       load: async (campaignId) => {
         if (get().campaignId === campaignId && get().status !== 'idle') return
@@ -69,12 +79,14 @@ export const useCampaignStore = create<CampaignDataState>()(
             entities: {},
             skills: {},
             play: emptyPlayState(),
+            maps: {},
           }),
         )
-        const [list, defs, record] = await Promise.all([
+        const [list, defs, record, mapList] = await Promise.all([
           db.entities.where('campaignId').equals(campaignId).toArray(),
           db.skills.where('campaignId').equals(campaignId).toArray(),
           db.campaigns.get(campaignId),
+          db.maps.where('campaignId').equals(campaignId).toArray(),
         ])
         if (get().campaignId !== campaignId) return // another campaign was opened meanwhile
         const stored = Object.fromEntries(defs.map((d) => [d.id, d]))
@@ -87,7 +99,11 @@ export const useCampaignStore = create<CampaignDataState>()(
         const skills = { ...stored, ...Object.fromEntries(adopted.added.map((d) => [d.id, d])) }
         const play = pruneMembers(normalizePlayState(record?.play), new Set(Object.keys(entities)))
         lastSavedPlay = play
-        campaignHistory.getState().untracked(() => set({ status: 'ready', entities, skills, play }))
+        const maps = Object.fromEntries(mapList.map((m) => [m.id, normalizeMap(m)]))
+        lastSavedMaps = Object.fromEntries(mapList.map((m) => [m.id, m]))
+        campaignHistory
+          .getState()
+          .untracked(() => set({ status: 'ready', entities, skills, play, maps }))
         campaignHistory.getState().clear()
       },
 
@@ -102,6 +118,7 @@ export const useCampaignStore = create<CampaignDataState>()(
             entities: {},
             skills: {},
             play: emptyPlayState(),
+            maps: {},
           }),
         )
         campaignHistory.getState().clear()
@@ -146,7 +163,16 @@ export const useCampaignStore = create<CampaignDataState>()(
             for (const [key, e] of Object.entries(rest))
               if (e.kind === 'familiar' && e.details.ownerId === id)
                 rest[key] = { ...e, details: { ...e.details, ownerId: null } }
-            return { entities: rest, play }
+            // Its tokens leave the maps too.
+            const maps = Object.fromEntries(
+              Object.entries(s.maps).map(([key, m]) => [
+                key,
+                m.tokens.some((t) => t.entityId === id)
+                  ? { ...m, tokens: m.tokens.filter((t) => t.entityId !== id) }
+                  : m,
+              ]),
+            )
+            return { entities: rest, play, maps }
           }),
         ),
 
@@ -184,6 +210,32 @@ export const useCampaignStore = create<CampaignDataState>()(
       updatePlay: (recipe, label) =>
         campaignHistory.getState().transaction(label, () => set((s) => ({ play: recipe(s.play) }))),
 
+      addMap: (map, label) =>
+        campaignHistory
+          .getState()
+          .transaction(label, () => set((s) => ({ maps: { ...s.maps, [map.id]: map } }))),
+
+      updateMap: (id, recipe, label) =>
+        campaignHistory.getState().transaction(label, () =>
+          set((s) => {
+            const current = s.maps[id]
+            if (!current) return s
+            const next = recipe(current)
+            if (next === current) return s
+            return { maps: { ...s.maps, [id]: { ...next, updatedAt: Date.now() } } }
+          }),
+        ),
+
+      removeMap: (id, label) =>
+        campaignHistory.getState().transaction(label, () =>
+          set((s) => {
+            if (!s.maps[id]) return s
+            const { [id]: _removed, ...maps } = s.maps
+            const play = s.play.mapId === id ? { ...s.play, mapId: null } : s.play
+            return { maps, play }
+          }),
+        ),
+
       adoptLooseSkills: (loose, label) => {
         const s = get()
         const holder = { skills: loose } as Entity
@@ -211,12 +263,13 @@ const AUTOSAVE_DELAY = 250
 let lastSaved: EntityMap = {}
 let lastSavedSkills: SkillLibrary = {}
 let lastSavedPlay: PlayState = emptyPlayState()
+let lastSavedMaps: MapLibrary = {}
 let timer: ReturnType<typeof setTimeout> | null = null
 let pending: Promise<void> = Promise.resolve()
 
 async function save(): Promise<void> {
   timer = null
-  const { entities, skills, play, campaignId, status } = useCampaignStore.getState()
+  const { entities, skills, play, maps, campaignId, status } = useCampaignStore.getState()
   if (!campaignId || status !== 'ready') return
   const previous = lastSaved
   const changed = Object.values(entities).filter((e) => previous[e.id] !== e)
@@ -225,18 +278,26 @@ async function save(): Promise<void> {
   const changedSkills = Object.values(skills).filter((d) => previousSkills[d.id] !== d)
   const removedSkills = Object.keys(previousSkills).filter((id) => !skills[id])
   const playChanged = play !== lastSavedPlay
+  const previousMaps = lastSavedMaps
+  const changedMaps = Object.values(maps).filter((m) => previousMaps[m.id] !== m)
+  const removedMaps = Object.keys(previousMaps).filter((id) => !maps[id])
   if (
     !changed.length &&
     !removed.length &&
     !changedSkills.length &&
     !removedSkills.length &&
-    !playChanged
+    !playChanged &&
+    !changedMaps.length &&
+    !removedMaps.length
   )
     return
   lastSavedPlay = play
+  lastSavedMaps = maps
   lastSaved = entities
   lastSavedSkills = skills
-  await db.transaction('rw', db.entities, db.skills, db.campaigns, async () => {
+  await db.transaction('rw', [db.entities, db.skills, db.campaigns, db.maps], async () => {
+    if (changedMaps.length) await db.maps.bulkPut(changedMaps)
+    if (removedMaps.length) await db.maps.bulkDelete(removedMaps)
     if (playChanged) await db.campaigns.update(campaignId, { play })
     if (changed.length) await db.entities.bulkPut(changed)
     if (removed.length) await db.entities.bulkDelete(removed)
@@ -267,7 +328,8 @@ useCampaignStore.subscribe((state, previous) => {
     state.status === 'ready' &&
     (state.entities !== previous.entities ||
       state.skills !== previous.skills ||
-      state.play !== previous.play)
+      state.play !== previous.play ||
+      state.maps !== previous.maps)
   )
     schedule()
 })

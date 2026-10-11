@@ -1,6 +1,7 @@
 import { newId } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
 import { normalizeItem } from '@/domain/items'
+import { normalizeMap, type GameMap } from '@/domain/maps'
 import type {
   ConditionTemplate,
   EnemyTemplate,
@@ -16,6 +17,7 @@ import {
   CAMPAIGN_EXPORT_FORMAT,
   CAMPAIGN_EXPORT_VERSION,
   emptyLibrary,
+  type Asset,
   type Campaign,
   type CampaignExport,
   type CampaignLibrary,
@@ -103,11 +105,22 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
     async remove(id: string): Promise<void> {
       await db.transaction(
         'rw',
-        [db.campaigns, db.entities, db.rolls, db.skills, db.bestiary, db.itemLibrary],
+        [
+          db.campaigns,
+          db.entities,
+          db.rolls,
+          db.skills,
+          db.bestiary,
+          db.itemLibrary,
+          db.maps,
+          db.assets,
+        ],
         async () => {
           await db.entities.where('campaignId').equals(id).delete()
           await db.bestiary.where('campaignId').equals(id).delete()
           await db.itemLibrary.where('campaignId').equals(id).delete()
+          await db.maps.where('campaignId').equals(id).delete()
+          await db.assets.where('campaignId').equals(id).delete()
           await db.skills.where('campaignId').equals(id).delete()
           await db.rolls.where('campaignId').equals(id).delete()
           await db.campaigns.delete(id)
@@ -123,6 +136,8 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
       const skills = await db.skills.where('campaignId').equals(id).sortBy('createdAt')
       const bestiary = await db.bestiary.where('campaignId').equals(id).toArray()
       const items = await db.itemLibrary.where('campaignId').equals(id).toArray()
+      const maps = await db.maps.where('campaignId').equals(id).toArray()
+      const assets = await db.assets.where('campaignId').equals(id).toArray()
       return {
         format: CAMPAIGN_EXPORT_FORMAT,
         version: CAMPAIGN_EXPORT_VERSION,
@@ -133,6 +148,8 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
         skills,
         bestiary,
         items,
+        maps,
+        assets,
       }
     },
 
@@ -141,7 +158,16 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
       const data = parseExport(input)
       return db.transaction(
         'rw',
-        [db.campaigns, db.entities, db.rolls, db.skills, db.bestiary, db.itemLibrary],
+        [
+          db.campaigns,
+          db.entities,
+          db.rolls,
+          db.skills,
+          db.bestiary,
+          db.itemLibrary,
+          db.maps,
+          db.assets,
+        ],
         async () => {
           const existing = await db.campaigns.get(data.campaign.id)
           const campaign: Campaign = existing
@@ -208,6 +234,53 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
               campaignId: campaign.id,
             })),
           )
+          // Maps keep pointing at the right characters, maps and pictures.
+          const mapIds = new Map(data.maps.map((m) => [m.id, remap ? newId() : m.id]))
+          const assetIds = new Map(data.assets.map((a) => [a.id, remap ? newId() : a.id]))
+          await db.assets.bulkPut(
+            data.assets.map((a) => ({ ...a, id: assetIds.get(a.id)!, campaignId: campaign.id })),
+          )
+          await db.maps.bulkPut(
+            data.maps.map((m) => ({
+              ...m,
+              id: mapIds.get(m.id)!,
+              campaignId: campaign.id,
+              background: {
+                ...m.background,
+                assetId: m.background.assetId ? (assetIds.get(m.background.assetId) ?? null) : null,
+              },
+              tokens: m.tokens
+                .filter((t) => ids.has(t.entityId))
+                .map((t) => ({ ...t, entityId: ids.get(t.entityId)! })),
+              elements: m.elements.map((el) => ({
+                ...el,
+                ...(el.link
+                  ? { link: { mapId: el.link.mapId ? (mapIds.get(el.link.mapId) ?? null) : null } }
+                  : {}),
+                ...(el.npc
+                  ? {
+                      npc: {
+                        entityId: el.npc.entityId ? (ids.get(el.npc.entityId) ?? null) : null,
+                      },
+                    }
+                  : {}),
+              })),
+            })),
+          )
+          if (campaign.play) {
+            const play = campaign.play
+            campaign.play = {
+              ...play,
+              mapId: play.mapId ? (mapIds.get(play.mapId) ?? null) : null,
+              display: {
+                ...play.display,
+                imageAssetId: play.display?.imageAssetId
+                  ? (assetIds.get(play.display.imageAssetId) ?? null)
+                  : null,
+              },
+            }
+            await db.campaigns.put(campaign)
+          }
           await db.itemLibrary.bulkPut(
             data.items.map((i) => ({ ...i, id: remap ? newId() : i.id, campaignId: campaign.id })),
           )
@@ -315,5 +388,13 @@ export function parseExport(input: string | unknown): CampaignExport {
     skills,
     bestiary,
     items,
+    maps: (Array.isArray(data.maps) ? data.maps : [])
+      .filter(
+        (m): m is GameMap => isRecord(m) && typeof m.id === 'string' && typeof m.name === 'string',
+      )
+      .map((m) => normalizeMap({ ...m, campaignId: campaign.id })),
+    assets: (Array.isArray(data.assets) ? data.assets : []).filter(
+      (a): a is Asset => isRecord(a) && typeof a.id === 'string' && typeof a.data === 'string',
+    ),
   }
 }

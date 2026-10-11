@@ -54,7 +54,7 @@ test('exports a campaign, deletes it and re-imports it identically', async ({ pa
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/^codex-aller-retour-\d{4}-\d{2}-\d{2}\.json$/)
   const file = JSON.parse(await readFile(await download.path(), 'utf8'))
-  expect(file).toMatchObject({ format: 'codex-campaign', version: 6 })
+  expect(file).toMatchObject({ format: 'codex-campaign', version: 7 })
 
   await page.getByRole('button', { name: /Plus d’actions — Aller-retour/ }).click()
   await page.getByRole('menuitem', { name: 'Supprimer' }).click()

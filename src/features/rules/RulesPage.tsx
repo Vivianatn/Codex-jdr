@@ -240,6 +240,35 @@ export function RulesPage() {
               className="max-w-48"
               onCommit={(cellMeters) => patch('grid', { cellMeters })}
             />
+            <SelectField<RulesConfig['grid']['diagonal']>
+              label={t.rulesPage.diagonal}
+              value={rules.grid.diagonal}
+              onChange={(diagonal) => patch('grid', { diagonal })}
+              options={(['euclidean', 'chebyshev', 'alternate'] as const).map((v) => ({
+                value: v,
+                label: t.rulesPage.diagonals[v],
+              }))}
+              className="max-w-md"
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <NumberInput
+                label={t.rulesPage.movementBase}
+                hint={t.rulesPage.movementHint}
+                value={rules.movement.baseCells}
+                min={0}
+                max={100}
+                onCommit={(baseCells) => patch('movement', { baseCells })}
+              />
+              <NumberInput
+                label={t.rulesPage.movementPerDex}
+                hint={t.rulesPage.movementHint}
+                value={rules.movement.perDexterity}
+                min={0}
+                max={10}
+                integer={false}
+                onCommit={(perDexterity) => patch('movement', { perDexterity })}
+              />
+            </div>
           </Section>
 
           <Section title={t.rulesPage.hpThresholds}>

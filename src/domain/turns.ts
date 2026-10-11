@@ -19,13 +19,28 @@ export type TurnState =
   | { status: 'playing'; round: number; groupId: string; memberId: string }
   | { status: 'gm'; round: number }
 
+export interface PlayerDisplay {
+  /** What the players' window shows (SPEC §5.3). */
+  mode: 'map' | 'image' | 'pause'
+  /** Mood picture shown full screen in "image" mode. */
+  imageAssetId: string | null
+}
+
 export interface PlayState {
   groups: PlayGroup[]
   turn: TurnState
+  /** Map in play (D-228), or null. */
+  mapId: string | null
+  display: PlayerDisplay
 }
 
 export function emptyPlayState(): PlayState {
-  return { groups: [], turn: { status: 'stopped' } }
+  return {
+    groups: [],
+    turn: { status: 'stopped' },
+    mapId: null,
+    display: { mode: 'map', imageAssetId: null },
+  }
 }
 
 /** Fills missing fields of a saved play state (or none). */
@@ -39,7 +54,16 @@ export function normalizePlayState(raw: unknown): PlayState {
       )
     : []
   const turn = value.turn && typeof value.turn === 'object' ? value.turn : { status: 'stopped' }
-  return { groups, turn: turn as TurnState }
+  const display =
+    value.display && typeof value.display === 'object'
+      ? { ...emptyPlayState().display, ...value.display }
+      : emptyPlayState().display
+  return {
+    groups,
+    turn: turn as TurnState,
+    mapId: typeof value.mapId === 'string' ? value.mapId : null,
+    display,
+  }
 }
 
 // ---------------------------------------------------------------------------

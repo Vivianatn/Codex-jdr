@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, useParams, useRouteError } from 'react-router'
 import { CreationWizard } from '@/features/characters/wizard/CreationWizard'
 import { useT } from '@/i18n'
@@ -24,4 +25,28 @@ export function RouteError() {
 export function WizardRoute() {
   const { section = '' } = useParams()
   return <CreationWizard section={section} />
+}
+
+// The map screens carry Konva: they load on demand.
+const MapEditorPage = lazy(() =>
+  import('@/features/maps/MapEditorPage').then((m) => ({ default: m.MapEditorPage })),
+)
+const PlayerView = lazy(() =>
+  import('@/features/maps/PlayerView').then((m) => ({ default: m.PlayerView })),
+)
+
+export function MapEditorRoute() {
+  return (
+    <Suspense fallback={null}>
+      <MapEditorPage />
+    </Suspense>
+  )
+}
+
+export function PlayerViewRoute() {
+  return (
+    <Suspense fallback={null}>
+      <PlayerView />
+    </Suspense>
+  )
 }

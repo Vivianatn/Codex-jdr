@@ -49,6 +49,13 @@ export interface RulesConfig {
   }
   grid: {
     cellMeters: number
+    /** How the ruler counts diagonals on square grids (D-228). */
+    diagonal: 'euclidean' | 'chebyshev' | 'alternate'
+  }
+  movement: {
+    /** Movement range shown when dragging a token: base + Dexterity × perDexterity cells; both 0 = off. */
+    baseCells: number
+    perDexterity: number
   }
   /*
    * Everything below is OFF by default: Codex imposes no mechanic the GM has
@@ -127,7 +134,8 @@ export const DEFAULT_RULES: RulesConfig = {
     extraSkillEveryLevels: 10,
     enforceOnCreation: ['player'],
   },
-  grid: { cellMeters: 1 },
+  grid: { cellMeters: 1, diagonal: 'euclidean' },
+  movement: { baseCells: 0, perDexterity: 0 },
   combat: { strengthDamageBonus: false, unarmedDamage: '' },
   defense: { fromDexterity: false, fromEquipment: false },
   carry: { kgPerStrength: 0, overloadedDexPenalty: 0 },
@@ -171,6 +179,8 @@ export function withDefaultRules(input: unknown): RulesConfig {
   }
   const merged = merge(defaultRules(), input) as RulesConfig
   if (!['none', 'linear', 'table'].includes(merged.xp.mode)) merged.xp.mode = 'none'
+  if (!['euclidean', 'chebyshev', 'alternate'].includes(merged.grid.diagonal))
+    merged.grid.diagonal = 'euclidean'
   return merged
 }
 

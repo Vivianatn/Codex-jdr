@@ -4,6 +4,45 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Phase 4 — Plateau (2026-10-11)
+
+### D-228 · Cartes de la campagne
+
+- Une carte (`src/domain/maps.ts`, table `maps`) regroupe sa grille (carrée ou hexagonale, taille de case, décalage, couleur, opacité), son image de fond, son décor, ses objets interactifs (coffre, piège, levier, passage vers une autre carte, PNJ, note du MJ), ses murs et portes, ses jetons, ses dessins et son brouillard. Elle appartient à sa campagne (D-224).
+- Les cartes vivent dans le store de campagne, à côté des personnages et de l'état de jeu : déplacer un jeton, ouvrir une porte ou déclencher un piège avec ses dégâts forment **une seule** entrée d'annulation.
+- Toutes les actions de jeu sur une carte passent par `src/features/game/mapActions.ts` (placement, déplacement, portes, crochetage, perception de groupe, pièges, zones d'effet).
+- La carte en jeu est `play.mapId`. Un passage permet d'en changer en un clic.
+
+### D-229 · Images dans une table `assets`
+
+Les fonds de carte et les images d'ambiance sont stockés à part (table `assets`, WebP, 4096 px au plus, 15 Mo au plus à l'import). Une carte ne garde que l'identifiant de son image, si bien que la sauvegarde automatique (fréquente) reste légère. L'export v7 contient `maps` et `assets`. Une copie à l'import renumérote tout : jetons, passages, PNJ, fond, carte en jeu et image d'ambiance.
+
+### D-230 · Mesures et déplacements : rien d'imposé
+
+- Distance diagonale configurable (`grid.diagonal`) : euclidienne par défaut (la plus neutre pour « 1 case = 1 m »), Chebyshev ou alternée (1-2-1).
+- Portée de déplacement (`movement.baseCells`, `movement.perDexterity`) : **0 par défaut**, donc aucun cercle de portée n'est affiché tant que le MJ ne l'a pas réglée (D-217).
+- Les murs et les portes fermées bloquent le glisser d'un jeton. Maj permet de forcer.
+
+### D-231 · Brouillard de guerre
+
+- Désactivé par défaut. Le MJ révèle ou masque au pinceau ou au rectangle. Il voit le brouillard en transparence, les joueurs ne voient rien dessous.
+- Révélation automatique autour des jetons de joueurs (rayon en cases, ligne de vue arrêtée par les murs et les portes fermées) : désactivée par défaut, à activer par carte.
+- Les ennemis posés sur une carte avec brouillard arrivent cachés aux joueurs.
+
+### D-232 · Vue joueurs (second écran)
+
+- `#/c/:id/view` s'ouvre dans une autre fenêtre. Elle ne charge **pas** le store de campagne, pour éviter que deux fenêtres sauvegardent en même temps : elle lit IndexedDB en direct (Dexie `liveQuery`, qui fonctionne entre onglets).
+- La caméra du MJ et les signalements (ping, Alt + clic) passent par un `BroadcastChannel` (`codex-view-<campagne>`). La vue joueurs suit la caméra du MJ, ajustée à la taille de sa fenêtre, ou passe en caméra libre.
+- Le MJ choisit ce qu'affichent les joueurs : la carte, une image d'ambiance ou une pause. Les joueurs ne voient ni le calque MJ, ni les éléments cachés, ni les pièges non repérés, ni les PV des ennemis.
+
+### D-233 · Rendu et performances
+
+- Le plateau utilise Konva (react-konva 18, compatible React 18), réparti en calques : statique (fond, grille, décor, objets, murs), jetons, brouillard et dessins, puis superpositions.
+- Les écrans de carte sont chargés à la demande (`React.lazy`), si bien que Konva reste hors du bundle principal.
+- Les jetons sont mémoïsés : bouger la caméra ne recalcule pas les 200 jetons.
+- Mesure (`npm run test:perf`, Chromium sans écran, rendu logiciel) : **≈ 35 images/s avec 200 jetons** pendant le zoom et le déplacement, contre ≈ 42 images/s sans aucun jeton dans le même harnais. Le test n'échoue que sous 20 images/s. Il tourne seul, car en parallèle les autres tests faussent la mesure.
+- Dans l'éditeur, les panneaux sont posés à côté de la carte pour ne pas en masquer une partie. En jeu, ils flottent par-dessus, le temps d'une action.
+
 ## Phase 3 — Tours par groupes (2026-10-11)
 
 ### D-226 · Le suivi de combat est remplacé par des tours par groupes

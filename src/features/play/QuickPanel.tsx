@@ -1,3 +1,4 @@
+import { MapTokenBlock } from '@/features/maps/MapTokenBlock'
 import { motion } from 'framer-motion'
 import { FileText, Minus, Plus, Shield, Sword, X } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
@@ -67,6 +68,7 @@ export function QuickPanel() {
         }}
       />
       <div className="mt-4 space-y-5">
+        <MapTokenBlock entity={entity} />
         <StatsBlock entity={entity} />
         <ItemsBlock entity={entity} />
         <ConditionsBlock entity={entity} />
