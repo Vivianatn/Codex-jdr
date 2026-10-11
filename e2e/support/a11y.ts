@@ -17,3 +17,17 @@ export async function expectNoSeriousA11yViolations(page: Page) {
     serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
   ).toEqual([])
 }
+
+/**
+ * Starts the app with its own "Animations : désactivées" setting, so audits and
+ * assertions never run in the middle of a fade (axe would measure faded text).
+ */
+export async function disableAppAnimations(page: Page) {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('codex.settings'))
+      localStorage.setItem(
+        'codex.settings',
+        JSON.stringify({ state: { theme: 'light', animations: 'off', locale: 'fr' }, version: 1 }),
+      )
+  })
+}

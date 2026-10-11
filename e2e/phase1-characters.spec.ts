@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
-import { expectNoSeriousA11yViolations } from './support/a11y'
+import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
 
 const STATS = [
   'Force',
@@ -67,6 +67,7 @@ async function createPlayer(page: Page, pseudo: string, audit = false) {
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
+  await disableAppAnimations(page)
   await page.goto('/')
 })
 

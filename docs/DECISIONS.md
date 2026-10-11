@@ -64,7 +64,7 @@ Le format passe en `version: 2` et contient `entities`. Les fichiers v1 (phase 0
 ### D-111 · Tests
 
 - Les tests de composants rendent l'application entière (routeur, Dexie sur fake-indexeddb, animations coupées). Le délai d'attente de Testing Library passe à 4 s et celui d'un test à 20 s : l'assistant tape des dizaines de champs.
-- Les audits axe des tests e2e attendent la fin des animations : un contraste mesuré pendant un fondu (texte encore semi-transparent) donnait de faux positifs.
+- Les tests e2e démarrent l'app avec son réglage « Animations : désactivées » (et les audits axe attendent en plus la fin de toute animation CSS) : un contraste mesuré pendant un fondu, avec du texte encore semi-transparent, donnait de faux positifs intermittents.
 - Playwright utilise la moitié des cœurs (`workers: '50%'`) avec un délai de 60 s par test : chaque test pilote toute l'application.
 
 ---
