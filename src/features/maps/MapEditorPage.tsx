@@ -35,6 +35,11 @@ export function MapEditorPage() {
   const { mapId } = useParams()
   const map = useCampaignStore((s) => (mapId ? s.maps[mapId] : undefined))
   const entities = useCampaignStore((s) => s.entities)
+  const maps = useCampaignStore((s) => s.maps)
+  const mapNames = useMemo(
+    () => Object.fromEntries(Object.values(maps).map((m) => [m.id, m.name])),
+    [maps],
+  )
   const updateMap = useCampaignStore((s) => s.updateMap)
   const updatePlay = useCampaignStore((s) => s.updatePlay)
   const selection = useMapViewStore((s) => s.selection)
@@ -142,6 +147,7 @@ export function MapEditorPage() {
             viewer="gm"
             mode="edit"
             labels={labels}
+            mapNames={mapNames}
             onChange={onChange}
             onBlocked={(m) => toast(m)}
             calibrateCells={calibrateCells}

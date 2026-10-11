@@ -204,15 +204,29 @@ export function MapSettingsPanel({
             checked={map.grid.visible}
             onChange={(visible) => patch((m) => ({ ...m, grid: { ...m.grid, visible } }))}
           />
-          <label className="flex items-center gap-1.5 text-sm text-ink">
-            {t.maps.gridColor}
-            <input
-              type="color"
-              value={map.grid.color}
-              onChange={(e) => patch((m) => ({ ...m, grid: { ...m.grid, color: e.target.value } }))}
-              className="h-7 w-9 cursor-pointer rounded border border-line bg-transparent"
-            />
-          </label>
+          <CheckboxField
+            label={t.maps.gridAuto}
+            checked={map.grid.color === 'auto'}
+            onChange={(auto) =>
+              patch((m) => ({
+                ...m,
+                grid: { ...m.grid, color: auto ? 'auto' : '#211C26', opacity: auto ? 1 : 0.25 },
+              }))
+            }
+          />
+          {map.grid.color !== 'auto' && (
+            <label className="flex items-center gap-1.5 text-sm text-ink">
+              {t.maps.gridColor}
+              <input
+                type="color"
+                value={map.grid.color}
+                onChange={(e) =>
+                  patch((m) => ({ ...m, grid: { ...m.grid, color: e.target.value } }))
+                }
+                className="h-7 w-9 cursor-pointer rounded border border-line-strong bg-transparent"
+              />
+            </label>
+          )}
         </div>
         <NumberInput
           label={t.maps.calibrateCells}

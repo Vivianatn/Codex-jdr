@@ -184,8 +184,9 @@ export function newMap(
       offsetX: 0,
       offsetY: 0,
       visible: true,
-      color: '#1f1d2b',
-      opacity: 0.25,
+      // 'auto' follows the board theme (DA §9.1); the GM may pick a colour.
+      color: 'auto',
+      opacity: 1,
     },
     background: { assetId: null, x: 0, y: 0, scale: 1, opacity: 1 },
     elements: [],

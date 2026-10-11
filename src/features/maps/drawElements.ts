@@ -1,17 +1,24 @@
 import type { ElementKind, MapElement } from '@/domain/maps'
+import { drawBoardIcon } from './boardIcons'
+import { DA_CELL, type BoardTheme } from './boardTheme'
 
 /**
- * Procedural drawings of map elements (decor and objects) on a 2D canvas, in
- * the element's local box (0,0)–(w,h). Map art uses fixed "ink on parchment"
- * colours that read on any background, not the UI theme.
+ * Drawings of map elements on a 2D canvas, in the element's local box
+ * (0,0)–(w,h). Decor is "ink on parchment" (one stroke, flat fills from the
+ * board theme); interactive objects sit on a plate with their icon so they
+ * read on any background (DA §9.6).
  */
 
 type Ctx = CanvasRenderingContext2D
 
-const INK = '#2b2233'
+interface DrawContext {
+  theme: BoardTheme
+  /** Size of a cell in map pixels; DA sizes are given for 70 px. */
+  cell: number
+}
 
 function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number) {
-  const rr = Math.min(r, w / 2, h / 2)
+  const rr = Math.max(0, Math.min(r, w / 2, h / 2))
   ctx.beginPath()
   ctx.moveTo(x + rr, y)
   ctx.arcTo(x + w, y, x + w, y + h, rr)
@@ -34,30 +41,56 @@ function blob(ctx: Ctx, cx: number, cy: number, r: number, bumps: number, seed: 
   ctx.closePath()
 }
 
-function fillStroke(ctx: Ctx, fill: string, stroke = INK, width = 1.5) {
+function ink(ctx: Ctx, d: DrawContext, fill: string, width = 1.5) {
+  const u = d.cell / DA_CELL
   ctx.fillStyle = fill
   ctx.fill()
-  ctx.strokeStyle = stroke
-  ctx.lineWidth = width
+  ctx.strokeStyle = d.theme.decor.stroke
+  ctx.lineWidth = width * u
   ctx.stroke()
 }
 
-type Drawer = (ctx: Ctx, w: number, h: number, el: MapElement) => void
+/** Plate under an interactive object: 40 × 40 at 70 px cells, coloured inner edge. */
+function plate(ctx: Ctx, d: DrawContext, w: number, h: number, color: string) {
+  const u = d.cell / DA_CELL
+  const s = 40 * u
+  roundRect(ctx, (w - s) / 2, (h - s) / 2, s, s, 8 * u)
+  ctx.fillStyle = d.theme.plate
+  ctx.fill()
+  roundRect(ctx, (w - s) / 2 + u, (h - s) / 2 + u, s - 2 * u, s - 2 * u, 7 * u)
+  ctx.strokeStyle = color
+  ctx.lineWidth = 2 * u
+  ctx.stroke()
+}
+
+/** Zone covering the element's cells (trap, passage). */
+function zone(ctx: Ctx, d: DrawContext, w: number, h: number, stroke: string, fill: string) {
+  const u = d.cell / DA_CELL
+  roundRect(ctx, u, u, w - 2 * u, h - 2 * u, 4 * u)
+  ctx.fillStyle = fill
+  ctx.fill()
+  ctx.setLineDash([6 * u, 4 * u])
+  ctx.strokeStyle = stroke
+  ctx.lineWidth = 2 * u
+  ctx.stroke()
+  ctx.setLineDash([])
+}
+
+type Drawer = (ctx: Ctx, w: number, h: number, el: MapElement, d: DrawContext) => void
 
 const DRAWERS: Record<ElementKind, Drawer> = {
-  tree(ctx, w, h) {
+  tree(ctx, w, h, _el, d) {
     const r = Math.min(w, h) * 0.46
     blob(ctx, w / 2, h / 2, r, 7, 1)
-    fillStroke(ctx, '#3f7d3a', '#1f3d1c', 2)
-    blob(ctx, w / 2 - r * 0.15, h / 2 - r * 0.15, r * 0.55, 6, 3)
-    ctx.fillStyle = 'rgba(140, 200, 110, 0.45)'
-    ctx.fill()
+    ink(ctx, d, d.theme.decor.fill, 2)
+    blob(ctx, w / 2 - r * 0.12, h / 2 - r * 0.12, r * 0.55, 6, 3)
+    ink(ctx, d, d.theme.decor.fillDeep, 1)
   },
-  bush(ctx, w, h) {
+  bush(ctx, w, h, _el, d) {
     blob(ctx, w / 2, h / 2, Math.min(w, h) * 0.38, 6, 2)
-    fillStroke(ctx, '#5c9a45', '#2b4d20')
+    ink(ctx, d, d.theme.decor.fill)
   },
-  rock(ctx, w, h) {
+  rock(ctx, w, h, _el, d) {
     ctx.beginPath()
     ctx.moveTo(w * 0.15, h * 0.65)
     ctx.lineTo(w * 0.3, h * 0.2)
@@ -66,13 +99,16 @@ const DRAWERS: Record<ElementKind, Drawer> = {
     ctx.lineTo(w * 0.65, h * 0.88)
     ctx.lineTo(w * 0.28, h * 0.85)
     ctx.closePath()
-    fillStroke(ctx, '#8f8a86', '#4a4542', 2)
+    ink(ctx, d, d.theme.decor.fillDeep, 2)
   },
-  water(ctx, w, h) {
-    roundRect(ctx, 1, 1, w - 2, h - 2, Math.min(w, h) * 0.3)
-    fillStroke(ctx, 'rgba(74, 144, 217, 0.65)', '#2f6db0')
-    ctx.strokeStyle = 'rgba(255,255,255,0.6)'
-    ctx.lineWidth = 1.5
+  water(ctx, w, h, _el, d) {
+    const u = d.cell / DA_CELL
+    roundRect(ctx, u, u, w - 2 * u, h - 2 * u, Math.min(w, h) * 0.3)
+    ctx.fillStyle = d.theme.decor.water
+    ctx.fill()
+    ctx.strokeStyle = d.theme.decor.waterEdge
+    ctx.lineWidth = 1.5 * u
+    ctx.stroke()
     for (let y = h * 0.3; y < h; y += h * 0.3) {
       ctx.beginPath()
       ctx.moveTo(w * 0.15, y)
@@ -81,35 +117,34 @@ const DRAWERS: Record<ElementKind, Drawer> = {
       ctx.stroke()
     }
   },
-  table(ctx, w, h) {
+  table(ctx, w, h, _el, d) {
     roundRect(ctx, w * 0.08, h * 0.15, w * 0.84, h * 0.7, 4)
-    fillStroke(ctx, '#9b6a3c', '#4d3218')
+    ink(ctx, d, d.theme.decor.fill)
   },
-  chair(ctx, w, h) {
+  chair(ctx, w, h, _el, d) {
     roundRect(ctx, w * 0.25, h * 0.3, w * 0.5, h * 0.5, 3)
-    fillStroke(ctx, '#a87444', '#4d3218')
+    ink(ctx, d, d.theme.decor.fill)
     roundRect(ctx, w * 0.25, h * 0.15, w * 0.5, h * 0.15, 2)
-    fillStroke(ctx, '#7a4f29', '#4d3218')
+    ink(ctx, d, d.theme.decor.fillDeep)
   },
-  bed(ctx, w, h) {
+  bed(ctx, w, h, _el, d) {
     roundRect(ctx, w * 0.1, h * 0.05, w * 0.8, h * 0.9, 4)
-    fillStroke(ctx, '#b33b3b', '#5c1d1d')
+    ink(ctx, d, d.theme.decor.fillDeep)
     roundRect(ctx, w * 0.2, h * 0.1, w * 0.6, h * 0.2, 4)
-    fillStroke(ctx, '#f4efe6', '#8a8070')
+    ink(ctx, d, d.theme.decor.fill)
   },
-  barrel(ctx, w, h) {
+  barrel(ctx, w, h, _el, d) {
     const r = Math.min(w, h) * 0.38
     ctx.beginPath()
     ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2)
-    fillStroke(ctx, '#8a5a2b', '#3d2712', 2)
+    ink(ctx, d, d.theme.decor.fill, 2)
     ctx.beginPath()
     ctx.arc(w / 2, h / 2, r * 0.6, 0, Math.PI * 2)
-    ctx.strokeStyle = '#3d2712'
     ctx.stroke()
   },
-  crate(ctx, w, h) {
+  crate(ctx, w, h, _el, d) {
     roundRect(ctx, w * 0.12, h * 0.12, w * 0.76, h * 0.76, 2)
-    fillStroke(ctx, '#b88a4e', '#5a3f1c', 2)
+    ink(ctx, d, d.theme.decor.fill, 2)
     ctx.beginPath()
     ctx.moveTo(w * 0.12, h * 0.12)
     ctx.lineTo(w * 0.88, h * 0.88)
@@ -117,44 +152,39 @@ const DRAWERS: Record<ElementKind, Drawer> = {
     ctx.lineTo(w * 0.12, h * 0.88)
     ctx.stroke()
   },
-  pillar(ctx, w, h) {
+  pillar(ctx, w, h, _el, d) {
     ctx.beginPath()
     ctx.arc(w / 2, h / 2, Math.min(w, h) * 0.4, 0, Math.PI * 2)
-    fillStroke(ctx, '#c9c2b6', '#5f5a52', 2)
+    ink(ctx, d, d.theme.decor.fill, 2)
     ctx.beginPath()
     ctx.arc(w / 2, h / 2, Math.min(w, h) * 0.26, 0, Math.PI * 2)
-    ctx.strokeStyle = '#8f887c'
     ctx.stroke()
   },
-  statue(ctx, w, h) {
+  statue(ctx, w, h, _el, d) {
     roundRect(ctx, w * 0.15, h * 0.15, w * 0.7, h * 0.7, 3)
-    fillStroke(ctx, '#bdb6a8', '#5f5a52', 2)
+    ink(ctx, d, d.theme.decor.fillDeep, 2)
     ctx.beginPath()
     ctx.arc(w / 2, h / 2, Math.min(w, h) * 0.2, 0, Math.PI * 2)
-    fillStroke(ctx, '#e0dbd1', '#5f5a52')
+    ink(ctx, d, d.theme.decor.fill)
   },
-  rug(ctx, w, h) {
+  rug(ctx, w, h, _el, d) {
     roundRect(ctx, w * 0.05, h * 0.05, w * 0.9, h * 0.9, 3)
-    fillStroke(ctx, 'rgba(160, 40, 60, 0.75)', '#5c1424')
+    ink(ctx, d, d.theme.decor.fillDeep)
     roundRect(ctx, w * 0.15, h * 0.15, w * 0.7, h * 0.7, 2)
-    ctx.strokeStyle = '#d9a441'
-    ctx.lineWidth = 1.5
     ctx.stroke()
   },
-  torch(ctx, w, h) {
-    const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.min(w, h) * 0.5)
-    g.addColorStop(0, 'rgba(255, 200, 80, 0.9)')
-    g.addColorStop(1, 'rgba(255, 140, 40, 0)')
+  torch(ctx, w, h, _el, d) {
+    const r = Math.min(w, h) * 0.5
+    const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, r)
+    g.addColorStop(0, d.theme.objects.torchHalo)
+    g.addColorStop(1, 'rgba(0,0,0,0)')
     ctx.fillStyle = g
     ctx.fillRect(0, 0, w, h)
-    ctx.beginPath()
-    ctx.arc(w / 2, h / 2, Math.min(w, h) * 0.12, 0, Math.PI * 2)
-    fillStroke(ctx, '#ffb347', '#a8551a')
+    drawBoardIcon(ctx, 'torch', w / 2, h / 2, Math.min(w, h) * 0.45, d.theme.objects.torch, 1.75)
   },
-  stairs(ctx, w, h) {
+  stairs(ctx, w, h, _el, d) {
     roundRect(ctx, w * 0.08, h * 0.08, w * 0.84, h * 0.84, 2)
-    fillStroke(ctx, '#a39a8c', '#4e483f')
-    ctx.strokeStyle = '#4e483f'
+    ink(ctx, d, d.theme.decor.fill)
     for (let i = 1; i < 5; i++) {
       const y = h * 0.08 + (h * 0.84 * i) / 5
       ctx.beginPath()
@@ -163,89 +193,74 @@ const DRAWERS: Record<ElementKind, Drawer> = {
       ctx.stroke()
     }
   },
-  chest(ctx, w, h, el) {
-    roundRect(ctx, w * 0.12, h * 0.25, w * 0.76, h * 0.55, 3)
-    fillStroke(ctx, el.chest?.opened ? '#c99a52' : '#9c6b2f', '#3d2712', 2)
-    ctx.fillStyle = '#d9a441'
-    ctx.fillRect(w * 0.45, h * 0.35, w * 0.1, h * 0.18)
-    ctx.strokeStyle = '#3d2712'
-    ctx.beginPath()
-    ctx.moveTo(w * 0.12, h * 0.42)
-    ctx.lineTo(w * 0.88, h * 0.42)
-    ctx.stroke()
+  chest(ctx, w, h, el, d) {
+    const u = d.cell / DA_CELL
+    const color = d.theme.objects.chest
+    plate(ctx, d, w, h, color)
+    drawBoardIcon(ctx, el.chest?.opened ? 'chestOpen' : 'chest', w / 2, h / 2, 24 * u, color)
   },
-  trap(ctx, w, h, el) {
-    ctx.setLineDash([4, 3])
-    ctx.beginPath()
-    ctx.arc(w / 2, h / 2, Math.min(w, h) * 0.4, 0, Math.PI * 2)
-    fillStroke(
+  trap(ctx, w, h, el, d) {
+    const u = d.cell / DA_CELL
+    const o = d.theme.objects
+    zone(
       ctx,
-      el.trap?.triggered ? 'rgba(224, 82, 82, 0.35)' : 'rgba(224, 82, 82, 0.18)',
-      '#c43d3d',
-      2,
+      d,
+      w,
+      h,
+      o.trap,
+      el.trap?.triggered ? o.trapFill.replace(/[\d.]+\)$/, '0.28)') : o.trapFill,
     )
-    ctx.setLineDash([])
+    drawBoardIcon(ctx, 'trap', w / 2, h / 2, 28 * u, o.trap)
+  },
+  lever(ctx, w, h, el, d) {
+    const u = d.cell / DA_CELL
+    const color = d.theme.objects.lever
+    plate(ctx, d, w, h, color)
+    drawBoardIcon(ctx, el.lever?.on ? 'leverOn' : 'leverOff', w / 2, h / 2, 24 * u, color)
+  },
+  link(ctx, w, h, _el, d) {
+    const u = d.cell / DA_CELL
+    const o = d.theme.objects
+    zone(ctx, d, w, h, o.passage, o.passageFill)
+    drawBoardIcon(ctx, 'passage', w / 2, h / 2, 28 * u, o.passage)
+  },
+  npc(ctx, w, h, _el, d) {
+    const r = Math.min(w, h) * 0.43
     ctx.beginPath()
-    ctx.moveTo(w * 0.32, h * 0.32)
-    ctx.lineTo(w * 0.68, h * 0.68)
-    ctx.moveTo(w * 0.68, h * 0.32)
-    ctx.lineTo(w * 0.32, h * 0.68)
-    ctx.strokeStyle = '#c43d3d'
-    ctx.lineWidth = 2.5
+    ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2)
+    ctx.fillStyle = d.theme.objects.npc
+    ctx.fill()
+    ctx.strokeStyle = d.theme.token.edge
+    ctx.lineWidth = d.theme.token.edgeWidth * (d.cell / DA_CELL)
     ctx.stroke()
+    drawBoardIcon(ctx, 'npc', w / 2, h / 2, r * 1.1, '#FFFFFF', 2)
   },
-  lever(ctx, w, h, el) {
-    roundRect(ctx, w * 0.3, h * 0.6, w * 0.4, h * 0.2, 2)
-    fillStroke(ctx, '#7d7a75', INK)
-    const on = el.lever?.on
-    ctx.beginPath()
-    ctx.moveTo(w / 2, h * 0.65)
-    ctx.lineTo(on ? w * 0.75 : w * 0.25, h * 0.25)
-    ctx.strokeStyle = INK
-    ctx.lineWidth = 3
+  note(ctx, w, h, _el, d) {
+    const u = d.cell / DA_CELL
+    const s = 34 * u
+    ctx.save()
+    ctx.translate(w / 2, h / 2)
+    ctx.rotate((-4 * Math.PI) / 180)
+    roundRect(ctx, -s / 2, -s / 2, s, s, 3 * u)
+    ctx.fillStyle = d.theme.objects.note
+    ctx.fill()
+    ctx.strokeStyle = d.theme.objects.noteEdge
+    ctx.lineWidth = u
     ctx.stroke()
-    ctx.beginPath()
-    ctx.arc(on ? w * 0.75 : w * 0.25, h * 0.25, Math.min(w, h) * 0.1, 0, Math.PI * 2)
-    fillStroke(ctx, on ? '#3fa96b' : '#e05252', INK)
-  },
-  link(ctx, w, h) {
-    roundRect(ctx, w * 0.15, h * 0.1, w * 0.7, h * 0.8, Math.min(w, h) * 0.3)
-    fillStroke(ctx, 'rgba(109, 91, 208, 0.75)', '#3b2f84', 2)
-    ctx.beginPath()
-    ctx.moveTo(w * 0.35, h / 2)
-    ctx.lineTo(w * 0.65, h / 2)
-    ctx.moveTo(w * 0.55, h * 0.38)
-    ctx.lineTo(w * 0.67, h / 2)
-    ctx.lineTo(w * 0.55, h * 0.62)
-    ctx.strokeStyle = '#ffffff'
-    ctx.lineWidth = 2.5
-    ctx.stroke()
-  },
-  npc(ctx, w, h) {
-    ctx.beginPath()
-    ctx.arc(w / 2, h / 2, Math.min(w, h) * 0.4, 0, Math.PI * 2)
-    fillStroke(ctx, '#e9d8a6', '#6b5a24', 2)
-    ctx.fillStyle = '#6b5a24'
-    ctx.font = `bold ${Math.round(Math.min(w, h) * 0.45)}px Inter, sans-serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('!', w / 2, h / 2 + 1)
-  },
-  note(ctx, w, h) {
-    roundRect(ctx, w * 0.15, h * 0.15, w * 0.7, h * 0.7, 2)
-    fillStroke(ctx, '#ffe68a', '#a68a1f')
-    ctx.strokeStyle = '#a68a1f'
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath()
-      ctx.moveTo(w * 0.27, h * (0.35 + i * 0.12))
-      ctx.lineTo(w * 0.73, h * (0.35 + i * 0.12))
-      ctx.stroke()
-    }
+    drawBoardIcon(ctx, 'note', 0, 0, 18 * u, d.theme.objects.noteIcon)
+    ctx.restore()
   },
 }
 
-export function drawElement(ctx: Ctx, el: MapElement, w: number, h: number) {
+export function drawElement(
+  ctx: Ctx,
+  el: MapElement,
+  w: number,
+  h: number,
+  theme: BoardTheme,
+  cell: number,
+) {
   ctx.save()
-  DRAWERS[el.kind](ctx, w, h, el)
+  DRAWERS[el.kind](ctx, w, h, el, { theme, cell })
   ctx.restore()
 }

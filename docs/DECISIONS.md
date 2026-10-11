@@ -4,6 +4,23 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Direction artistique « Codex à la chandelle » (2026-10-11)
+
+La référence est [CODEX-DA.md](CODEX-DA.md), produit par Claude Design à partir du cahier des charges. Les entrées ci-dessous notent seulement les écarts et les choix d'application.
+
+### D-235 · Thème sombre du mode En jeu appliqué à toute la page
+
+Le document pose `data-theme="dark"` sur le conteneur de l'écran En jeu. Mais les menus, toasts et boîtes de dialogue s'ouvrent hors de ce conteneur (portails Radix) et seraient restés clairs. Le réglage « En jeu, toujours en sombre » (activé par défaut) bascule donc toute la page tant que l'écran En jeu est affiché ; la Vue joueurs est toujours sombre. L'interrupteur de thème de l'en-tête, en jeu, lève aussi ce réglage. Le grain de papier n'apparaît qu'en Préparation.
+
+### D-236 · Plateau : thème en littéraux, tailles qui suivent la case
+
+- Les couleurs du plateau sont dans `src/features/maps/boardTheme.ts` (et non `src/board/`), à côté du canevas. Trois palettes : MJ clair, MJ sombre, joueurs.
+- Les tailles en pixels du document sont données pour une case de 70 px. Elles sont converties à la taille de case de la carte, donc elles suivent le zoom, sauf la grille, la mesure, les zones et les signalements, qui restent en pixels d'écran.
+- Les icônes du plateau sont les tracés Lucide (ISC), générés dans `boardIcons.ts` et dessinés en `Path2D`.
+- La grille des nouvelles cartes est en couleur « automatique » (celle du thème). Le MJ peut toujours choisir une couleur, et les cartes existantes gardent la leur.
+- La Vue joueurs ne montre jamais le nom d'un ennemi : la fonction « révéler le nom » du document n'existe pas encore.
+- Le portrait d'un personnage à terre est assombri plutôt que désaturé : un filtre Konva aurait obligé à mettre chaque jeton en cache.
+
 ## Phase 4 — Plateau (2026-10-11)
 
 ### D-228 · Cartes de la campagne

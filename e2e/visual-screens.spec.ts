@@ -8,6 +8,57 @@ import { createCampaign, importCharacter } from './support/app'
  * images land in test-results/screens/.
  */
 
+interface Point {
+  x: number
+  y: number
+}
+
+async function clickMap(page: Page, p: Point) {
+  const s = await page.evaluate(
+    (point) =>
+      (window as unknown as { __codexMap: { toScreen: (p: Point) => Point } }).__codexMap.toScreen(
+        point,
+      ),
+    p,
+  )
+  await page.mouse.click(s.x, s.y)
+}
+
+/** Copies the first player into an enemy and an ally, straight into IndexedDB. */
+function seedFoes(page: Page) {
+  return page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        const req = indexedDB.open('codex')
+        req.onsuccess = () => {
+          const idb = req.result
+          const read = idb.transaction('entities').objectStore('entities').getAll()
+          read.onsuccess = () => {
+            const model = read.result[0]
+            const tx = idb.transaction('entities', 'readwrite')
+            const put = (kind: string, pseudo: string, details: object, hp: number) =>
+              tx.objectStore('entities').put({
+                ...model,
+                id: crypto.randomUUID(),
+                kind,
+                details,
+                identity: { ...model.identity, pseudo, portrait: null, body: null },
+                hp: { ...model.hp, current: hp },
+              })
+            put(
+              'enemy',
+              'Goule affamée',
+              { templateId: null, copyNumber: 1, xpReward: 0, loot: '' },
+              6,
+            )
+            put('ally', 'Brann', { ownerId: null, role: '' }, 20)
+            tx.oncomplete = () => resolve()
+          }
+        }
+      }),
+  )
+}
+
 const shot = (page: Page, theme: string, name: string) =>
   page.screenshot({ path: `test-results/screens/${theme}-${name}.png` })
 
@@ -76,7 +127,39 @@ for (const theme of ['light', 'dark'] as const) {
       buffer: Buffer.from(await backgroundPng(page), 'base64'),
     })
     await expect(page.getByRole('button', { name: 'Retirer l’image' })).toBeVisible()
+    // Walls with a door, a chest and a trap (cells of 64 px).
+    const C = 64
+    const toolbar = page.getByRole('toolbar', { name: 'Outils' })
+    await toolbar.getByRole('button', { name: 'Tracer des murs' }).click()
+    for (const p of [
+      [1, 1],
+      [10, 1],
+      [10, 4],
+    ])
+      await clickMap(page, { x: p[0]! * C, y: p[1]! * C })
+    await page.keyboard.press('Escape')
+    await clickMap(page, { x: 10 * C, y: 5 * C })
+    await clickMap(page, { x: 10 * C, y: 8 * C })
+    await page.keyboard.press('Escape')
+    await toolbar.getByRole('button', { name: 'Placer une porte' }).click()
+    await clickMap(page, { x: 10 * C, y: 4 * C })
+    await clickMap(page, { x: 10 * C, y: 5 * C })
+    for (const [kind, col, row] of [
+      ['Coffre', 3, 2],
+      ['Piège', 7, 6],
+      ['Levier', 2, 6],
+    ] as const) {
+      await page.getByRole('button', { name: 'Éléments' }).click()
+      await page.getByRole('menuitem', { name: kind }).click()
+      await clickMap(page, { x: col * C + C / 2, y: row * C + C / 2 })
+    }
+    await toolbar.getByRole('button', { name: 'Sélection et déplacement' }).click()
+    await page.keyboard.press('Escape')
     await shot(page, theme, '09-map-editor')
+    await page.waitForTimeout(400)
+    await seedFoes(page)
+    await page.reload()
+    await expect(page.getByRole('heading', { level: 1, name: 'Ombreval' })).toBeVisible()
 
     // Play: a group, the tokens, a mini sheet.
     await page.getByRole('button', { name: 'Jouer cette carte' }).click()
@@ -89,8 +172,8 @@ for (const theme of ['light', 'dark'] as const) {
       })
       await card.getByRole('button', { name: 'Ajouter au groupe Le groupe' }).click()
     }
-    for (const name of ['Gorak', 'Lyra']) {
-      await card.getByRole('button', { name: `Manipuler ${name}` }).click()
+    for (const name of ['Gorak', 'Lyra', 'Goule affamée', 'Brann']) {
+      await page.getByRole('button', { name: `Manipuler ${name}` }).click()
       const quick = page.getByRole('complementary', { name: `Manipulation rapide — ${name}` })
       await quick.getByRole('button', { name: 'Placer sur la carte' }).click()
       if (name === 'Gorak') await shot(page, theme, '10-quick-panel')

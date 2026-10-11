@@ -363,6 +363,7 @@ export const fr = {
     settings: 'Réglages de la carte',
     gridVisible: 'Afficher la grille',
     gridColor: 'Couleur de la grille',
+    gridAuto: 'Couleur du thème',
     gridOpacity: 'Opacité de la grille (%)',
     offsetX: 'Décalage horizontal (px)',
     offsetY: 'Décalage vertical (px)',

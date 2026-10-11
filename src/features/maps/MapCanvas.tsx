@@ -1,4 +1,4 @@
-import type Konva from 'konva'
+import Konva from 'konva'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Arc,
@@ -45,7 +45,10 @@ import {
 } from '@/domain/maps'
 import type { Entity } from '@/domain/types'
 import { hpBand, type RulesConfig } from '@/rules'
+import { useResolvedTheme } from '@/app/usePreferences'
 import { useMapViewStore, type Camera } from '@/stores/mapViewStore'
+import { drawBoardIcon, type BoardIcon } from './boardIcons'
+import { BOARD_DARK, BOARD_LIGHT, BOARD_PLAYERS, DA_CELL, type BoardTheme } from './boardTheme'
 import { ENTITY_DRAG_TYPE } from './dragTypes'
 import { drawElement } from './drawElements'
 import { elementBox, fitCamera, MAX_SCALE, MIN_SCALE } from './mapGeometry'
@@ -93,25 +96,54 @@ export interface MapCanvasProps {
   onDropEntity?: (entityId: string, cell: Cell) => void
   onBlocked?: (message: string) => void
   calibrateCells?: number
+  /** Names of the campaign's maps, for passage labels (GM only). */
+  mapNames?: Record<string, string>
   className?: string
 }
 
-const KIND_COLORS: Record<Entity['kind'], string> = {
-  player: '#6d5bd0',
-  ally: '#3fa96b',
-  familiar: '#d9a441',
-  enemy: '#c43d3d',
-}
-const BAND_COLORS = { healthy: '#3fa96b', wounded: '#e8a33d', critical: '#e05252', down: '#e05252' }
+/** Condition colours on tokens (the *-text tones of DA §2, readable on the plate). */
 const CONDITION_DOT: Record<string, string> = {
-  red: '#e05252',
-  orange: '#e8833d',
-  yellow: '#d9a441',
-  green: '#3fa96b',
-  blue: '#4a90d9',
-  violet: '#6d5bd0',
-  pink: '#d3558f',
-  gray: '#8a869c',
+  red: '#C23B3B',
+  orange: '#C2621C',
+  yellow: '#A87719',
+  green: '#2E9A5E',
+  blue: '#3A80CC',
+  violet: '#7A4BB6',
+  pink: '#B23D73',
+  gray: '#8C8069',
+}
+
+/** Board palette: the players' window has its own, the GM follows the app theme. */
+function useBoardTheme(viewer: 'gm' | 'players'): BoardTheme {
+  const resolved = useResolvedTheme()
+  if (viewer === 'players') return BOARD_PLAYERS
+  return resolved === 'dark' ? BOARD_DARK : BOARD_LIGHT
+}
+
+/** Draws a board icon inside a Konva shape. */
+function IconShape({
+  icon,
+  x,
+  y,
+  size,
+  color,
+}: {
+  icon: BoardIcon
+  x: number
+  y: number
+  size: number
+  color: string
+}) {
+  return (
+    <Shape
+      listening={false}
+      perfectDrawEnabled={false}
+      sceneFunc={(ctx) => {
+        const c = (ctx as unknown as { _context: CanvasRenderingContext2D })._context
+        drawBoardIcon(c, icon, x, y, size, color)
+      }}
+    />
+  )
 }
 
 /**
@@ -130,6 +162,9 @@ export function MapCanvas(props: MapCanvasProps) {
   const selection = useMapViewStore((s) => s.selection)
   const area = useMapViewStore((s) => s.area)
   const pings = useMapViewStore((s) => s.pings)
+  const theme = useBoardTheme(viewer)
+  /** DA pixel sizes are given for a 70 px cell. */
+  const u = map.grid.size / DA_CELL
 
   // ---- size & camera ------------------------------------------------------
   useEffect(() => {
@@ -521,10 +556,8 @@ export function MapCanvas(props: MapCanvasProps) {
   return (
     <div
       ref={container}
-      className={
-        props.className ?? 'relative size-full overflow-hidden bg-[#e9e4d8] dark:bg-[#1a1824]'
-      }
-      style={{ cursor, touchAction: 'none' }}
+      className={props.className ?? 'relative size-full overflow-hidden'}
+      style={{ cursor, touchAction: 'none', background: theme.bg }}
       data-testid="map-canvas"
       onDragOver={(e) => {
         if (props.onDropEntity && e.dataTransfer.types.includes(ENTITY_DRAG_TYPE))
@@ -588,27 +621,54 @@ export function MapCanvas(props: MapCanvasProps) {
                 y={map.grid.offsetY}
                 width={extent.width}
                 height={extent.height}
-                fill="#f3eee2"
-                stroke="#cfc6b3"
-                strokeWidth={2}
+                fill={theme.floor}
               />
             )}
-            {map.grid.visible && show('grid') && <GridShape map={map} />}
+            {theme.outline && (
+              <Rect
+                x={map.grid.offsetX}
+                y={map.grid.offsetY}
+                width={extent.width}
+                height={extent.height}
+                stroke={theme.outline}
+                strokeWidth={1 / camera.scale}
+                listening={false}
+              />
+            )}
+            {map.grid.visible && show('grid') && (
+              <GridShape map={map} theme={theme} scale={camera.scale} />
+            )}
             {show('decor') &&
               decor.map((el) => (
-                <ElementNode key={el.id} el={el} map={map} {...elementHandlers(el)} />
+                <ElementNode
+                  key={el.id}
+                  el={el}
+                  map={map}
+                  theme={theme}
+                  gm={isGm}
+                  {...elementHandlers(el)}
+                />
               ))}
             {show('objects') &&
               objects.map((el) => (
-                <ElementNode key={el.id} el={el} map={map} {...elementHandlers(el)} />
+                <ElementNode
+                  key={el.id}
+                  el={el}
+                  map={map}
+                  theme={theme}
+                  gm={isGm}
+                  linkName={el.link?.mapId ? props.mapNames?.[el.link.mapId] : undefined}
+                  {...elementHandlers(el)}
+                />
               ))}
             {show('walls') &&
               map.walls.map((w) => (
                 <WallNode
                   key={w.id}
                   wall={w}
+                  theme={theme}
+                  u={u}
                   selected={selection.type === 'wall' && selection.id === w.id}
-                  scale={camera.scale}
                   onSelect={() => {
                     if (tool !== 'select') return
                     if (mode === 'edit')
@@ -630,6 +690,7 @@ export function MapCanvas(props: MapCanvasProps) {
                   entity={props.entities[t.entityId]!}
                   rules={props.rules}
                   gm={isGm}
+                  theme={theme}
                   selected={selectedTokens.includes(t.id) || areaTargets.has(t.id)}
                   active={props.activeEntityId === t.entityId}
                   draggable={mode !== 'view' && tool === 'select' && Boolean(props.onChange)}
@@ -664,7 +725,9 @@ export function MapCanvas(props: MapCanvasProps) {
 
           {/* Fog and drawings. */}
           <Layer listening={tool === 'erase'}>
-            {map.fog.enabled && show('fog') && <FogShape map={map} gm={isGm} />}
+            {map.fog.enabled && show('fog') && (
+              <FogShape map={map} theme={theme} scale={camera.scale} />
+            )}
             {show('drawings') &&
               map.drawings
                 .filter((d) => isGm || !d.gmOnly)
@@ -690,7 +753,14 @@ export function MapCanvas(props: MapCanvasProps) {
             {isGm &&
               show('gm') &&
               gmNotes.map((el) => (
-                <ElementNode key={el.id} el={el} map={map} {...elementHandlers(el)} />
+                <ElementNode
+                  key={el.id}
+                  el={el}
+                  map={map}
+                  theme={theme}
+                  gm={isGm}
+                  {...elementHandlers(el)}
+                />
               ))}
           </Layer>
 
@@ -702,7 +772,7 @@ export function MapCanvas(props: MapCanvasProps) {
                   key={`${c.col},${c.row}`}
                   points={cellPolygon(map.grid, c).flatMap((p) => [p.x, p.y])}
                   closed
-                  fill={gesture.reveal ? 'rgba(217,164,65,0.35)' : 'rgba(20,19,28,0.45)'}
+                  fill={gesture.reveal ? 'rgba(217,164,65,0.35)' : theme.fog.masked}
                 />
               ))}
             {gesture?.kind === 'rect' && (
@@ -711,10 +781,10 @@ export function MapCanvas(props: MapCanvasProps) {
                 y={Math.min(gesture.from.y, gesture.to.y)}
                 width={Math.abs(gesture.to.x - gesture.from.x)}
                 height={Math.abs(gesture.to.y - gesture.from.y)}
-                stroke="#6d5bd0"
+                stroke={theme.brush}
                 strokeWidth={2 / camera.scale}
                 dash={[8 / camera.scale, 4 / camera.scale]}
-                fill="rgba(109,91,208,0.12)"
+                fill={theme.area.fill}
               />
             )}
             {gesture?.kind === 'draw' && (
@@ -734,8 +804,8 @@ export function MapCanvas(props: MapCanvasProps) {
                   snapToVertex(map.grid, pointer).x,
                   snapToVertex(map.grid, pointer).y,
                 ]}
-                stroke={tool === 'door' ? '#8a5a2b' : '#2b2233'}
-                strokeWidth={6 / Math.max(camera.scale, 0.5)}
+                stroke={tool === 'door' ? theme.door.closed : theme.wall.color}
+                strokeWidth={(tool === 'door' ? theme.door.thickness : theme.wall.width) * u}
                 opacity={0.6}
                 dash={[10, 6]}
               />
@@ -745,12 +815,12 @@ export function MapCanvas(props: MapCanvasProps) {
                 x={pointer.x}
                 y={pointer.y}
                 radius={(useMapViewStore.getState().brush * map.grid.size) / 2}
-                stroke="#6d5bd0"
-                strokeWidth={2 / camera.scale}
-                dash={[6, 4]}
+                stroke={theme.brush}
+                strokeWidth={1 / camera.scale}
+                dash={[4 / camera.scale, 4 / camera.scale]}
               />
             )}
-            {shownArea && <AreaNode area={shownArea} scale={camera.scale} />}
+            {shownArea && <AreaNode area={shownArea} scale={camera.scale} theme={theme} />}
             {measureLine && (
               <MeasureNode
                 map={map}
@@ -758,11 +828,20 @@ export function MapCanvas(props: MapCanvasProps) {
                 from={measureLine.from}
                 to={measureLine.to}
                 scale={camera.scale}
+                theme={theme}
                 label={props.labels.measure}
               />
             )}
             {pings.map((p) => (
-              <PingNode key={p.id} x={p.x} y={p.y} scale={camera.scale} id={p.id} />
+              <PingNode
+                key={p.id}
+                x={p.x}
+                y={p.y}
+                scale={camera.scale}
+                id={p.id}
+                theme={theme}
+                cell={map.grid.size}
+              />
             ))}
           </Layer>
         </Stage>
@@ -794,60 +873,93 @@ function isTyping(target: EventTarget | null) {
 }
 
 // ---------------------------------------------------------------------------
-// Shapes
+// Shapes (board theme: docs/CODEX-DA.md §9)
 // ---------------------------------------------------------------------------
 
-function GridShape({ map }: { map: GameMap }) {
+type Ctx2D = CanvasRenderingContext2D
+const raw = (ctx: unknown) => (ctx as { _context: Ctx2D })._context
+
+/** True when full animations are allowed (DA §7.2). */
+function motionFull() {
+  return (
+    document.documentElement.dataset.motion === 'full' &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
+function GridShape({ map, theme, scale }: { map: GameMap; theme: BoardTheme; scale: number }) {
   const { grid } = map
+  // "auto" (new maps) follows the board theme; a colour chosen by the GM wins.
+  const auto = grid.color === 'auto'
   return (
     <Shape
       listening={false}
       perfectDrawEnabled={false}
       sceneFunc={(ctx) => {
-        const c = (ctx as unknown as { _context: CanvasRenderingContext2D })._context
+        const c = raw(ctx)
         c.save()
-        c.strokeStyle = grid.color
-        c.globalAlpha = grid.opacity
-        c.lineWidth = 1
-        c.beginPath()
+        c.lineWidth = theme.gridWidth / scale
+        const stroke = (color: string, lines: (path: Ctx2D) => void) => {
+          c.strokeStyle = color
+          c.beginPath()
+          lines(c)
+          c.stroke()
+        }
+        if (!auto) c.globalAlpha = grid.opacity
+        const minor = auto ? theme.grid : grid.color
+        const major = auto ? theme.gridMajor : null
         if (grid.type === 'square') {
           const { width, height } = gridExtent(map)
-          for (let col = 0; col <= map.cols; col++) {
-            const x = grid.offsetX + col * grid.size
-            c.moveTo(x, grid.offsetY)
-            c.lineTo(x, grid.offsetY + height)
-          }
-          for (let row = 0; row <= map.rows; row++) {
-            const y = grid.offsetY + row * grid.size
-            c.moveTo(grid.offsetX, y)
-            c.lineTo(grid.offsetX + width, y)
-          }
-        } else {
-          for (let row = 0; row < map.rows; row++)
-            for (let col = 0; col < map.cols; col++) {
-              const poly = cellPolygon(grid, { col, row })
-              c.moveTo(poly[0]!.x, poly[0]!.y)
-              for (const p of poly.slice(1)) c.lineTo(p.x, p.y)
-              c.closePath()
+          const lines = (keep: (i: number) => boolean) => (p: Ctx2D) => {
+            for (let col = 0; col <= map.cols; col++) {
+              if (!keep(col)) continue
+              const x = grid.offsetX + col * grid.size
+              p.moveTo(x, grid.offsetY)
+              p.lineTo(x, grid.offsetY + height)
             }
+            for (let row = 0; row <= map.rows; row++) {
+              if (!keep(row)) continue
+              const y = grid.offsetY + row * grid.size
+              p.moveTo(grid.offsetX, y)
+              p.lineTo(grid.offsetX + width, y)
+            }
+          }
+          stroke(
+            minor,
+            lines((i) => !major || i % 5 !== 0),
+          )
+          if (major)
+            stroke(
+              major,
+              lines((i) => i % 5 === 0),
+            )
+        } else {
+          stroke(minor, (p) => {
+            for (let row = 0; row < map.rows; row++)
+              for (let col = 0; col < map.cols; col++) {
+                const poly = cellPolygon(grid, { col, row })
+                p.moveTo(poly[0]!.x, poly[0]!.y)
+                for (const q of poly.slice(1)) p.lineTo(q.x, q.y)
+                p.closePath()
+              }
+          })
         }
-        c.stroke()
         c.restore()
       }}
     />
   )
 }
 
-function FogShape({ map, gm }: { map: GameMap; gm: boolean }) {
+function FogShape({ map, theme, scale }: { map: GameMap; theme: BoardTheme; scale: number }) {
+  const u = map.grid.size / DA_CELL
   return (
     <Shape
       listening={false}
       perfectDrawEnabled={false}
       sceneFunc={(ctx) => {
-        const c = (ctx as unknown as { _context: CanvasRenderingContext2D })._context
+        const c = raw(ctx)
         c.save()
-        c.fillStyle = gm ? 'rgba(20, 19, 28, 0.55)' : '#0b0a10'
-        c.beginPath()
+        const path = new Path2D()
         for (let row = 0; row < map.rows; row++)
           for (let col = 0; col < map.cols; col++) {
             if (map.fog.revealed[row * map.cols + col] === '1') continue
@@ -857,20 +969,75 @@ function FogShape({ map, gm }: { map: GameMap; gm: boolean }) {
             const cy = poly.reduce((s, p) => s + p.y, 0) / poly.length
             const grow = (p: Point) => ({ x: cx + (p.x - cx) * 1.02, y: cy + (p.y - cy) * 1.02 })
             const first = grow(poly[0]!)
-            c.moveTo(first.x, first.y)
-            for (const p of poly.slice(1).map(grow)) c.lineTo(p.x, p.y)
-            c.closePath()
+            path.moveTo(first.x, first.y)
+            for (const p of poly.slice(1).map(grow)) path.lineTo(p.x, p.y)
+            path.closePath()
           }
-        c.fill()
+        // Players: soft edge around what is revealed (DA §9.2).
+        if (theme.fog.softEdge) c.filter = `blur(${(theme.fog.softEdge * u * scale) / 2}px)`
+        c.fillStyle = theme.fog.masked
+        c.fill(path)
+        c.filter = 'none'
+        // GM: diagonal hatching so the fog reads as fog over any picture.
+        if (theme.fog.hatch) {
+          c.clip(path)
+          c.strokeStyle = theme.fog.hatch
+          c.lineWidth = 2 * u
+          const { width, height } = gridExtent(map)
+          const step = 12 * u
+          c.beginPath()
+          for (let d = -height; d < width + height; d += step) {
+            c.moveTo(map.grid.offsetX + d, map.grid.offsetY)
+            c.lineTo(map.grid.offsetX + d - height, map.grid.offsetY + height)
+          }
+          c.stroke()
+        }
         c.restore()
       }}
     />
   )
 }
 
+function SmallLabel({
+  text,
+  x,
+  y,
+  theme,
+  u,
+}: {
+  text: string
+  x: number
+  y: number
+  theme: BoardTheme
+  u: number
+}) {
+  const l = theme.label
+  const size = l.size * u
+  // Konva has no auto-centring for labels: estimate the width.
+  const width = text.length * size * 0.56 + 2 * l.padX * u
+  return (
+    <Label x={x - width / 2} y={y} listening={false}>
+      <Tag fill={l.bg} cornerRadius={l.radius * u} />
+      <Text
+        text={text}
+        width={width}
+        align="center"
+        fontFamily="Inter Variable, Inter, sans-serif"
+        fontStyle="600"
+        fontSize={size}
+        padding={l.padY * u}
+        fill={l.text}
+      />
+    </Label>
+  )
+}
+
 function ElementNode({
   el,
   map,
+  theme,
+  gm,
+  linkName,
   selected,
   draggable,
   onSelect,
@@ -878,12 +1045,19 @@ function ElementNode({
 }: {
   el: MapElement
   map: GameMap
+  theme: BoardTheme
+  gm: boolean
+  linkName?: string
   selected: boolean
   draggable: boolean
   onSelect: () => void
   onMoved: (x: number, y: number) => void
 }) {
   const box = elementBox(map, el)
+  const u = map.grid.size / DA_CELL
+  // GM view of things the players do not see: half transparent, crossed eye.
+  const hiddenFromPlayers = gm && (el.hidden || Boolean(el.trap && !el.trap.detected))
+  const label = el.label || (gm ? linkName : '') || ''
   return (
     <Group
       x={box.x + box.w / 2}
@@ -891,7 +1065,7 @@ function ElementNode({
       offsetX={box.w / 2}
       offsetY={box.h / 2}
       rotation={el.rotation}
-      opacity={el.hidden ? 0.55 : 1}
+      opacity={hiddenFromPlayers ? 0.5 : 1}
       draggable={draggable}
       onClick={onSelect}
       onTap={onSelect}
@@ -909,8 +1083,7 @@ function ElementNode({
         width={box.w}
         height={box.h}
         sceneFunc={(ctx, shape) => {
-          const c = (ctx as unknown as { _context: CanvasRenderingContext2D })._context
-          drawElement(c, el, box.w, box.h)
+          drawElement(raw(ctx), el, box.w, box.h, theme, map.grid.size)
           ctx.fillStrokeShape(shape)
         }}
         hitFunc={(ctx, shape) => {
@@ -920,24 +1093,23 @@ function ElementNode({
           ctx.fillStrokeShape(shape)
         }}
       />
-      {el.label && (
-        <Text
-          text={el.label}
-          y={box.h + 2}
-          width={box.w}
-          align="center"
-          fontSize={Math.max(10, map.grid.size * 0.22)}
-          fill="#2b2233"
-          listening={false}
+      {hiddenFromPlayers && (
+        <IconShape
+          icon="eyeOff"
+          x={box.w - 9 * u}
+          y={9 * u}
+          size={14 * u}
+          color={theme.token.hiddenEdge}
         />
       )}
+      {label && <SmallLabel text={label} x={box.w / 2} y={box.h + 2 * u} theme={theme} u={u} />}
       {selected && (
         <Rect
           width={box.w}
           height={box.h}
-          stroke="#6d5bd0"
-          strokeWidth={3}
-          dash={[8, 4]}
+          stroke={theme.token.selection ?? theme.brush}
+          strokeWidth={2 * u}
+          dash={[6 * u, 4 * u]}
           listening={false}
         />
       )}
@@ -947,39 +1119,95 @@ function ElementNode({
 
 function WallNode({
   wall,
+  theme,
+  u,
   selected,
-  scale,
   onSelect,
 }: {
   wall: Wall
+  theme: BoardTheme
+  u: number
   selected: boolean
-  scale: number
   onSelect: () => void
 }) {
-  const door = wall.kind === 'door'
-  const open = door && wall.door?.open
-  const width = (door ? 9 : 6) / Math.max(scale, 0.6)
+  const points = [wall.x1, wall.y1, wall.x2, wall.y2]
+  const hit = { hitStrokeWidth: 18 * u }
+  const selection = selected && theme.token.selection
+
+  if (wall.kind !== 'door' || !wall.door) {
+    const w = theme.wall.width * u
+    return (
+      <Group onClick={onSelect} onTap={onSelect}>
+        <Line
+          points={points}
+          stroke={theme.wall.outline}
+          strokeWidth={w + 2 * theme.wall.outlineWidth * u}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+        />
+        <Line
+          points={points}
+          stroke={selection || theme.wall.color}
+          strokeWidth={w}
+          lineCap="round"
+          lineJoin="round"
+          {...hit}
+        />
+      </Group>
+    )
+  }
+
+  const d = theme.door
+  const door = wall.door
+  const t = d.thickness * u
+  const mid = { x: (wall.x1 + wall.x2) / 2, y: (wall.y1 + wall.y2) / 2 }
+  if (door.open) {
+    // Open: dashed outline of the door leaf.
+    const len = Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1) || 1
+    const nx = (-(wall.y2 - wall.y1) / len) * (t / 2)
+    const ny = ((wall.x2 - wall.x1) / len) * (t / 2)
+    return (
+      <Group onClick={onSelect} onTap={onSelect}>
+        <Line
+          points={[
+            wall.x1 + nx,
+            wall.y1 + ny,
+            wall.x2 + nx,
+            wall.y2 + ny,
+            wall.x2 - nx,
+            wall.y2 - ny,
+            wall.x1 - nx,
+            wall.y1 - ny,
+          ]}
+          closed
+          stroke={selection || d.open}
+          strokeWidth={d.openWidth * u}
+          dash={[d.openDash[0] * u, d.openDash[1] * u]}
+          fill="rgba(0,0,0,0)"
+          {...hit}
+        />
+      </Group>
+    )
+  }
+  const locked = door.locked && d.showLock
   return (
     <Group onClick={onSelect} onTap={onSelect}>
       <Line
-        points={[wall.x1, wall.y1, wall.x2, wall.y2]}
-        stroke={selected ? '#6d5bd0' : door ? '#8a5a2b' : '#2b2233'}
-        strokeWidth={width}
-        lineCap="round"
-        dash={open ? [width * 1.5, width * 1.5] : undefined}
-        hitStrokeWidth={18}
+        points={points}
+        stroke={d.edge}
+        strokeWidth={t + 2 * d.edgeWidth * u}
+        lineCap="butt"
+        listening={false}
       />
-      {door && wall.door?.locked && (
-        <Circle
-          x={(wall.x1 + wall.x2) / 2}
-          y={(wall.y1 + wall.y2) / 2}
-          radius={width * 0.9}
-          fill="#d9a441"
-          stroke="#2b2233"
-          strokeWidth={1.5}
-          listening={false}
-        />
-      )}
+      <Line
+        points={points}
+        stroke={selection || (locked ? d.locked : d.closed)}
+        strokeWidth={t}
+        lineCap="butt"
+        {...hit}
+      />
+      {locked && <IconShape icon="lock" x={mid.x} y={mid.y} size={12 * u} color="#FFFFFF" />}
     </Group>
   )
 }
@@ -995,12 +1223,34 @@ function sameData<P extends object>(a: P, b: P) {
   )
 }
 
+/** Outline of a token: circle, or rounded square for enemies (DA §9.3). */
+function tokenPath(c: Ctx2D, square: boolean, r: number) {
+  c.beginPath()
+  if (!square) {
+    c.arc(0, 0, r, -Math.PI / 2, (Math.PI * 3) / 2)
+    return 2 * Math.PI * r
+  }
+  const k = Math.min(r, 0.44 * r) // corner = 22 % of the side (2r)
+  c.moveTo(0, -r)
+  c.lineTo(r - k, -r)
+  c.arcTo(r, -r, r, -r + k, k)
+  c.lineTo(r, r - k)
+  c.arcTo(r, r, r - k, r, k)
+  c.lineTo(-r + k, r)
+  c.arcTo(-r, r, -r, r - k, k)
+  c.lineTo(-r, -r + k)
+  c.arcTo(-r, -r, -r + k, -r, k)
+  c.closePath()
+  return 8 * (r - k) + 2 * Math.PI * k
+}
+
 const TokenNode = memo(function TokenNode({
   token,
   map,
   entity,
   rules,
   gm,
+  theme,
   selected,
   active,
   draggable,
@@ -1014,6 +1264,7 @@ const TokenNode = memo(function TokenNode({
   entity: Entity
   rules: RulesConfig
   gm: boolean
+  theme: BoardTheme
   selected: boolean
   active: boolean
   draggable: boolean
@@ -1022,17 +1273,32 @@ const TokenNode = memo(function TokenNode({
   onDragMove: (p: Point) => void
   onDragEnd: () => void
 }) {
+  const T = theme.token
+  const u = map.grid.size / DA_CELL
   const center = tokenCenter(map.grid, token)
-  const radius =
-    (map.grid.type === 'hex' ? hexRadius(map.grid) * 0.85 : map.grid.size * 0.42) * token.size
+  const familiar = entity.kind === 'familiar'
+  const square = entity.kind === 'enemy'
+  // 0.86 of a cell for size 1, 1.86 for size 2…; familiars 0.66.
+  const r =
+    map.grid.type === 'hex'
+      ? hexRadius(map.grid) * (familiar ? 0.66 : 0.86) * token.size
+      : ((familiar ? 0.66 : token.size - 0.14) * map.grid.size) / 2
+  const ring = T.ringWidth * u
+  const edge = T.edgeWidth * u
+  const inner = r - ring - edge
   const portrait = useImage(entity.identity.portrait)
   const name = entityName(entity)
   const max = entityHpMax(entity, rules)
   const ratio = max > 0 ? Math.max(0, Math.min(1, entity.hp.current / max)) : 0
   const band = hpBand(entity.hp.current, max, rules.hp)
-  const color = KIND_COLORS[entity.kind]
-  const ring = Math.max(3, radius * 0.14)
-  const dots = entity.conditions.slice(0, 4)
+  const down = entity.hp.current <= 0
+  const showHp = gm || entity.kind !== 'enemy'
+  const fill = T.kinds[entity.kind]
+  const bandColor = { healthy: T.healthy, wounded: T.wounded, critical: T.critical, down: T.down }[
+    band
+  ]
+  const conditions = entity.conditions.slice(0, 3)
+  const more = entity.conditions.length - conditions.length
   const range = useMemo(() => {
     const cells =
       rules.movement.baseCells +
@@ -1040,122 +1306,239 @@ const TokenNode = memo(function TokenNode({
     return cells > 0 ? cells * map.grid.size : 0
   }, [entity, rules, map.grid.size])
   const [dragging, setDragging] = useState(false)
+  const [hover, setHover] = useState(false)
+  const halo = useRef<Konva.Shape>(null)
 
-  return (
-    <Group
-      x={center.x}
-      y={center.y}
-      draggable={draggable}
-      opacity={token.hidden ? 0.5 : 1}
-      onClick={(e) => onSelect(e.evt.shiftKey)}
-      onTap={() => onSelect(false)}
-      onDragStart={() => setDragging(true)}
-      onDragMove={(e) => onDragMove({ x: e.target.x(), y: e.target.y() })}
-      onDragEnd={(e) => {
-        setDragging(false)
-        onDragEnd()
-        const node = e.target
-        const cell = tokenCellAt(map.grid, { x: node.x(), y: node.y() }, token.size)
-        const ok = inBounds(map, cell) && onMoved(cell, e.evt.shiftKey)
-        // The store decides the final position: snap back if refused.
-        if (!ok) node.position(center)
-      }}
-    >
-      {dragging && range > 0 && (
+  // Active token: soft pulse 0.55 → 1 → 0.55 over 1.6 s (DA §7.3).
+  useEffect(() => {
+    const node = halo.current
+    if (!active || !node || !motionFull()) return
+    const anim = new Konva.Animation((frame) => {
+      const t = ((frame?.time ?? 0) % 1600) / 1600
+      node.opacity(0.55 + 0.45 * Math.sin(t * Math.PI))
+    }, node.getLayer())
+    anim.start()
+    return () => {
+      anim.stop()
+    }
+  }, [active])
+
+  // Names: allies always; enemies on hover, selection or during their turn.
+  // The players never see an enemy's name.
+  const showName = entity.kind !== 'enemy' ? true : gm && (hover || selected || active)
+
+  const body = (
+    <>
+      {dragging && range > 0 && T.moveFill && (
         <Circle
           radius={range}
-          fill="rgba(109,91,208,0.08)"
-          stroke="#6d5bd0"
-          strokeWidth={2}
-          dash={[8, 6]}
+          fill={T.moveFill}
+          stroke={T.selection ?? undefined}
+          strokeWidth={u}
+          dash={[8 * u, 6 * u]}
           listening={false}
         />
       )}
       {active && (
-        <Circle
-          radius={radius + ring * 2.2}
-          stroke="#d9a441"
-          strokeWidth={ring}
-          shadowColor="#d9a441"
-          shadowBlur={12}
+        <Shape
+          ref={halo}
           listening={false}
+          sceneFunc={(ctx) => {
+            const c = raw(ctx)
+            c.save()
+            tokenPath(c, square, r + 3 * u + (T.active.width * u) / 2)
+            c.strokeStyle = T.active.color
+            c.lineWidth = T.active.width * u
+            c.shadowColor = T.active.glow
+            c.shadowBlur = T.active.blur * u
+            c.stroke()
+            c.restore()
+          }}
         />
       )}
-      {selected && (
-        <Circle
-          radius={radius + ring * 1.6}
-          stroke="#6d5bd0"
-          strokeWidth={2}
-          dash={[6, 4]}
+      {selected && T.selection && (
+        <Shape
           listening={false}
+          sceneFunc={(ctx) => {
+            const c = raw(ctx)
+            c.save()
+            tokenPath(c, square, r + 4 * u + u)
+            c.setLineDash([6 * u, 4 * u])
+            c.strokeStyle = T.selection!
+            c.lineWidth = 2 * u
+            c.stroke()
+            c.restore()
+          }}
         />
       )}
-      <Circle radius={radius} fill={color} stroke="#ffffff" strokeWidth={1.5} />
+      {/* Fill, ring track, HP ring and edge, drawn in one pass. */}
+      <Shape
+        sceneFunc={(ctx, shape) => {
+          const c = raw(ctx)
+          c.save()
+          tokenPath(c, square, r - edge / 2)
+          c.fillStyle = fill
+          c.fill()
+          // Ring track and HP.
+          const mid = r - edge - ring / 2
+          const perimeter = tokenPath(c, square, mid)
+          c.lineWidth = ring
+          c.strokeStyle = down ? T.down : T.ringTrack
+          c.stroke()
+          if (showHp && !down && ratio > 0) {
+            tokenPath(c, square, mid)
+            c.setLineDash([perimeter * ratio, perimeter])
+            c.strokeStyle = bandColor
+            c.stroke()
+            c.setLineDash([])
+          }
+          // Edge (dashed when hidden from the players).
+          tokenPath(c, square, r - edge / 2)
+          if (token.hidden && gm) c.setLineDash([4 * u, 4 * u])
+          c.lineWidth = edge
+          c.strokeStyle = token.hidden && gm ? T.hiddenEdge : T.edge
+          c.stroke()
+          c.restore()
+          ctx.fillStrokeShape(shape)
+        }}
+        hitFunc={(ctx, shape) => {
+          const c = raw(ctx)
+          tokenPath(c, square, r)
+          ctx.fillStrokeShape(shape)
+        }}
+      />
       {portrait ? (
-        <Group clipFunc={(ctx) => ctx.arc(0, 0, radius - 1, 0, Math.PI * 2)}>
-          <KImage
-            image={portrait}
-            x={-radius}
-            y={-radius}
-            width={radius * 2}
-            height={radius * 2}
-            listening={false}
-          />
+        <Group
+          clipFunc={(ctx) => {
+            tokenPath(ctx as unknown as Ctx2D, square, inner)
+          }}
+          opacity={down ? 0.4 : 1}
+          listening={false}
+        >
+          <KImage image={portrait} x={-inner} y={-inner} width={inner * 2} height={inner * 2} />
         </Group>
       ) : (
         <Text
           text={name.slice(0, 2).toUpperCase()}
-          x={-radius}
-          y={-radius}
-          width={radius * 2}
-          height={radius * 2}
+          x={-inner}
+          y={-inner}
+          width={inner * 2}
+          height={inner * 2}
           align="center"
           verticalAlign="middle"
-          fontSize={radius * 0.8}
-          fontStyle="bold"
-          fill="#ffffff"
+          fontFamily="Inter Variable, Inter, sans-serif"
+          fontStyle="700"
+          fontSize={inner * 0.8}
+          fill="#FFFFFF"
+          opacity={down ? 0.5 : 1}
           listening={false}
         />
       )}
-      <Arc
-        innerRadius={radius}
-        outerRadius={radius + ring}
-        angle={360}
-        fill="rgba(0,0,0,0.35)"
-        listening={false}
-      />
-      {(gm || entity.kind !== 'enemy') && (
+      {down && <IconShape icon="skull" x={0} y={0} size={16 * u} color="#FFFFFF" />}
+      {showHp && entity.hp.temp > 0 && max > 0 && (
         <Arc
-          innerRadius={radius}
-          outerRadius={radius + ring}
-          angle={360 * ratio}
+          innerRadius={r + 2 * u}
+          outerRadius={r + 4 * u}
+          angle={360 * Math.min(1, entity.hp.temp / max)}
           rotation={-90}
-          fill={BAND_COLORS[band]}
+          fill={T.temp}
           listening={false}
         />
       )}
-      {dots.map((c, i) => (
-        <Circle
-          key={c.id}
-          x={radius * 0.75 - i * ring * 2.1}
-          y={-radius * 0.85}
-          radius={ring * 0.95}
-          fill={CONDITION_DOT[c.color] ?? '#8a869c'}
-          stroke="#ffffff"
-          strokeWidth={1}
+      {(familiar || entity.kind === 'ally') && (
+        <Group x={r * 0.72} y={r * 0.72} listening={false}>
+          <Circle radius={9 * u} fill={T.edge} />
+          <Circle radius={7 * u} fill={fill} />
+          <IconShape icon={familiar ? 'paw' : 'shield'} x={0} y={0} size={10 * u} color="#FFFFFF" />
+        </Group>
+      )}
+      {conditions.map((cond, i) => {
+        // On the upper-right arc of the token.
+        const a = -Math.PI / 2 + (i + 0.6) * 0.62
+        const size = T.condition.size * u
+        return (
+          <Group
+            key={cond.id}
+            x={Math.cos(a) * (r + size * 0.1)}
+            y={Math.sin(a) * (r + size * 0.1)}
+            listening={false}
+          >
+            <Circle
+              radius={size / 2}
+              fill={T.condition.bg}
+              stroke={T.condition.stroke}
+              strokeWidth={u}
+            />
+            <Circle radius={size * 0.28} fill={CONDITION_DOT[cond.color] ?? CONDITION_DOT.gray} />
+          </Group>
+        )
+      })}
+      {more > 0 && (
+        <Text
+          text={`+${more}`}
+          x={r * 0.55}
+          y={-r * 1.25}
+          fontFamily="Inter Variable, Inter, sans-serif"
+          fontStyle="700"
+          fontSize={10 * u}
+          fill={T.condition.stroke}
           listening={false}
         />
-      ))}
-      <Label y={radius + ring + 2} listening={false}>
-        <Tag fill="rgba(31,29,43,0.78)" cornerRadius={4} pointerDirection="none" />
-        <Text text={name} fontSize={Math.max(9, map.grid.size * 0.18)} padding={3} fill="#ffffff" />
-      </Label>
-    </Group>
+      )}
+      {token.hidden && gm && (
+        <IconShape icon="eyeOff" x={-r * 0.72} y={-r * 0.72} size={14 * u} color={T.hiddenEdge} />
+      )}
+      {showName && <SmallLabel text={name} x={0} y={r + theme.label.gap * u} theme={theme} u={u} />}
+    </>
+  )
+
+  return (
+    <>
+      {dragging && (
+        <Group x={center.x} y={center.y} opacity={0.35} listening={false}>
+          <Shape
+            sceneFunc={(ctx) => {
+              const c = raw(ctx)
+              tokenPath(c, square, r)
+              c.fillStyle = fill
+              c.fill()
+            }}
+          />
+        </Group>
+      )}
+      <Group
+        x={center.x}
+        y={center.y}
+        draggable={draggable}
+        opacity={token.hidden ? 0.45 : 1}
+        onClick={(e) => onSelect(e.evt.shiftKey)}
+        onTap={() => onSelect(false)}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        onDragStart={() => setDragging(true)}
+        onDragMove={(e) => onDragMove({ x: e.target.x(), y: e.target.y() })}
+        onDragEnd={(e) => {
+          setDragging(false)
+          onDragEnd()
+          const node = e.target
+          const cell = tokenCellAt(map.grid, { x: node.x(), y: node.y() }, token.size)
+          const ok = inBounds(map, cell) && onMoved(cell, e.evt.shiftKey)
+          // The store decides the final position: snap back if refused.
+          if (!ok) node.position(center)
+        }}
+      >
+        {body}
+      </Group>
+    </>
   )
 }, sameData)
 
-function AreaNode({ area, scale }: { area: AreaShape; scale: number }) {
-  const style = { fill: 'rgba(224,82,82,0.18)', stroke: '#e05252', strokeWidth: 2 / scale }
+function AreaNode({ area, scale, theme }: { area: AreaShape; scale: number; theme: BoardTheme }) {
+  const style = {
+    fill: theme.area.fill,
+    stroke: theme.area.stroke,
+    strokeWidth: theme.area.width / scale,
+  }
   switch (area.kind) {
     case 'circle':
       return <Circle x={area.center.x} y={area.center.y} radius={area.radius} {...style} />
@@ -1205,6 +1588,7 @@ function MeasureNode({
   from,
   to,
   scale,
+  theme,
   label,
 }: {
   map: GameMap
@@ -1212,8 +1596,10 @@ function MeasureNode({
   from: Point
   to: Point
   scale: number
+  theme: BoardTheme
   label: (cells: number, meters: number) => string
 }) {
+  const m = theme.measure
   const cells = cellDistance(
     map.grid,
     cellAt(map.grid, from),
@@ -1225,46 +1611,101 @@ function MeasureNode({
     <Group>
       <Line
         points={[from.x, from.y, to.x, to.y]}
-        stroke="#d9a441"
-        strokeWidth={3 / scale}
-        dash={[10 / scale, 6 / scale]}
+        stroke={m.line}
+        strokeWidth={m.width / scale}
+        dash={[m.dash[0] / scale, m.dash[1] / scale]}
       />
-      <Circle x={from.x} y={from.y} radius={5 / scale} fill="#d9a441" />
-      <Label x={to.x + 10 / scale} y={to.y + 10 / scale} scaleX={1 / scale} scaleY={1 / scale}>
-        <Tag fill="#1f1d2b" cornerRadius={6} />
+      <Circle x={from.x} y={from.y} radius={4 / scale} fill={m.line} />
+      <Circle x={to.x} y={to.y} radius={4 / scale} fill={m.line} />
+      <Label x={to.x + 12 / scale} y={to.y + 12 / scale} scaleX={1 / scale} scaleY={1 / scale}>
+        <Tag fill={m.bubble} cornerRadius={999} />
         <Text
           text={label(cells, meters)}
-          fontSize={14}
-          padding={6}
-          fill="#ffffff"
-          fontStyle="bold"
+          fontFamily="Inter Variable, Inter, sans-serif"
+          fontStyle="700"
+          fontSize={m.font}
+          padding={Math.round(m.font * 0.45)}
+          fill={m.bubbleText}
         />
       </Label>
     </Group>
   )
 }
 
-function PingNode({ id, x, y, scale }: { id: string; x: number; y: number; scale: number }) {
-  const ref = useRef<Konva.Circle>(null)
+/** Ping: three rings from 0.4 to 1.6 cell, 1.2 s, staggered 200 ms, twice (DA §7.3). */
+function PingNode({
+  id,
+  x,
+  y,
+  scale,
+  theme,
+  cell,
+}: {
+  id: string
+  x: number
+  y: number
+  scale: number
+  theme: BoardTheme
+  cell: number
+}) {
+  const rings = useRef<(Konva.Circle | null)[]>([])
   const drop = useMapViewStore((s) => s.dropPing)
   useEffect(() => {
-    const node = ref.current
-    if (!node) return
-    node.radius(4 / scale)
-    node.opacity(1)
-    const tween = node.to({
-      radius: 60 / scale,
-      opacity: 0,
-      duration: 1.4,
-      onFinish: () => drop(id),
-    })
-    return () => tween?.destroy?.()
+    const full = motionFull()
+    const tweens: Konva.Tween[] = []
+    const timers: number[] = []
+    const play = (round: number) =>
+      rings.current.forEach((node, i) => {
+        if (!node) return
+        timers.push(
+          window.setTimeout(
+            () => {
+              node.radius(0.2 * cell)
+              node.opacity(1)
+              const tween = new Konva.Tween({
+                node,
+                radius: 0.8 * cell,
+                opacity: 0,
+                duration: 1.2,
+                easing: Konva.Easings.EaseOut,
+              })
+              tweens.push(tween)
+              tween.play()
+            },
+            round * 1400 + i * 200,
+          ),
+        )
+      })
+    if (full) {
+      play(0)
+      play(1)
+    } else {
+      rings.current[0]?.radius(0.6 * cell)
+    }
+    timers.push(window.setTimeout(() => drop(id), full ? 3200 : 1200))
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t))
+      tweens.forEach((t) => t.destroy())
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return (
-    <Group>
-      <Circle ref={ref} x={x} y={y} stroke="#d9a441" strokeWidth={4 / scale} />
-      <Circle x={x} y={y} radius={5 / scale} fill="#d9a441" />
+    <Group listening={false}>
+      {[0, 1, 2].map((i) => (
+        <Circle
+          key={i}
+          ref={(n) => {
+            rings.current[i] = n
+          }}
+          x={x}
+          y={y}
+          radius={0.2 * cell}
+          opacity={i === 0 ? 1 : 0}
+          stroke={theme.ping.color}
+          strokeWidth={theme.ping.width / scale}
+        />
+      ))}
+      <Circle x={x} y={y} radius={theme.ping.dot / 2 / scale} fill={theme.ping.color} />
     </Group>
   )
 }

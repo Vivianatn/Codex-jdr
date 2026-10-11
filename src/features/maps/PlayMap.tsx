@@ -46,6 +46,10 @@ export function PlayMap() {
   const campaign = useCampaign()
   const play = useCampaignStore((s) => s.play)
   const maps = useCampaignStore((s) => s.maps)
+  const mapNames = useMemo(
+    () => Object.fromEntries(Object.values(maps).map((m) => [m.id, m.name])),
+    [maps],
+  )
   const entities = useCampaignStore((s) => s.entities)
   const updateMap = useCampaignStore((s) => s.updateMap)
   const updatePlay = useCampaignStore((s) => s.updatePlay)
@@ -199,6 +203,7 @@ export function PlayMap() {
           viewer="gm"
           mode="play"
           labels={labels}
+          mapNames={mapNames}
           activeEntityId={activeEntityId}
           onChange={onChange}
           onTokenOpen={(id) => {
