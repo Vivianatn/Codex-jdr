@@ -31,7 +31,7 @@ export function EmptyState({ icon, title, body, actions, className }: EmptyState
           {icon}
         </div>
       </div>
-      <h2 className="font-display text-lg font-semibold text-ink">{title}</h2>
+      <h2 className="font-title text-[1.375rem] leading-tight font-semibold text-ink">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-ink-muted">{body}</p>
       {actions && <div className="mt-6 flex flex-wrap justify-center gap-2">{actions}</div>}
     </motion.div>

@@ -28,7 +28,12 @@ export function ThemeToggle() {
     <IconButton
       label={t.settings.toggleTheme}
       icon={resolved === 'dark' ? <Sun /> : <Moon />}
-      onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
+      onClick={() => {
+        // On the play screen, the switch also lifts « En jeu, toujours en sombre ».
+        const { surface, playDark, setPlayDark } = useSettingsStore.getState()
+        if (surface === 'play' && playDark && resolved === 'dark') setPlayDark(false)
+        setTheme(resolved === 'dark' ? 'light' : 'dark')
+      }}
       data-testid="theme-toggle"
     />
   )

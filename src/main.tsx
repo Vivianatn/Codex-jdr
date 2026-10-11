@@ -1,4 +1,5 @@
 import '@fontsource-variable/inter'
+import '@fontsource-variable/fraunces/opsz.css'
 import '@fontsource/cinzel/500.css'
 import '@fontsource/cinzel/600.css'
 import '@fontsource/cinzel/700.css'

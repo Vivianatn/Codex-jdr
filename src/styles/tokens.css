@@ -1,95 +1,143 @@
 /*
- * Codex design tokens — "Grimoire moderne".
+ * Codex design tokens — art direction « Codex à la chandelle » (docs/CODEX-DA.md §2).
  * Raw values live here as --codex-* variables; Tailwind utilities are mapped
  * onto them in index.css (@theme inline) so the theme can switch at runtime.
+ * The dark block also applies to any subtree with data-theme="dark" (play screen).
  */
 
 :root {
   color-scheme: light;
-
-  /* Base */
-  --codex-bg: #f7f5f0;
-  --codex-surface: #ffffff;
-  --codex-surface-2: #f1eee6;
-  --codex-surface-glass: rgb(255 255 255 / 0.72);
-  --codex-ink: #1f1d2b;
-  --codex-ink-muted: #6b6880;
-  --codex-line: #e4e0d6;
-  --codex-line-strong: #cfc9bb;
-
-  /* Accents */
+  --codex-bg: #f6f2e9;
+  --codex-surface: #fffdf8;
+  --codex-surface-2: #efe9dc;
+  --codex-surface-glass: rgb(255 253 248 / 0.84);
+  --codex-ink: #211c26;
+  --codex-ink-muted: #655d6e;
+  --codex-line: #e2daca;
+  --codex-line-strong: #8c8069;
   --codex-accent: #6d5bd0;
   --codex-accent-hover: #5c4ac0;
-  --codex-accent-contrast: #ffffff;
-  --codex-accent-soft: #ece9fa;
-  /* Accent tuned for text on the page background (AA contrast). */
-  --codex-accent-text: #5a48bd;
+  --codex-accent-soft: #ece8fa;
+  --codex-accent-text: #5844ba;
   --codex-gold: #d9a441;
-  --codex-gold-soft: #f8edd6;
-  /* Gold is too light for text on ivory; use this when gold must be read. */
-  --codex-gold-text: #8a6417;
-
-  /* Semantic */
+  --codex-gold-soft: #f7ecd3;
+  --codex-gold-text: #82601b;
   --codex-hp: #e05252;
-  --codex-hp-text: #b8322f;
-  --codex-heal: #3fa96b;
-  --codex-heal-text: #23774a;
-  --codex-warning: #e8a33d;
-  --codex-info: #4a90d9;
-
-  /* One colour per characteristic */
+  --codex-hp-text: #ae2e2b;
+  --codex-heal: #2e9a5e;
+  --codex-heal-text: #20714a;
+  --codex-warning: #b97a12;
+  --codex-info: #3a80cc;
   --codex-stat-strength: #b5483a;
   --codex-stat-constitution: #5e8b4a;
-  --codex-stat-dexterity: #1e9e95;
+  --codex-stat-dexterity: #17908a;
   --codex-stat-intelligence: #3e6fd8;
-  --codex-stat-charisma: #d3558f;
+  --codex-stat-charisma: #c94a85;
   --codex-stat-wisdom: #8b5cc7;
-  --codex-stat-luck: #d9a441;
-
-  /* Shape & depth */
+  --codex-stat-luck: #a87719;
+  --codex-surface-raised: #ffffff;
+  --codex-surface-sunken: #eae3d4;
+  --codex-ink-faint: #9a9183;
+  --codex-on-accent: #ffffff;
+  --codex-accent-active: #4e3dae;
+  --codex-focus: #6d5bd0;
+  --codex-on-gold: #2a1e08;
+  --codex-gold-line: #a97b22;
+  --codex-gold-glow: rgb(217 164 65 / 0.4);
+  --codex-hp-soft: #fcece7;
+  --codex-danger: #c43c3a;
+  --codex-danger-hover: #a93230;
+  --codex-heal-soft: #eaf3e9;
+  --codex-warning-text: #8a5a0e;
+  --codex-warning-soft: #f8f0e1;
+  --codex-info-text: #2b66a8;
+  --codex-info-soft: #ebf1f4;
+  --codex-hp-temp: #d7e6f5;
+  --codex-stat-strength-text: #a43d30;
+  --codex-stat-constitution-text: #476e36;
+  --codex-stat-dexterity-text: #13716a;
+  --codex-stat-intelligence-text: #3460c4;
+  --codex-stat-charisma-text: #b23d73;
+  --codex-stat-wisdom-text: #7a4bb6;
+  --codex-stat-luck-text: #82601b;
+  --codex-stat-strength-soft: #f6e7e1;
+  --codex-stat-constitution-soft: #ecefe3;
+  --codex-stat-dexterity-soft: #e3f0eb;
+  --codex-stat-intelligence-soft: #e8ecf4;
+  --codex-stat-charisma-soft: #f9e8ea;
+  --codex-stat-wisdom-soft: #f1eaf2;
+  --codex-stat-luck-soft: #f5eddd;
+  --codex-rarity-common: #8c8069;
+  --codex-rarity-common-text: #655d6e;
+  --codex-rarity-common-soft: #fffdf8;
+  --codex-rarity-uncommon: #3d8f55;
+  --codex-rarity-uncommon-text: #2c7442;
+  --codex-rarity-uncommon-soft: #eaf3e9;
+  --codex-rarity-rare: #3e6fd8;
+  --codex-rarity-rare-text: #3460c4;
+  --codex-rarity-rare-soft: #e8ecf4;
+  --codex-rarity-very-rare: #8b5cc7;
+  --codex-rarity-very-rare-text: #7a4bb6;
+  --codex-rarity-very-rare-soft: #f1eaf2;
+  --codex-rarity-legendary: #a97b22;
+  --codex-rarity-legendary-text: #82601b;
+  --codex-rarity-legendary-soft: #f7ecd3;
+  --codex-token-player: #6d5bd0;
+  --codex-token-ally: #2b7d4c;
+  --codex-token-familiar: #137570;
+  --codex-token-foe: #c43c3a;
+  --codex-token-npc: #b23d73;
+  --codex-scrim: rgb(33 28 38 / 0.4);
+  --codex-glass-line: rgb(140 128 105 / 0.35);
+  --codex-bar: rgb(255 253 248 / 0.94);
+  --codex-shadow-soft: 0 1px 2px rgb(33 28 38 / 0.06), 0 4px 16px rgb(33 28 38 / 0.06);
+  --codex-shadow-lifted: 0 2px 4px rgb(33 28 38 / 0.06), 0 12px 32px rgb(33 28 38 / 0.1);
+  --codex-shadow-overlay: 0 4px 8px rgb(33 28 38 / 0.1), 0 24px 64px rgb(33 28 38 / 0.22);
   --codex-radius-sm: 8px;
   --codex-radius: 12px;
   --codex-radius-lg: 16px;
-  --codex-shadow-soft: 0 1px 2px rgb(31 29 43 / 0.04), 0 4px 16px rgb(31 29 43 / 0.06);
-  --codex-shadow-lifted: 0 2px 4px rgb(31 29 43 / 0.05), 0 12px 32px rgb(31 29 43 / 0.1);
-  --codex-shadow-overlay: 0 8px 40px rgb(31 29 43 / 0.18);
-  --codex-focus-ring: 0 0 0 2px var(--codex-bg), 0 0 0 4px var(--codex-accent);
-
-  /* Motion */
-  --codex-duration-fast: 150ms;
-  --codex-duration: 220ms;
-  --codex-duration-slow: 300ms;
-  --codex-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --codex-radius-xl: 20px;
+  --codex-radius-pill: 999px;
+  --codex-blur-glass: 16px;
+  --codex-grain-opacity: 0.025;
+  --codex-dur-fast: 150ms;
+  --codex-dur-base: 220ms;
+  --codex-dur-slow: 300ms;
+  --codex-dur-moment: 600ms;
+  --codex-dur-epic: 1200ms;
+  --codex-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --codex-ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --codex-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --codex-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --codex-font-display: 'Cinzel', 'Cormorant SC', Georgia, serif;
+  --codex-font-title: 'Fraunces Variable', 'Fraunces', Georgia, serif;
+  --codex-font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
 }
 
-:root[data-theme='dark'] {
+:root[data-theme='dark'],
+[data-theme='dark'] {
   color-scheme: dark;
-
-  --codex-bg: #14131c;
-  --codex-surface: #1e1c29;
-  --codex-surface-2: #262435;
-  --codex-surface-glass: rgb(30 28 41 / 0.72);
-  --codex-ink: #edeaf5;
-  --codex-ink-muted: #a9a4bd;
-  --codex-line: #2f2c40;
-  --codex-line-strong: #423e57;
-
-  --codex-accent: #6d5bd0;
-  --codex-accent-hover: #5c4ac0; /* darker on hover: white text keeps AA contrast */
-  --codex-accent-contrast: #ffffff;
-  --codex-accent-soft: #2a2545;
-  --codex-accent-text: #a99cf2;
-  --codex-gold: #d9a441;
-  --codex-gold-soft: #3a2f1c;
-  --codex-gold-text: #e6bd6a;
-
-  --codex-hp: #e05252;
-  --codex-hp-text: #f08080;
-  --codex-heal: #3fa96b;
-  --codex-heal-text: #6fcf97;
+  --codex-bg: #15110d;
+  --codex-surface: #1f1913;
+  --codex-surface-2: #29211a;
+  --codex-surface-glass: rgb(31 25 19 / 0.82);
+  --codex-ink: #f2eadd;
+  --codex-ink-muted: #b3a691;
+  --codex-line: #362c23;
+  --codex-line-strong: #85745f;
+  --codex-accent: #7562d8;
+  --codex-accent-hover: #6655cc;
+  --codex-accent-soft: #2c2540;
+  --codex-accent-text: #b4a6f4;
+  --codex-gold: #e0ae4e;
+  --codex-gold-soft: #3a2c17;
+  --codex-gold-text: #ebc274;
+  --codex-hp: #e35d5d;
+  --codex-hp-text: #f28b82;
+  --codex-heal: #4cb97a;
+  --codex-heal-text: #7bd6a1;
   --codex-warning: #e8a33d;
   --codex-info: #4a90d9;
-
   --codex-stat-strength: #d0675a;
   --codex-stat-constitution: #7fae6a;
   --codex-stat-dexterity: #34c0b5;
@@ -97,8 +145,92 @@
   --codex-stat-charisma: #e57aab;
   --codex-stat-wisdom: #a782dc;
   --codex-stat-luck: #e2b65e;
+  --codex-surface-raised: #241e17;
+  --codex-surface-sunken: #191410;
+  --codex-ink-faint: #75695a;
+  --codex-on-accent: #ffffff;
+  --codex-accent-active: #5848be;
+  --codex-focus: #b4a6f4;
+  --codex-on-gold: #2a1e08;
+  --codex-gold-line: #c9963a;
+  --codex-gold-glow: rgb(224 174 78 / 0.45);
+  --codex-hp-soft: #3e241f;
+  --codex-danger: #c43c3a;
+  --codex-danger-hover: #a93230;
+  --codex-heal-soft: #263323;
+  --codex-warning-text: #f0bf6e;
+  --codex-warning-soft: #3f2f1a;
+  --codex-info-text: #8dbdf0;
+  --codex-info-soft: #262c33;
+  --codex-hp-temp: #22364d;
+  --codex-stat-strength-text: #e58a7e;
+  --codex-stat-constitution-text: #97c383;
+  --codex-stat-dexterity-text: #5bd3c9;
+  --codex-stat-intelligence-text: #93b1f2;
+  --codex-stat-charisma-text: #ee9bc0;
+  --codex-stat-wisdom-text: #bea2e8;
+  --codex-stat-luck-text: #ebc274;
+  --codex-stat-strength-soft: #422921;
+  --codex-stat-constitution-soft: #323724;
+  --codex-stat-dexterity-soft: #233a33;
+  --codex-stat-intelligence-soft: #2e313e;
+  --codex-stat-charisma-soft: #472c31;
+  --codex-stat-wisdom-soft: #3a2e3b;
+  --codex-stat-luck-soft: #463822;
+  --codex-rarity-common: #8e7f6b;
+  --codex-rarity-common-text: #b3a691;
+  --codex-rarity-common-soft: #29211a;
+  --codex-rarity-uncommon: #5fc27d;
+  --codex-rarity-uncommon-text: #7bd6a1;
+  --codex-rarity-uncommon-soft: #263323;
+  --codex-rarity-rare: #6b93ec;
+  --codex-rarity-rare-text: #93b1f2;
+  --codex-rarity-rare-soft: #2e313e;
+  --codex-rarity-very-rare: #a782dc;
+  --codex-rarity-very-rare-text: #bea2e8;
+  --codex-rarity-very-rare-soft: #3a2e3b;
+  --codex-rarity-legendary: #c9963a;
+  --codex-rarity-legendary-text: #ebc274;
+  --codex-rarity-legendary-soft: #3a2c17;
+  --codex-token-player: #7562d8;
+  --codex-token-ally: #2b7d4c;
+  --codex-token-familiar: #137570;
+  --codex-token-foe: #c43c3a;
+  --codex-token-npc: #b23d73;
+  --codex-scrim: rgb(8 6 4 / 0.62);
+  --codex-glass-line: rgb(242 234 221 / 0.1);
+  --codex-bar: rgb(21 17 13 / 0.94);
+  --codex-shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.3);
+  --codex-shadow-lifted: 0 2px 6px rgb(0 0 0 / 0.35), 0 16px 40px rgb(0 0 0 / 0.45);
+  --codex-shadow-overlay: 0 4px 12px rgb(0 0 0 / 0.45), 0 32px 80px rgb(0 0 0 / 0.6);
+  --codex-radius-sm: 8px;
+  --codex-radius: 12px;
+  --codex-radius-lg: 16px;
+  --codex-radius-xl: 20px;
+  --codex-radius-pill: 999px;
+  --codex-blur-glass: 16px;
+  --codex-grain-opacity: 0.03;
+  --codex-dur-fast: 150ms;
+  --codex-dur-base: 220ms;
+  --codex-dur-slow: 300ms;
+  --codex-dur-moment: 600ms;
+  --codex-dur-epic: 1200ms;
+  --codex-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --codex-ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --codex-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --codex-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --codex-font-display: 'Cinzel', 'Cormorant SC', Georgia, serif;
+  --codex-font-title: 'Fraunces Variable', 'Fraunces', Georgia, serif;
+  --codex-font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+}
 
-  --codex-shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
-  --codex-shadow-lifted: 0 2px 4px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.4);
-  --codex-shadow-overlay: 0 8px 40px rgb(0 0 0 / 0.55);
+/* Older names still used by the code, kept as aliases. */
+:root,
+[data-theme] {
+  --codex-accent-contrast: var(--codex-on-accent);
+  --codex-duration-fast: var(--codex-dur-fast);
+  --codex-duration: var(--codex-dur-base);
+  --codex-duration-slow: var(--codex-dur-slow);
+  --codex-ease: var(--codex-ease-out);
+  --codex-focus-ring: 0 0 0 2px var(--codex-bg), 0 0 0 4px var(--codex-focus);
 }

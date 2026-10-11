@@ -83,9 +83,7 @@ export function CampaignLayout() {
           start={
             <>
               <BackToCampaigns />
-              <span className="truncate font-display text-base font-semibold text-ink">
-                {campaign.name}
-              </span>
+              <span className="truncate type-card-title text-ink">{campaign.name}</span>
             </>
           }
           center={<ModeSwitch campaignId={campaign.id} />}

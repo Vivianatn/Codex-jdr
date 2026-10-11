@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Maximize, Video, VideoOff } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router'
+import { useSurface } from '@/app/useSurface'
 import { db } from '@/db/db'
 import { normalizeEntityShape } from '@/domain/entity'
 import { normalizeMap } from '@/domain/maps'
@@ -29,6 +30,7 @@ interface GmCamera {
  */
 export function PlayerView() {
   const t = useT()
+  useSurface('players')
   const labels = useCanvasLabels()
   const { campaignId = '' } = useParams()
   const [follow, setFollow] = useState(true)

@@ -16,6 +16,9 @@
           theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
         document.documentElement.dataset.theme = theme
         document.documentElement.dataset.motion = saved.animations || 'full'
+        document.documentElement.dataset.grain = saved.paperGrain === false ? 'off' : 'on'
+        if (saved.textSize && saved.textSize !== 100)
+          document.documentElement.style.fontSize = saved.textSize + '%'
       } catch (e) {}
     </script>
   </head>

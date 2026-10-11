@@ -46,7 +46,7 @@ export function CharacterCard({
         <div className="flex items-center gap-3">
           <Portrait src={entity.identity.portrait} name={name} />
           <div className="min-w-0">
-            <p className="truncate font-display text-base font-semibold text-ink">{name}</p>
+            <p className="truncate type-card-title text-ink">{name}</p>
             <p className="truncate text-sm text-ink-muted">
               {[entity.identity.className, `${t.sheet.level} ${entity.level}`]
                 .filter(Boolean)

@@ -14,9 +14,7 @@ export function DashboardPage() {
   return (
     <PageTransition className="px-4 py-8 sm:px-8">
       <div className="max-w-3xl">
-        <h1 className="font-display text-2xl font-semibold text-ink sm:text-3xl">
-          {campaign.name}
-        </h1>
+        <h1 className="type-screen-title text-ink">{campaign.name}</h1>
         <p className="mt-2 text-ink-muted">{campaign.description || t.dashboard.subtitle}</p>
         <Ornament variant="stats" className="my-8" />
 
@@ -24,7 +22,7 @@ export function DashboardPage() {
           aria-labelledby="next-steps"
           className="rounded-lg border border-line bg-surface p-6 shadow-soft"
         >
-          <h2 id="next-steps" className="font-display text-lg font-semibold text-ink">
+          <h2 id="next-steps" className="type-section text-ink">
             {t.dashboard.nextStepsTitle}
           </h2>
           <ol className="mt-4 space-y-3">

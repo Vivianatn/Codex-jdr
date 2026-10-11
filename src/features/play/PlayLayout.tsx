@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { useSurface } from '@/app/useSurface'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
 import { GroupsPanel } from './GroupsPanel'
@@ -15,6 +16,7 @@ const PlayMap = lazy(() => import('@/features/maps/PlayMap').then((m) => ({ defa
  */
 export function PlayLayout() {
   const t = useT()
+  useSurface('play')
 
   return (
     <PageTransition className="flex-row">

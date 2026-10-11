@@ -183,7 +183,7 @@ function Wizard({ kind, ownerId }: { kind: EntityKind; ownerId: string | null })
   return (
     <PageTransition className="px-4 py-8 sm:px-8">
       <div className="mx-auto w-full max-w-4xl">
-        <h1 className="font-display text-2xl font-semibold text-ink">{t.wizard.titles[kind]}</h1>
+        <h1 className="type-screen-title text-ink">{t.wizard.titles[kind]}</h1>
 
         <nav aria-label={t.wizard.progress} className="mt-6">
           <div
@@ -614,7 +614,7 @@ function RecapStep({ entity, rules }: { entity: EntityOfKind<EntityKind>; rules:
       <div className="space-y-4">
         <p className="text-ink-muted">{t.wizard.recapIntro}</p>
         <RecapCard>
-          <p className="font-display text-xl font-semibold text-ink">{entityName(entity)}</p>
+          <p className="font-title text-xl font-semibold text-ink">{entityName(entity)}</p>
           <p className="text-sm text-ink-muted">
             {[entity.identity.className, `${t.sheet.level} ${entity.level}`]
               .filter(Boolean)

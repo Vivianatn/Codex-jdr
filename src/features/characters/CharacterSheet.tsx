@@ -78,13 +78,8 @@ export function CharacterSheet({
         />
         <div className="min-w-0 flex-1 space-y-3">
           <div>
-            <p className="text-xs font-semibold tracking-wider text-gold-text uppercase">
-              {kindLabel}
-            </p>
-            <h1
-              id="sheet-title"
-              className="font-display text-2xl font-semibold text-ink sm:text-3xl"
-            >
+            <p className="type-eyebrow">{kindLabel}</p>
+            <h1 id="sheet-title" className="type-name text-ink">
               {name}
             </h1>
             <p className="text-sm text-ink-muted">

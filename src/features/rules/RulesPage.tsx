@@ -79,7 +79,7 @@ export function RulesPage() {
       <div className="max-w-3xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="font-display text-2xl font-semibold text-ink">{t.rulesPage.title}</h1>
+            <h1 className="type-screen-title text-ink">{t.rulesPage.title}</h1>
             <p className="mt-2 text-ink-muted">{t.rulesPage.subtitle}</p>
           </div>
           <Button

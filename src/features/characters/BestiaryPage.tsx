@@ -42,7 +42,7 @@ export function BestiaryPage() {
   return (
     <PageTransition className="px-4 py-8 sm:px-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="font-display text-2xl font-semibold text-ink">{t.nav.bestiary}</h1>
+        <h1 className="type-screen-title text-ink">{t.nav.bestiary}</h1>
         {templates && templates.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {importButton}

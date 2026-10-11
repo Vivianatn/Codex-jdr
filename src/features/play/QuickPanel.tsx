@@ -99,10 +99,8 @@ function Header({
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold tracking-wider text-gold-text uppercase">
-              {t.kinds[entity.kind]}
-            </p>
-            <h2 className="truncate font-display text-xl font-semibold text-ink">{name}</h2>
+            <p className="type-eyebrow">{t.kinds[entity.kind]}</p>
+            <h2 className="truncate font-title text-xl font-semibold text-ink">{name}</h2>
           </div>
           <IconButton size="sm" label={t.quick.close} icon={<X />} onClick={onClose} />
         </div>

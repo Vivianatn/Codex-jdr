@@ -35,7 +35,7 @@ export function CampaignCard({
         to={`/c/${campaign.id}`}
         className="flex h-full min-h-36 flex-col rounded-lg border border-line bg-surface p-5 shadow-soft transition-[box-shadow,transform,border-color] duration-200 group-hover:-translate-y-0.5 group-hover:border-line-strong group-hover:shadow-lifted"
       >
-        <span className="pr-8 font-display text-lg leading-snug font-semibold text-ink">
+        <span className="pr-8 font-title text-[1.375rem] leading-snug font-semibold text-ink">
           {campaign.name}
         </span>
         {campaign.description && (

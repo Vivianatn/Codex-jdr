@@ -93,7 +93,7 @@ function Placeholder({ section }: { section: PlaceholderSection }) {
   const copy = t.sections[section]
   return (
     <PageTransition key={section} className="px-4 py-8 sm:px-8">
-      <h1 className="font-display text-2xl font-semibold text-ink">{sectionLabel(t, section)}</h1>
+      <h1 className="type-screen-title text-ink">{sectionLabel(t, section)}</h1>
       <Ornament className="my-6 max-w-sm" />
       <EmptyState icon={<Icon />} title={copy.emptyTitle} body={copy.emptyBody} />
     </PageTransition>
