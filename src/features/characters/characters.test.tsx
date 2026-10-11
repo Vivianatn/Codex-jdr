@@ -160,6 +160,39 @@ describe('character sheet', () => {
     expect(campaignHistory.getState().canRedo).toBe(true)
   })
 
+  it('reminds the GM to add a skill at level 10, without limiting skills', async () => {
+    const c = await newCampaign()
+    const e = createEntity('player', c.id, rules, { identity: { pseudo: 'Gorak' }, level: 9 })
+    await db.entities.add(e)
+    const { user } = renderApp(`/c/${c.id}/prep/players/e/${e.id}`)
+    await screen.findByRole('heading', { level: 1, name: 'Gorak' })
+
+    // Skills can be added freely, outside the 10-level milestones.
+    await user.click(screen.getByRole('tab', { name: 'Compétences' }))
+    for (const name of ['Rage', 'Charge', 'Cri', 'Frappe']) {
+      await user.click(screen.getByRole('button', { name: 'Ajouter : Compétences actives' }))
+      const dialog = await screen.findByRole('dialog')
+      await user.type(within(dialog).getByLabelText('Nom'), name)
+      await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }))
+    }
+    expect(screen.getByText('4 compétences')).toBeInTheDocument()
+    expect(screen.getByText('Prochain rappel de compétence : niveau 10')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'Statistiques' }))
+    const level = screen.getByLabelText('Niveau')
+    await user.clear(level)
+    await user.type(level, '10{Enter}')
+    expect(
+      await screen.findByText('Gorak atteint le niveau 10 : pense à lui ajouter une compétence.'),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Journal' }))
+    expect(
+      screen.getByText('Niveau 10 atteint : une nouvelle compétence peut être ajoutée'),
+    ).toBeInTheDocument()
+  })
+
   it('adds a stat modifier and shows the effective value', async () => {
     const c = await newCampaign()
     const e = createEntity('ally', c.id, rules, { identity: { pseudo: 'Bran' } })

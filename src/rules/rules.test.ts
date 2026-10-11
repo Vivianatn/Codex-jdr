@@ -11,10 +11,9 @@ import {
   hpFormulaParts,
   hpMax,
   hpRollFromMax,
-  isOverSkillAllowance,
   nextExtraSkillLevel,
   resolveCheck,
-  skillAllowance,
+  skillMilestonesReached,
   statFromDice,
   statModifier,
   withDefaultRules,
@@ -142,13 +141,29 @@ describe('hit points', () => {
 })
 
 describe('skills', () => {
-  it('earns one extra skill every 10 levels', () => {
-    expect(skillAllowance(1, rules)).toEqual({ active: 2, passive: 1, extra: 0, total: 3 })
-    expect(skillAllowance(9, rules).extra).toBe(0)
-    expect(skillAllowance(10, rules).extra).toBe(1)
-    expect(skillAllowance(25, rules).total).toBe(5)
+  it('reminds the GM of a new skill every 10 levels', () => {
     expect(nextExtraSkillLevel(1, rules)).toBe(10)
     expect(nextExtraSkillLevel(10, rules)).toBe(20)
+    expect(skillMilestonesReached(9, 10, rules)).toEqual([10])
+    expect(skillMilestonesReached(9, 21, rules)).toEqual([10, 20])
+    expect(skillMilestonesReached(10, 19, rules)).toEqual([])
+    expect(skillMilestonesReached(12, 3, rules)).toEqual([]) // level down: no reminder
+    const off = defaultRules()
+    off.skills.extraSkillEveryLevels = 0
+    expect(skillMilestonesReached(1, 50, off)).toEqual([])
+    expect(nextExtraSkillLevel(1, off)).toBeNull()
+  })
+
+  it('reminders match the levels that are multiples of N (property)', () => {
+    fc.assert(
+      fc.property(level, level, (a, b) => {
+        const reached = skillMilestonesReached(a, b, rules)
+        const expected = Array.from({ length: Math.max(0, b - a) }, (_, i) => a + 1 + i).filter(
+          (l) => l % 10 === 0,
+        )
+        expect(reached).toEqual(expected)
+      }),
+    )
   })
 
   it('requires exactly 2 actives, 1 passive and 1 class passive for players', () => {
@@ -165,17 +180,6 @@ describe('skills', () => {
     ).toBe(false)
     // Not enforced for enemies by default.
     expect(checkCreationSkills([], 'enemy', rules)).toMatchObject({ ok: true, enforced: false })
-  })
-
-  it('flags sheets with more skills than the level allows', () => {
-    const four = [
-      { kind: 'active' as const },
-      { kind: 'active' as const },
-      { kind: 'passive' as const },
-      { kind: 'passive' as const },
-    ]
-    expect(isOverSkillAllowance(four, 9, rules)).toBe(true)
-    expect(isOverSkillAllowance(four, 10, rules)).toBe(false)
   })
 })
 

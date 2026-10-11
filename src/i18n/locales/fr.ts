@@ -170,9 +170,10 @@ export const fr = {
     disabled: 'désactivée',
     modifiersHint: 'Bonus ou malus appliqués en continu aux caractéristiques.',
     empty: 'Aucune compétence.',
-    allowance: (used: number, total: number) => `${used} / ${total} compétences`,
-    nextExtra: (level: number) => `+1 compétence au niveau ${level}`,
-    overAllowance: 'Plus de compétences que le niveau ne le permet.',
+    total: (count: number) => (count === 1 ? '1 compétence' : `${count} compétences`),
+    nextReminder: (level: number) => `Prochain rappel de compétence : niveau ${level}`,
+    milestoneToast: (name: string, level: number) =>
+      `${name} atteint le niveau ${level} : pense à lui ajouter une compétence.`,
     requirement: (active: number, passive: number) =>
       `À la création : ${active} actives, ${passive} passive et 1 passif de classe.`,
     count: (count: number, required: number) => `${count} / ${required}`,
@@ -202,6 +203,8 @@ export const fr = {
     stat: (stat: string, from: number, to: number) => `${stat} : ${from} → ${to}`,
     skillAdded: (name: string) => `Compétence apprise : ${name}`,
     skillRemoved: (name: string) => `Compétence retirée : ${name}`,
+    skillMilestone: (level: number) =>
+      `Niveau ${level} atteint : une nouvelle compétence peut être ajoutée`,
     conditionAdded: (name: string) => `État : ${name}`,
     conditionRemoved: (name: string) => `Fin de l’état : ${name}`,
     itemAdded: (name: string, quantity: number) =>
@@ -328,8 +331,8 @@ export const fr = {
     skills: 'Compétences',
     initialActive: 'Actives au départ',
     initialPassive: 'Passives au départ',
-    extraEvery: '+1 compétence tous les … niveaux',
-    extraEveryHint: '0 pour désactiver.',
+    extraEvery: 'Rappel « nouvelle compétence » tous les … niveaux',
+    extraEveryHint: 'simple rappel, aucune limite ; 0 pour désactiver',
     enforce: 'Exiger les compétences de départ exactes à la création pour',
     grid: 'Plateau',
     cellMeters: 'Mètres par case',

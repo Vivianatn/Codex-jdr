@@ -39,7 +39,7 @@ export interface RulesConfig {
   skills: {
     initialActive: number
     initialPassive: number
-    /** One extra skill (active or passive) every N levels; 0 disables it. */
+    /** Remind the GM to add a skill every N levels (no limit is enforced); 0 disables it. */
     extraSkillEveryLevels: number
     /** Kinds for which the creation wizard requires the exact starting skills. */
     enforceOnCreation: EntityKind[]

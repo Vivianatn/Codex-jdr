@@ -1,23 +1,13 @@
 import type { EntityKind, SkillKind } from '@/domain/types'
 import type { RulesConfig } from './config'
 
-export interface SkillAllowance {
-  active: number
-  passive: number
-  /** Extra skills earned by level, each either active or passive. */
-  extra: number
-  /** active + passive + extra (the class passive is not counted). */
-  total: number
-}
+/**
+ * Skills are free: the GM adds as many as they like, whenever they like.
+ * Every N levels (`extraSkillEveryLevels`) the app only *reminds* the GM that a
+ * new skill is due.
+ */
 
-export function skillAllowance(level: number, rules: RulesConfig): SkillAllowance {
-  const every = rules.skills.extraSkillEveryLevels
-  const extra = every > 0 ? Math.floor(Math.max(0, level) / every) : 0
-  const { initialActive: active, initialPassive: passive } = rules.skills
-  return { active, passive, extra, total: active + passive + extra }
-}
-
-/** Level at which the next extra skill is earned, or null if the rule is off. */
+/** Next level that triggers a "new skill" reminder, or null if reminders are off. */
 export function nextExtraSkillLevel(level: number, rules: RulesConfig): number | null {
   const every = rules.skills.extraSkillEveryLevels
   if (every <= 0) return null
@@ -64,12 +54,12 @@ export function checkCreationSkills(
   return { counts, required, enforced, ok: !enforced || exact }
 }
 
-/** On an existing sheet: more active/passive skills than the level allows (warning only). */
-export function isOverSkillAllowance(
-  skills: readonly { kind: SkillKind }[],
-  level: number,
-  rules: RulesConfig,
-): boolean {
-  const counts = countSkills(skills)
-  return counts.active + counts.passive > skillAllowance(level, rules).total
+/** Reminder levels crossed when going from `from` to `to` (e.g. 9 → 21 gives [10, 20]). */
+export function skillMilestonesReached(from: number, to: number, rules: RulesConfig): number[] {
+  const every = rules.skills.extraSkillEveryLevels
+  if (every <= 0 || to <= from) return []
+  const first = (Math.floor(Math.max(0, from) / every) + 1) * every
+  const levels: number[] = []
+  for (let level = first; level <= to; level += every) levels.push(level)
+  return levels
 }

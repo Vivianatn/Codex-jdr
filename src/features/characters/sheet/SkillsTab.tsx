@@ -4,13 +4,7 @@ import { Button, IconButton } from '@/components/ui/Button'
 import type { Entity, Skill, SkillKind } from '@/domain/types'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
-import {
-  countSkills,
-  isOverSkillAllowance,
-  nextExtraSkillLevel,
-  skillAllowance,
-  type RulesConfig,
-} from '@/rules'
+import { nextExtraSkillLevel, type RulesConfig } from '@/rules'
 import { emptySkill } from '@/domain/entity'
 import { SkillDialog } from '../SkillDialog'
 import type { SheetEditor } from '../useSheetEditor'
@@ -147,22 +141,13 @@ export function SkillsTab({
   editor: SheetEditor
 }) {
   const t = useT()
-  const counts = countSkills(entity.skills)
-  const allowance = skillAllowance(entity.level, rules)
   const next = nextExtraSkillLevel(entity.level, rules)
-  const over = isOverSkillAllowance(entity.skills, entity.level, rules)
+  const total = entity.skills.filter((s) => s.kind !== 'class').length
   return (
     <div className="space-y-6">
       <p className="flex flex-wrap gap-x-3 text-sm text-ink-muted">
-        <span className={cn('tabular font-medium', over ? 'text-hp-text' : 'text-ink')}>
-          {t.skills.allowance(counts.active + counts.passive, allowance.total)}
-        </span>
-        {next !== null && <span>{t.skills.nextExtra(next)}</span>}
-        {over && (
-          <span role="status" className="text-hp-text">
-            {t.skills.overAllowance}
-          </span>
-        )}
+        <span className="tabular font-medium text-ink">{t.skills.total(total)}</span>
+        {next !== null && <span>{t.skills.nextReminder(next)}</span>}
       </p>
       <SkillList
         skills={entity.skills}

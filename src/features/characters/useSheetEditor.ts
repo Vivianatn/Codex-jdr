@@ -14,7 +14,14 @@ import type {
   StatModifier,
 } from '@/domain/types'
 import { useT } from '@/i18n'
-import { adjustCurrentForNewMax, clampHp, hpMax, type RulesConfig } from '@/rules'
+import { toast } from 'sonner'
+import {
+  adjustCurrentForNewMax,
+  clampHp,
+  hpMax,
+  skillMilestonesReached,
+  type RulesConfig,
+} from '@/rules'
 
 /** Applies a change to the entity being edited (store, bestiary…), with an undo label. */
 export type SheetChange = (recipe: (entity: Entity) => Entity, label: string) => void
@@ -42,15 +49,22 @@ export function useSheetEditor(entity: Entity, rules: RulesConfig, change: Sheet
 
     level(level: number) {
       if (level === entity.level || level < 1) return
+      const milestones = skillMilestonesReached(entity.level, level, rules)
       edit(
         (e) => {
           const oldMax = entityHpMax(e, rules)
           const newMax = hpMax(e.hp.roll, level, rules)
           const current = adjustCurrentForNewMax(e.hp.current, oldMax, newMax)
-          return { ...e, level, hp: { ...e.hp, current } }
+          return milestones.reduce(
+            (next, m) => withJournal(next, 'skill', t.journal.skillMilestone(m)),
+            { ...e, level, hp: { ...e.hp, current } },
+          )
         },
         ['level', t.journal.level(entity.level, level)],
       )
+      // A reminder only: the GM decides whether and which skill to add.
+      for (const m of milestones)
+        toast.info(t.skills.milestoneToast(entityName(entity), m), { duration: 10_000 })
     },
 
     hpRoll(roll: number) {

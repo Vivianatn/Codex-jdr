@@ -10,15 +10,15 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 Réponses aux questions de la section 13, appliquées comme valeurs par défaut dans `src/rules/config.ts` (`DEFAULT_RULES`) et modifiables par campagne dans **Préparation › Règles** :
 
-| #   | Question                         | Règle retenue                                                                                |
-| --- | -------------------------------- | -------------------------------------------------------------------------------------------- |
-| 1   | Arrondi de `2d20/2`              | Au supérieur (défaut conservé)                                                               |
-| 2   | PV à la montée de niveau         | **+1 PV max par niveau gagné**. Donc PV max = 10 + 1d20 + Nv à tout niveau.                  |
-| 3   | Méthode des tests                | Jet sous la caractéristique, `1d20 ≤ valeur` (défaut conservé)                               |
-| 4   | Progression des caractéristiques | Non (défaut conservé)                                                                        |
-| 5   | Gain de compétences              | **+1 compétence (active ou passive) tous les 10 niveaux**, sans niveau requis par compétence |
-| 6   | Critiques                        | **1 = réussite critique majeure, 2 = mineure ; 20 = échec critique majeur, 19 = mineur**     |
-| 7   | Unité de grille                  | **1 case = 1 m**                                                                             |
+| #   | Question                         | Règle retenue                                                                                                                      |
+| --- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Arrondi de `2d20/2`              | Au supérieur (défaut conservé)                                                                                                     |
+| 2   | PV à la montée de niveau         | **+1 PV max par niveau gagné**. Donc PV max = 10 + 1d20 + Nv à tout niveau.                                                        |
+| 3   | Méthode des tests                | Jet sous la caractéristique, `1d20 ≤ valeur` (défaut conservé)                                                                     |
+| 4   | Progression des caractéristiques | Non (défaut conservé)                                                                                                              |
+| 5   | Gain de compétences              | Le MJ ajoute les compétences qu'il veut, quand il veut. **Tous les 10 niveaux, un rappel** l'invite à en ajouter une (voir D-104). |
+| 6   | Critiques                        | **1 = réussite critique majeure, 2 = mineure ; 20 = échec critique majeur, 19 = mineur**                                           |
+| 7   | Unité de grille                  | **1 case = 1 m**                                                                                                                   |
 
 « On garde par défaut » a été interprété comme couvrant les questions sans réponse explicite (1, 3 et 4). Les faces critiques l'emportent toujours sur la comparaison : un 2 naturel réussit même sous une caractéristique de 1, un 19 naturel échoue même sous 20. Le critique élargi par la Chance (§4.9) existe, mais il est désactivé par défaut.
 
@@ -32,7 +32,7 @@ On stocke le **jet de PV** (`hp.roll`), pas le maximum. `PV max = base + jet + 1
 
 ### D-104 · Compétences de départ exigées pour les joueurs seulement (configurable)
 
-La fiche Discord est celle des joueurs. Imposer « exactement 2 actives, 1 passive, 1 passif de classe » pour chaque gobelin serait un formulaire bloquant inutile (§9.5). L'assistant bloque donc pour les **joueurs** par défaut ; les types concernés se choisissent dans les règles de campagne. Sur une fiche existante, dépasser le nombre de compétences autorisé par le niveau n'affiche qu'un avertissement.
+La fiche Discord est celle des joueurs. Imposer « exactement 2 actives, 1 passive, 1 passif de classe » pour chaque gobelin serait un formulaire bloquant inutile (§9.5). L'assistant bloque donc pour les **joueurs** par défaut ; les types concernés se choisissent dans les règles de campagne. Après la création, **aucune limite** : le MJ ajoute le nombre de compétences qu'il veut, à n'importe quel niveau (précision du MJ, 2026-10-11). Quand un personnage franchit un multiple de 10 niveaux, une notification rappelle d'ajouter une compétence et une ligne est écrite dans son journal. Le rappel ne bloque rien ; son intervalle se règle (ou se coupe avec 0) dans les règles de campagne.
 
 ### D-105 · Format Discord
 
