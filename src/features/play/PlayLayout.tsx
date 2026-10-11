@@ -5,7 +5,13 @@ import { buttonClasses } from '@/components/ui/buttonStyles'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
+import { useShallow } from 'zustand/react/shallow'
+import { entityHpMax, entityName } from '@/domain/entity'
+import type { Entity } from '@/domain/types'
+import { HpBar } from '@/features/characters/HpBar'
+import { Portrait } from '@/features/characters/Portrait'
 import { useT } from '@/i18n'
+import { selectEntitiesOfKinds, useCampaignStore } from '@/stores/campaignStore'
 
 /**
  * "En jeu" mode: the map takes the whole screen, with a slim quick-access
@@ -14,6 +20,8 @@ import { useT } from '@/i18n'
 export function PlayLayout() {
   const t = useT()
   const campaign = useCampaign()
+  const party = useCampaignStore(useShallow((s) => selectEntitiesOfKinds(s.entities, ['player'])))
+  const enemies = useCampaignStore(useShallow((s) => selectEntitiesOfKinds(s.entities, ['enemy'])))
 
   return (
     <PageTransition className="flex-row">
@@ -41,24 +49,75 @@ export function PlayLayout() {
         aria-label={t.play.quickAccess}
         className="hidden w-72 shrink-0 flex-col gap-6 overflow-y-auto border-l border-line bg-bg p-4 lg:flex"
       >
-        <QuickSection icon={<Users />} title={t.play.party} empty={t.play.partyEmpty} />
-        <QuickSection icon={<Skull />} title={t.play.enemies} empty={t.play.enemiesEmpty} />
-        <QuickSection icon={<Star />} title={t.play.favorites} empty={t.play.favoritesEmpty} />
+        <QuickSection
+          icon={<Users />}
+          title={t.play.party}
+          empty={t.play.partyEmpty}
+          entities={party}
+        />
+        <QuickSection
+          icon={<Skull />}
+          title={t.play.enemies}
+          empty={t.play.enemiesEmpty}
+          entities={enemies}
+        />
+        <QuickSection
+          icon={<Star />}
+          title={t.play.favorites}
+          empty={t.play.favoritesEmpty}
+          entities={[]}
+        />
       </aside>
     </PageTransition>
   )
 }
 
-function QuickSection({ icon, title, empty }: { icon: ReactNode; title: string; empty: string }) {
+function QuickSection({
+  icon,
+  title,
+  empty,
+  entities,
+}: {
+  icon: ReactNode
+  title: string
+  empty: string
+  entities: Entity[]
+}) {
+  const campaign = useCampaign()
   return (
     <section>
       <h2 className="mb-2 flex items-center gap-2 font-sans text-xs font-semibold tracking-wider text-ink-muted uppercase [&>svg]:size-3.5">
         {icon}
         {title}
       </h2>
-      <p className="rounded-md border border-dashed border-line px-3 py-4 text-center text-sm text-ink-muted">
-        {empty}
-      </p>
+      {entities.length === 0 ? (
+        <p className="rounded-md border border-dashed border-line px-3 py-4 text-center text-sm text-ink-muted">
+          {empty}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {entities.map((e) => (
+            <li
+              key={e.id}
+              className="flex items-center gap-2.5 rounded-md bg-surface px-2.5 py-2 shadow-soft"
+            >
+              <Portrait src={e.identity.portrait} name={entityName(e)} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">{entityName(e)}</p>
+                <HpBar
+                  current={e.hp.current}
+                  max={entityHpMax(e, campaign.rules)}
+                  size="sm"
+                  showLabel={false}
+                />
+              </div>
+              <span className="tabular text-xs text-ink-muted">
+                {e.hp.current}/{entityHpMax(e, campaign.rules)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   )
 }

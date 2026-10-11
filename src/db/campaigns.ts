@@ -1,4 +1,8 @@
+import { newId } from '@/domain/entity'
+import type { Entity } from '@/domain/types'
+import { defaultRules, withDefaultRules, type RulesConfig } from '@/rules'
 import { db as defaultDb, type CodexDB } from './db'
+import { normalizeEntity } from './normalize'
 import {
   CAMPAIGN_EXPORT_FORMAT,
   CAMPAIGN_EXPORT_VERSION,
@@ -25,10 +29,6 @@ export interface ImportResult {
   renamed: boolean
 }
 
-function newId(): string {
-  return crypto.randomUUID()
-}
-
 export function createCampaignRepository(db: CodexDB = defaultDb, now: () => number = Date.now) {
   return {
     async create(input: { name: string; description?: string }): Promise<Campaign> {
@@ -39,6 +39,7 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
         id: newId(),
         name,
         description: input.description?.trim() ?? '',
+        rules: defaultRules(),
         createdAt: timestamp,
         updatedAt: timestamp,
         lastOpenedAt: null,
@@ -73,12 +74,18 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
       await db.campaigns.update(id, clean)
     },
 
+    async updateRules(id: string, rules: RulesConfig): Promise<void> {
+      await db.campaigns.update(id, { rules, updatedAt: now() })
+    },
+
     async markOpened(id: string): Promise<void> {
       await db.campaigns.update(id, { lastOpenedAt: now() })
     },
 
+    /** Deletes the campaign and everything it owns. */
     async remove(id: string): Promise<void> {
-      await db.transaction('rw', db.campaigns, async () => {
+      await db.transaction('rw', db.campaigns, db.entities, async () => {
+        await db.entities.where('campaignId').equals(id).delete()
         await db.campaigns.delete(id)
       })
     },
@@ -86,28 +93,45 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
     async exportCampaign(id: string): Promise<CampaignExport> {
       const campaign = await db.campaigns.get(id)
       if (!campaign) throw new Error(`Campaign ${id} not found`)
+      const entities = await db.entities.where('campaignId').equals(id).toArray()
       return {
         format: CAMPAIGN_EXPORT_FORMAT,
         version: CAMPAIGN_EXPORT_VERSION,
         exportedAt: new Date(now()).toISOString(),
         campaign,
+        entities: entities.sort((a, b) => a.createdAt - b.createdAt),
       }
     },
 
     /** Accepts raw file text or an already-parsed object. */
     async importCampaign(input: string | unknown, copySuffix = '(copie)'): Promise<ImportResult> {
       const data = parseExport(input)
-      const existing = await db.campaigns.get(data.campaign.id)
-      const campaign: Campaign = existing
-        ? {
-            ...data.campaign,
-            id: newId(),
-            name: `${data.campaign.name} ${copySuffix}`,
-            updatedAt: now(),
-          }
-        : data.campaign
-      await db.campaigns.add(campaign)
-      return { campaign, renamed: Boolean(existing) }
+      return db.transaction('rw', db.campaigns, db.entities, async () => {
+        const existing = await db.campaigns.get(data.campaign.id)
+        const campaign: Campaign = existing
+          ? {
+              ...data.campaign,
+              id: newId(),
+              name: `${data.campaign.name} ${copySuffix}`,
+              updatedAt: now(),
+            }
+          : data.campaign
+
+        // Fresh ids if the campaign is a copy or if any id is already taken.
+        const taken = await db.entities.bulkGet(data.entities.map((e) => e.id))
+        const remap = existing || taken.some(Boolean)
+        const ids = new Map(data.entities.map((e) => [e.id, remap ? newId() : e.id]))
+        const entities = data.entities.map((e): Entity => {
+          const moved = { ...e, id: ids.get(e.id)!, campaignId: campaign.id } as Entity
+          if (moved.kind === 'familiar' && moved.details.ownerId)
+            moved.details = { ...moved.details, ownerId: ids.get(moved.details.ownerId) ?? null }
+          return moved
+        })
+
+        await db.campaigns.add(campaign)
+        await db.entities.bulkAdd(entities)
+        return { campaign, renamed: Boolean(existing) }
+      })
     },
   }
 }
@@ -120,7 +144,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function isCampaign(value: unknown): value is Campaign {
+function isCampaignCore(value: unknown): value is Omit<Campaign, 'rules'> & { rules?: unknown } {
   if (!isRecord(value)) return false
   return (
     typeof value.id === 'string' &&
@@ -134,6 +158,7 @@ function isCampaign(value: unknown): value is Campaign {
   )
 }
 
+/** Validates and upgrades an export file (v1 files have no rules and no entities). */
 export function parseExport(input: string | unknown): CampaignExport {
   let data: unknown = input
   if (typeof input === 'string') {
@@ -152,6 +177,21 @@ export function parseExport(input: string | unknown): CampaignExport {
       typeof data.version === 'number' ? data.version : undefined,
     )
   }
-  if (!isCampaign(data.campaign)) throw new CampaignImportError('invalidCampaign')
-  return data as unknown as CampaignExport
+  if (!isCampaignCore(data.campaign)) throw new CampaignImportError('invalidCampaign')
+  if (data.entities !== undefined && !Array.isArray(data.entities))
+    throw new CampaignImportError('invalidCampaign')
+
+  const campaign: Campaign = { ...data.campaign, rules: withDefaultRules(data.campaign.rules) }
+  const entities = ((data.entities as unknown[] | undefined) ?? []).map((raw) => {
+    const entity = normalizeEntity(raw, campaign.id)
+    if (!entity) throw new CampaignImportError('invalidCampaign')
+    return entity
+  })
+  return {
+    format: CAMPAIGN_EXPORT_FORMAT,
+    version: CAMPAIGN_EXPORT_VERSION,
+    exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
+    campaign,
+    entities,
+  }
 }

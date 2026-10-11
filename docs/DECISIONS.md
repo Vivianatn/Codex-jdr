@@ -4,6 +4,71 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Phase 1 — Fiches (2026-10-11)
+
+### D-101 · Règles confirmées par le MJ
+
+Réponses aux questions de la section 13, appliquées comme valeurs par défaut dans `src/rules/config.ts` (`DEFAULT_RULES`) et modifiables par campagne dans **Préparation › Règles** :
+
+| #   | Question                         | Règle retenue                                                                                |
+| --- | -------------------------------- | -------------------------------------------------------------------------------------------- |
+| 1   | Arrondi de `2d20/2`              | Au supérieur (défaut conservé)                                                               |
+| 2   | PV à la montée de niveau         | **+1 PV max par niveau gagné**. Donc PV max = 10 + 1d20 + Nv à tout niveau.                  |
+| 3   | Méthode des tests                | Jet sous la caractéristique, `1d20 ≤ valeur` (défaut conservé)                               |
+| 4   | Progression des caractéristiques | Non (défaut conservé)                                                                        |
+| 5   | Gain de compétences              | **+1 compétence (active ou passive) tous les 10 niveaux**, sans niveau requis par compétence |
+| 6   | Critiques                        | **1 = réussite critique majeure, 2 = mineure ; 20 = échec critique majeur, 19 = mineur**     |
+| 7   | Unité de grille                  | **1 case = 1 m**                                                                             |
+
+« On garde par défaut » a été interprété comme couvrant les questions sans réponse explicite (1, 3 et 4). Les faces critiques l'emportent toujours sur la comparaison : un 2 naturel réussit même sous une caractéristique de 1, un 19 naturel échoue même sous 20. Le critique élargi par la Chance (§4.9) existe, mais il est désactivé par défaut.
+
+### D-102 · Statistiques et PV tirés à l'avance
+
+Le MJ tire les caractéristiques et les PV avant la séance, pour tous les types de personnages. L'assistant ne lance donc aucun dé : on **saisit** soit la valeur finale, soit les deux d20 (l'app applique alors la division par 2 et l'arrondi de la campagne). Les PV se saisissent sous forme du d20 tiré, et le total `10 + jet + Nv` est affiché. Le lanceur de dés général (§7) reste prévu en phase 2, pour les jets que le MJ fera en partie. L'animation « la valeur se grave dans la carte » est conservée à la saisie.
+
+### D-103 · PV max dérivé, jamais stocké
+
+On stocke le **jet de PV** (`hp.roll`), pas le maximum. `PV max = base + jet + 1 + (Nv − 1) × PV par niveau` est recalculé partout (`rules/hp.ts`). Changer une règle met donc à jour toutes les fiches, et un import Discord retrouve le jet à partir du maximum. À une montée de niveau, les PV actuels augmentent du même nombre que le maximum.
+
+### D-104 · Compétences de départ exigées pour les joueurs seulement (configurable)
+
+La fiche Discord est celle des joueurs. Imposer « exactement 2 actives, 1 passive, 1 passif de classe » pour chaque gobelin serait un formulaire bloquant inutile (§9.5). L'assistant bloque donc pour les **joueurs** par défaut ; les types concernés se choisissent dans les règles de campagne. Sur une fiche existante, dépasser le nombre de compétences autorisé par le niveau n'affiche qu'un avertissement.
+
+### D-105 · Format Discord
+
+- Export : les libellés du modèle sont repris à l'identique (`## Etat :`, `- type d'arme`, `- Dexterité`, `----`). La description et le mindset vont dans un bloc de citation `>`. Les PV s'écrivent `actuels/max (10 + jet + 1)`. Les compétences sont préfixées `[Active]`, `[Passive]` ou `[Passif de classe]`, avec la caractéristique liée entre parenthèses. Les quantités s'écrivent `x2`. Les textes sur plusieurs lignes deviennent des lignes indentées.
+- Les lignes d'aide du modèle (« (DETERMINE PAR LANCES… ) ») ne sont pas réécrites dans une fiche remplie.
+- Import tolérant : accents, majuscules et deux-points facultatifs, `11,5`, `10 + 1d20+Nv = 27`, `(x20)`, `(active)`, et une ligne « Mindset : » libre. Ce qui manque prend une valeur par défaut et est signalé avant l'import.
+- Ne passent pas par Discord : portrait, PV temporaires, modificateurs chiffrés des compétences, journal. L'aller-retour sans perte est vérifié sur tout le reste par un test par propriétés (300 fiches aléatoires).
+
+### D-106 · Bestiaire partagé, exemplaires dans la campagne
+
+Les **modèles d'ennemis** vivent dans une table `bestiary` commune à toutes les campagnes (§2.3 « réutilisables d'une campagne à l'autre »). « Ajouter à la campagne » crée N **copies indépendantes** numérotées (« Gobelin 4 », « Gobelin 5 »…, à la suite des numéros existants), au niveau choisi. Supprimer un modèle ne supprime pas ses exemplaires. L'export de campagne contient les exemplaires, pas les modèles ; l'export de la bibliothèque est prévu avec les extras de la phase 6.
+
+### D-107 · État en mémoire, sauvegarde automatique, annulation
+
+Comme prévu en D-008 : à l'ouverture d'une campagne, ses personnages sont chargés dans `useCampaignStore`, qui fait foi tant qu'elle est ouverte. Chaque modification est sauvegardée dans IndexedDB par différence de références, regroupée toutes les 250 ms, et forcée avant un export, un changement de campagne ou la fermeture de la page. Toutes les modifications de fiche sont annulables : **Ctrl+Z / Ctrl+Maj+Z**, boutons dans l'en-tête, et bouton « Annuler » dans les toasts de suppression et d'ajout d'ennemis. Les champs texte valident à la sortie du champ ou avec Entrée, pas à chaque frappe : une modification = une entrée d'historique. Les modèles du bestiaire sont édités directement en base, sans historique.
+
+### D-108 · Portrait
+
+Image importée par clic ou glisser-déposer, puis recadrée dans un dialogue (déplacement à la souris ou aux flèches du clavier, zoom au curseur), et enregistrée en carré WebP de 384 px dans la fiche (data URL). Les exports JSON restent ainsi autonomes, sans fichier image séparé.
+
+### D-109 · Journal de fiche
+
+Sont consignés : création ou import, changement de niveau, PV actuels et temporaires, valeurs de base des caractéristiques, compétences apprises ou retirées, états, objets obtenus ou retirés. Les simples corrections de texte (identité) ne le sont pas, pour garder un journal lisible. Il est limité à 500 entrées par fiche.
+
+### D-110 · Export de campagne v2
+
+Le format passe en `version: 2` et contient `entities`. Les fichiers v1 (phase 0) s'importent toujours : règles par défaut et aucun personnage. Lorsqu'une campagne est importée comme copie, ses personnages reçoivent de nouveaux identifiants, et les liens familier → propriétaire sont recâblés.
+
+### D-111 · Tests
+
+- Les tests de composants rendent l'application entière (routeur, Dexie sur fake-indexeddb, animations coupées). Le délai d'attente de Testing Library passe à 4 s et celui d'un test à 20 s : l'assistant tape des dizaines de champs.
+- Les audits axe des tests e2e attendent la fin des animations : un contraste mesuré pendant un fondu (texte encore semi-transparent) donnait de faux positifs.
+- Playwright utilise la moitié des cœurs (`workers: '50%'`) avec un délai de 60 s par test : chaque test pilote toute l'application.
+
+---
+
 ## Phase 0 — Fondations (2026-10-11)
 
 ### D-001 · Versions de l'outillage

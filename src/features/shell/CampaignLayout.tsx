@@ -9,8 +9,10 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { campaignRepository } from '@/db/campaigns'
 import { useT } from '@/i18n'
+import { useCampaignStore } from '@/stores/campaignStore'
 import { useUiStore } from '@/stores/uiStore'
 import { AppHeader } from './AppHeader'
+import { UndoRedo } from './UndoRedo'
 import type { CampaignContext } from './campaignContext'
 
 export type GameMode = 'prep' | 'play'
@@ -25,11 +27,15 @@ export function CampaignLayout() {
     [campaignId],
   )
 
+  const ready = useCampaignStore((s) => s.campaignId === campaignId && s.status === 'ready')
+
   useEffect(() => {
-    if (campaignId) void campaignRepository.markOpened(campaignId)
+    if (!campaignId) return
+    void campaignRepository.markOpened(campaignId)
+    void useCampaignStore.getState().load(campaignId)
   }, [campaignId])
 
-  if (campaign === undefined) return null
+  if (campaign === undefined || (campaign && !ready)) return null
 
   if (campaign === null) {
     return (
@@ -63,6 +69,7 @@ export function CampaignLayout() {
           </>
         }
         center={<ModeSwitch campaignId={campaign.id} />}
+        end={<UndoRedo />}
       />
       <Outlet context={{ campaign } satisfies CampaignContext} />
     </div>

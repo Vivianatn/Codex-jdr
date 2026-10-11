@@ -1,18 +1,6 @@
-import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
-
-async function expectNoSeriousA11yViolations(page: Page) {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-    .analyze()
-  const serious = results.violations.filter(
-    (v) => v.impact === 'serious' || v.impact === 'critical',
-  )
-  expect(
-    serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
-  ).toEqual([])
-}
+import { expectNoSeriousA11yViolations } from './support/a11y'
 
 async function createCampaign(page: Page, name: string) {
   await page.getByRole('button', { name: 'Nouvelle campagne' }).first().click()
@@ -65,7 +53,7 @@ test('exports a campaign, deletes it and re-imports it identically', async ({ pa
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/^codex-aller-retour-\d{4}-\d{2}-\d{2}\.json$/)
   const file = JSON.parse(await readFile(await download.path(), 'utf8'))
-  expect(file).toMatchObject({ format: 'codex-campaign', version: 1 })
+  expect(file).toMatchObject({ format: 'codex-campaign', version: 2 })
 
   await page.getByRole('button', { name: /Plus d’actions — Aller-retour/ }).click()
   await page.getByRole('menuitem', { name: 'Supprimer' }).click()

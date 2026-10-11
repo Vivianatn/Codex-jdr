@@ -1,4 +1,5 @@
 import { Navigate, useParams, useRouteError } from 'react-router'
+import { CreationWizard } from '@/features/characters/wizard/CreationWizard'
 import { useT } from '@/i18n'
 import { useUiStore } from '@/stores/uiStore'
 
@@ -18,4 +19,9 @@ export function RouteError() {
       {t.errors.generic}
     </div>
   )
+}
+
+export function WizardRoute() {
+  const { section = '' } = useParams()
+  return <CreationWizard section={section} />
 }

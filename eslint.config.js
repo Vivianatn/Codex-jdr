@@ -28,6 +28,8 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       // Autofocus inside dialogs is intentional; only flag raw DOM elements.
       'jsx-a11y/no-autofocus': ['error', { ignoreNonDOM: true }],
+      // Scrollable regions must be focusable (axe: scrollable-region-focusable).
+      'jsx-a11y/no-noninteractive-tabindex': ['error', { roles: ['tabpanel', 'region'] }],
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

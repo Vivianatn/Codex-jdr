@@ -4,6 +4,7 @@ import type { Campaign } from '@/db/types'
 import { useT } from '@/i18n'
 import type { Messages } from '@/i18n/locales/fr'
 import { downloadJson, slugify } from '@/lib/files'
+import { flushAutosave, useCampaignStore } from '@/stores/campaignStore'
 
 export function importErrorMessage(t: Messages, error: unknown): string {
   if (!(error instanceof CampaignImportError)) return t.errors.generic
@@ -37,11 +38,14 @@ export function useCampaignActions() {
     },
 
     async remove(campaign: Campaign): Promise<void> {
+      if (useCampaignStore.getState().campaignId === campaign.id)
+        await useCampaignStore.getState().unload()
       await campaignRepository.remove(campaign.id)
       toast.success(t.campaigns.deleted(campaign.name))
     },
 
     async exportToFile(campaign: Campaign): Promise<void> {
+      await flushAutosave()
       const data = await campaignRepository.exportCampaign(campaign.id)
       const date = new Date().toISOString().slice(0, 10)
       downloadJson(`codex-${slugify(campaign.name)}-${date}.json`, data)

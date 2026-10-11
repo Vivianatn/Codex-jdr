@@ -11,6 +11,7 @@ export const PREP_SECTIONS = [
   'sessions',
   'quests',
   'notes',
+  'rules',
 ] as const
 
 export type PrepSection = (typeof PREP_SECTIONS)[number]

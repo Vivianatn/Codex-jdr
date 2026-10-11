@@ -4,7 +4,8 @@ import { PlayLayout } from '@/features/play/PlayLayout'
 import { PrepLayout } from '@/features/prep/PrepLayout'
 import { PrepSectionPage } from '@/features/prep/PrepSectionPage'
 import { CampaignLayout } from '@/features/shell/CampaignLayout'
-import { ResumePrep, RouteError } from './RouteHelpers'
+import { EntitySheetPage, TemplateSheetPage } from '@/features/characters/SheetPages'
+import { ResumePrep, RouteError, WizardRoute } from './RouteHelpers'
 
 export const routes: RouteObject[] = [
   { path: '/', element: <CampaignsPage />, errorElement: <RouteError /> },
@@ -18,7 +19,12 @@ export const routes: RouteObject[] = [
       {
         path: 'prep/:section',
         element: <PrepLayout />,
-        children: [{ index: true, element: <PrepSectionPage /> }],
+        children: [
+          { index: true, element: <PrepSectionPage /> },
+          { path: 'new', element: <WizardRoute /> },
+          { path: 'e/:entityId', element: <EntitySheetPage /> },
+          { path: 't/:templateId', element: <TemplateSheetPage /> },
+        ],
       },
       { path: 'play', element: <PlayLayout /> },
     ],

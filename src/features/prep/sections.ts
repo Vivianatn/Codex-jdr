@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Map,
   NotebookPen,
+  Scale,
   Skull,
   Users,
   type LucideIcon,
@@ -23,6 +24,7 @@ export const SECTION_ICONS: Record<PrepSection, LucideIcon> = {
   sessions: CalendarDays,
   quests: Flag,
   notes: NotebookPen,
+  rules: Scale,
 }
 
 export function sectionLabel(t: Messages, section: PrepSection): string {

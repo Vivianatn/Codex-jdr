@@ -1,7 +1,10 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach } from 'vitest'
+
+// Full-app renders (Dexie + router + motion) can take more than 1 s on slow machines.
+configure({ asyncUtilTimeout: 4000 })
 
 afterEach(() => {
   cleanup()

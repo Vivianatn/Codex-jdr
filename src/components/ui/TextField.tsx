@@ -1,7 +1,7 @@
 import { useId, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
 
-const FIELD =
+export const FIELD =
   'w-full rounded-md border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/70 transition-colors hover:border-line-strong focus-visible:border-accent aria-invalid:border-hp'
 
 interface FieldShellProps {
@@ -9,13 +9,27 @@ interface FieldShellProps {
   hint?: string
   error?: string | null
   id: string
+  /** Keeps the label for screen readers only (compact rows). */
+  hideLabel?: boolean
+  className?: string
   children: React.ReactNode
 }
 
-function FieldShell({ label, hint, error, id, children }: FieldShellProps) {
+export function FieldShell({
+  label,
+  hint,
+  error,
+  id,
+  hideLabel,
+  className,
+  children,
+}: FieldShellProps) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-ink">
+    <div className={cn('space-y-1.5', className)}>
+      <label
+        htmlFor={id}
+        className={cn('block text-sm font-medium text-ink', hideLabel && 'sr-only')}
+      >
         {label}
         {hint && <span className="ml-1 font-normal text-ink-muted">({hint})</span>}
       </label>
