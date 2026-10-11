@@ -90,7 +90,7 @@ export function PlayMap() {
   useEffect(() => {
     if (!map || !followTurn || !activeEntityId) return
     const p = actions.tokenPoint(map.id, activeEntityId)
-    if (p) cameraControls(map).centerOn(p)
+    if (p) cameraControls(map).centerOn(p, true)
     // Only when the turn changes, not on every map edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEntityId, followTurn, map?.id])

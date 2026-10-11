@@ -2,7 +2,9 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
 
-const ROLL_MS = 650
+/** Dice choreography (DA §7.3): tumble in 520 ms, then the real face lands. */
+const ROLL_MS = 520
+const SPRING = { type: 'spring' as const, stiffness: 420, damping: 28, mass: 0.9 }
 
 /** Outline of each die, in a 40×40 box. */
 function shapeFor(sides: number): string {
@@ -75,12 +77,16 @@ export function AnimatedDie({
         !kept && 'opacity-40',
       )}
       style={{ width: size, height: size }}
-      initial={rolling ? { rotate: -200, scale: 0.6, y: -12 } : false}
-      animate={landed ? { rotate: 0, scale: 1, y: 0 } : { rotate: 180, scale: 0.9, y: -6 }}
+      initial={rolling ? { rotate: -180, scale: 0.6, y: 40, opacity: 0 } : false}
+      animate={
+        landed
+          ? { rotate: 0, scale: [1, 1.08, 1], y: 0, opacity: 1 }
+          : { rotate: 0, scale: 1, y: 0, opacity: 1 }
+      }
       transition={
         landed
-          ? { type: 'spring', stiffness: 420, damping: 14 }
-          : { duration: ROLL_MS / 1000, ease: 'linear' }
+          ? { scale: { duration: 0.18, ease: [0.34, 1.56, 0.64, 1] }, default: SPRING }
+          : SPRING
       }
       aria-hidden
     >
@@ -91,16 +97,17 @@ export function AnimatedDie({
           strokeLinejoin="round"
           className={cn(
             tone === 'gold'
-              ? 'fill-gold-soft stroke-gold'
+              ? 'fill-gold-soft stroke-gold-line'
               : tone === 'red'
-                ? 'fill-hp/10 stroke-hp'
-                : 'fill-surface stroke-accent',
+                ? 'fill-hp-soft stroke-hp'
+                : 'fill-surface-raised stroke-gold-line',
           )}
         />
       </svg>
       <span
         className={cn(
-          'tabular relative font-display font-semibold text-ink',
+          'tabular relative font-display font-bold',
+          tone === 'gold' ? 'text-gold-text' : tone === 'red' ? 'text-hp-text' : 'text-ink',
           sides === 4 && 'mt-2',
           !kept && 'line-through',
         )}
@@ -112,25 +119,34 @@ export function AnimatedDie({
   )
 }
 
-/** Burst of golden particles for a critical success (SPEC §7). */
-export function GoldBurst() {
-  const particles = Array.from({ length: 14 }, (_, i) => {
-    const angle = (i / 14) * Math.PI * 2
-    const distance = 38 + (i % 3) * 14
-    return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance, delay: (i % 4) * 0.02 }
+/**
+ * Critical success (DA §7.3): 12 four-pointed golden sparks fly out every
+ * 30°, turning a quarter turn as they fade.
+ */
+export function GoldBurst({ reach = 1 }: { reach?: number }) {
+  const sparks = Array.from({ length: 12 }, (_, i) => {
+    const angle = (i * Math.PI) / 6
+    const distance = (40 + (i % 3) * 18) * reach
+    return {
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance,
+      size: 7 + (i % 4) * 3,
+      delay: i * 0.02,
+    }
   })
   return (
     <span
       className="pointer-events-none absolute inset-0 flex items-center justify-center"
       aria-hidden
     >
-      {particles.map((p, i) => (
+      {sparks.map((p, i) => (
         <motion.span
           key={i}
-          className="absolute size-1.5 rounded-full bg-gold shadow-[0_0_6px_var(--codex-gold)]"
-          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
-          animate={{ x: p.x, y: p.y, opacity: 0, scale: 0.4 }}
-          transition={{ duration: 0.8, delay: p.delay, ease: 'easeOut' }}
+          className="absolute bg-gold [clip-path:polygon(50%_0,62%_38%,100%_50%,62%_62%,50%_100%,38%_62%,0_50%,38%_38%)]"
+          style={{ width: p.size, height: p.size }}
+          initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
+          animate={{ x: p.x, y: p.y, opacity: 0, rotate: 90 }}
+          transition={{ duration: 0.9, delay: p.delay, ease: [0.22, 1, 0.36, 1] }}
         />
       ))}
     </span>

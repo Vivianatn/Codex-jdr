@@ -289,3 +289,24 @@
   font-weight: 600;
   letter-spacing: 0.06em;
 }
+
+/* "Tour suivant" after 20 s without action (DA §7.3); off with reduced motion. */
+@keyframes codex-pulse {
+  0%,
+  50%,
+  100% {
+    box-shadow: 0 0 0 0 var(--codex-accent-soft);
+  }
+  25% {
+    box-shadow: 0 0 0 6px var(--codex-accent-soft);
+  }
+}
+
+@utility idle-pulse {
+  animation: codex-pulse 2.4s var(--codex-ease-in-out) infinite;
+}
+
+:root[data-motion='reduced'] .idle-pulse,
+:root[data-motion='off'] .idle-pulse {
+  animation: none !important;
+}

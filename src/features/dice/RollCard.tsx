@@ -47,8 +47,8 @@ export function RollCard({
             ? 'border-hp/60 bg-hp-soft'
             : 'border-line bg-surface',
       )}
-      animate={shake ? { x: [0, -8, 8, -6, 6, -3, 0] } : { x: 0 }}
-      transition={{ duration: 0.45 }}
+      animate={shake ? { x: [0, -6, 6, -4, 4, -2, 0] } : { x: 0 }}
+      transition={{ duration: 0.42, ease: 'linear' }}
     >
       {landed && rolling && critical?.kind === 'success' && <GoldBurst />}
       <div className="flex items-start justify-between gap-3">

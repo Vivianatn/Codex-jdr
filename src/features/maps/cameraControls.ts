@@ -24,14 +24,37 @@ export function cameraControls(map: GameMap) {
       const { viewport, setCamera } = state()
       setCamera(map.id, fitCamera(map, viewport.width, viewport.height))
     },
-    centerOn(point: { x: number; y: number }) {
+    /**
+     * Centres the view on a point. `glide`: animate over 500 ms (DA §7.3) and
+     * only when the point is outside the central 60 % of the screen.
+     */
+    centerOn(point: { x: number; y: number }, glide = false) {
       const { viewport, setCamera } = state()
       const c = current()
-      setCamera(map.id, {
+      const target = {
         ...c,
         x: viewport.width / 2 - point.x * c.scale,
         y: viewport.height / 2 - point.y * c.scale,
-      })
+      }
+      if (!glide) return setCamera(map.id, target)
+      const sx = c.x + point.x * c.scale
+      const sy = c.y + point.y * c.scale
+      const inside =
+        Math.abs(sx - viewport.width / 2) < viewport.width * 0.3 &&
+        Math.abs(sy - viewport.height / 2) < viewport.height * 0.3
+      if (inside) return
+      const motion = document.documentElement.dataset.motion
+      if (motion !== 'full' || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+        return setCamera(map.id, target)
+      const start = performance.now()
+      const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / 500)
+        const k = ease(t)
+        setCamera(map.id, { ...c, x: c.x + (target.x - c.x) * k, y: c.y + (target.y - c.y) * k })
+        if (t < 1) requestAnimationFrame(step)
+      }
+      requestAnimationFrame(step)
     },
   }
 }

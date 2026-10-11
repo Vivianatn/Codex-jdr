@@ -46,6 +46,7 @@ import {
 import type { Entity } from '@/domain/types'
 import { hpBand, type RulesConfig } from '@/rules'
 import { useResolvedTheme } from '@/app/usePreferences'
+import { useFxStore, type HpFx } from '@/stores/fxStore'
 import { useMapViewStore, type Camera } from '@/stores/mapViewStore'
 import { drawBoardIcon, type BoardIcon } from './boardIcons'
 import { BOARD_DARK, BOARD_LIGHT, BOARD_PLAYERS, DA_CELL, type BoardTheme } from './boardTheme'
@@ -162,6 +163,7 @@ export function MapCanvas(props: MapCanvasProps) {
   const selection = useMapViewStore((s) => s.selection)
   const area = useMapViewStore((s) => s.area)
   const pings = useMapViewStore((s) => s.pings)
+  const hpFx = useFxStore((s) => s.hp)
   const theme = useBoardTheme(viewer)
   /** DA pixel sizes are given for a 70 px cell. */
   const u = map.grid.size / DA_CELL
@@ -721,6 +723,23 @@ export function MapCanvas(props: MapCanvasProps) {
                   onDragEnd={() => setMeasure(null)}
                 />
               ))}
+            {/* Damage and healing float above the tokens (DA §7.3). */}
+            {show('tokens') &&
+              hpFx.map((fx) => {
+                const token = tokens.find((tk) => tk.entityId === fx.entityId)
+                if (!token) return null
+                const same = hpFx.filter((x) => x.entityId === fx.entityId)
+                const index = same.indexOf(fx)
+                return (
+                  <DamageFx
+                    key={fx.id}
+                    fx={fx}
+                    at={tokenCenter(map.grid, token)}
+                    cell={map.grid.size}
+                    offset={(index - (same.length - 1) / 2) * 28 * u}
+                  />
+                )
+              })}
           </Layer>
 
           {/* Fog and drawings. */}
@@ -1706,6 +1725,87 @@ function PingNode({
         />
       ))}
       <Circle x={x} y={y} radius={theme.ping.dot / 2 / scale} fill={theme.ping.color} />
+    </Group>
+  )
+}
+
+/**
+ * Floating "−8" above a token (DA §7.3): rises 32 px, pops to 1.15, fades
+ * from 700 to 1000 ms; a damaged token flashes red. Reduced motion: shown
+ * in place, then faded.
+ */
+function DamageFx({ fx, at, cell, offset }: { fx: HpFx; at: Point; cell: number; offset: number }) {
+  const text = useRef<Konva.Text>(null)
+  const flash = useRef<Konva.Circle>(null)
+  const drop = useFxStore((s) => s.dropHp)
+  const u = cell / DA_CELL
+  const size = (fx.severe ? 40 : 28) * u
+  const color =
+    fx.kind === 'damage'
+      ? fx.severe
+        ? '#EBC274'
+        : '#F28B82'
+      : fx.kind === 'heal'
+        ? '#7BD6A1'
+        : '#8DBDF0'
+  const label = `${fx.kind === 'damage' ? '−' : '+'}${fx.amount}`
+  useEffect(() => {
+    const node = text.current
+    const full = motionFull()
+    const tweens: Konva.Tween[] = []
+    if (node && full) {
+      node.scale({ x: 0.8, y: 0.8 })
+      tweens.push(
+        new Konva.Tween({ node, scaleX: 1.15, scaleY: 1.15, duration: 0.12 }),
+        new Konva.Tween({ node, y: node.y() - 32 * u, duration: 1, easing: Konva.Easings.EaseOut }),
+      )
+      tweens.forEach((t) => t.play())
+      window.setTimeout(() => node.to({ scaleX: 1, scaleY: 1, duration: 0.15 }), 120)
+      window.setTimeout(() => node.to({ opacity: 0, duration: 0.3 }), 700)
+    } else if (node) {
+      window.setTimeout(() => node.to({ opacity: 0, duration: 0.15 }), 800)
+    }
+    const f = flash.current
+    if (f && fx.kind === 'damage') {
+      f.opacity(full ? 0 : 0.6)
+      if (full)
+        f.to({ opacity: 1, duration: 0.12, onFinish: () => f.to({ opacity: 0, duration: 0.12 }) })
+      else window.setTimeout(() => f.opacity(0), 200)
+    }
+    const timer = window.setTimeout(() => drop(fx.id), 1100)
+    return () => {
+      window.clearTimeout(timer)
+      tweens.forEach((t) => t.destroy())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <Group listening={false}>
+      {fx.kind === 'damage' && (
+        <Circle
+          ref={flash}
+          x={at.x}
+          y={at.y}
+          radius={cell * 0.45}
+          fill="rgba(227,93,93,0.45)"
+          opacity={0}
+        />
+      )}
+      <Text
+        ref={text}
+        text={label}
+        x={at.x + offset}
+        y={at.y - cell * 0.6}
+        offsetX={(label.length * size * 0.62) / 2}
+        offsetY={size / 2}
+        fontFamily="Cinzel, serif"
+        fontStyle="700"
+        fontSize={size}
+        fill={color}
+        stroke="#15110D"
+        strokeWidth={3 * u}
+        fillAfterStrokeEnabled
+      />
     </Group>
   )
 }

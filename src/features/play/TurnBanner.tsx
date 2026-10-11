@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { ChevronRight, CircleStop, Crown, Play, SkipForward } from 'lucide-react'
 import { Fragment } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import { useIdle } from '@/app/useIdle'
 import { Button } from '@/components/ui/Button'
 import { entityName } from '@/domain/entity'
 import { canStart, type PlayGroup, type TurnState } from '@/domain/turns'
@@ -23,6 +24,7 @@ export function TurnBanner() {
   const play = useCampaignStore((s) => s.play)
   const entities = useCampaignStore(useShallow((s) => s.entities))
   const turn = play.turn
+  const idle = useIdle(20_000, turn.status === 'playing')
   const groups = play.groups.filter((g) => g.memberIds.length)
   const currentIndex =
     turn.status === 'playing' ? play.groups.findIndex((g) => g.id === turn.groupId) : -1
@@ -122,6 +124,7 @@ export function TurnBanner() {
                 icon={<SkipForward />}
                 onClick={actions.nextTurn}
                 title={t.turns.nextHint}
+                className={cn(idle && 'idle-pulse')}
               >
                 {t.turns.next}
               </Button>
