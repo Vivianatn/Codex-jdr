@@ -40,7 +40,7 @@ export function PlaySheetDrawer() {
     <motion.aside
       key={entity.id}
       aria-label={t.sheet.open(entityName(entity))}
-      className="glass fixed top-14 right-0 bottom-0 z-20 w-full max-w-4xl overflow-y-auto border-l border-line p-5 shadow-overlay"
+      className="fixed top-14 right-0 bottom-0 z-40 w-full max-w-4xl overflow-y-auto border-l border-line bg-surface p-5 shadow-overlay"
       initial={{ x: 48, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}

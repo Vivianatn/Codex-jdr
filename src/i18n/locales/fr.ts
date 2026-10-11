@@ -274,9 +274,11 @@ export const fr = {
     tokensCount: (n: number) => (n === 1 ? '1 jeton' : `${n} jetons`),
     empty: 'Aucune carte. Crée ta première carte, puis importe une image de fond ou dessine-la.',
     back: 'Retour aux cartes',
+    breadcrumb: 'Fil d’Ariane',
     canvas: (name: string) => `Carte ${name}`,
     // tools
     tools: 'Outils',
+    toolGroups: { area: 'Zone d’effet', fog: 'Brouillard', annotate: 'Annoter' },
     tool: {
       select: 'Sélection et déplacement',
       measure: 'Mesurer',
@@ -496,6 +498,7 @@ export const fr = {
     areaSave: 'Jet pour moitié',
     // players' view
     playerView: 'Vue joueurs',
+    rollDice: 'Lancer un dé',
     openPlayerView: 'Ouvrir la vue joueurs (second écran)',
     display: 'Les joueurs voient',
     displayModes: { map: 'La carte', image: 'Une image', pause: 'Une pause' },
@@ -524,6 +527,7 @@ export const fr = {
     removeCondition: (name: string) => `Retirer l’état ${name}`,
   },
   turns: {
+    order: 'Ordre des tours',
     banner: 'Tours de jeu',
     round: (n: number) => `Round ${n}`,
     playing: (group: string) => `Au tour du groupe : ${group}`,

@@ -11,35 +11,33 @@ import { TurnBanner } from './TurnBanner'
 const PlayMap = lazy(() => import('@/features/maps/PlayMap').then((m) => ({ default: m.PlayMap })))
 
 /**
- * "En jeu" mode: the turn banner on top (D-226), the map, and the groups in
- * the sidebar. Sheets and the quick panel slide over the map.
+ * "En jeu" mode: the turn bar on top (D-226), then the board on the whole
+ * screen; groups, tools, sheets and the quick panel float over it (DA §10.6).
  */
 export function PlayLayout() {
   const t = useT()
   useSurface('play')
 
   return (
-    <PageTransition className="flex-row">
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TurnBanner />
-        <main
-          id="main"
-          aria-label={t.play.mapRegion}
-          className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-surface-2"
-        >
-          <MapBackdrop />
-          <Suspense fallback={null}>
-            <PlayMap />
-          </Suspense>
-        </main>
-      </div>
-
-      <aside
-        aria-label={t.play.quickAccess}
-        className="hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-line bg-bg p-4 lg:flex"
+    <PageTransition className="flex-col">
+      <TurnBanner />
+      <main
+        id="main"
+        aria-label={t.play.mapRegion}
+        className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-bg"
       >
-        <GroupsPanel />
-      </aside>
+        <MapBackdrop />
+        <Suspense fallback={null}>
+          <PlayMap />
+        </Suspense>
+        {/* The board is the hero: the groups float over it in glass (DA §10.6). */}
+        <aside
+          aria-label={t.play.quickAccess}
+          className="codex-glass absolute top-4 bottom-4 left-4 z-10 hidden w-64 flex-col overflow-y-auto p-3.5 lg:flex"
+        >
+          <GroupsPanel />
+        </aside>
+      </main>
       <PlaySheetDrawer />
       <QuickPanel />
     </PageTransition>

@@ -6,26 +6,16 @@ import { Button } from '@/components/ui/Button'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import { useCampaignStore } from '@/stores/campaignStore'
-import { useMapViewStore, type MapTool } from '@/stores/mapViewStore'
-import { cameraControls } from './cameraControls'
+import { useMapViewStore } from '@/stores/mapViewStore'
+import { cameraControls, useCameraScale } from './cameraControls'
 import { MapCanvas, type MapChange } from './MapCanvas'
 import { ElementPanel, MapSettingsPanel, WallPanel } from './MapPanels'
 import { PanelDock } from './panelDock'
-import { MapToolbar } from './MapToolbar'
+import { MapPalette, PaletteMenu } from './MapPalette'
+import { MapToolbar, ToolOptions, ZoomControl, type ToolItem } from './MapToolbar'
 import { useCanvasLabels } from './useCanvasLabels'
 
-const EDIT_TOOLS: MapTool[] = [
-  'select',
-  'wall',
-  'door',
-  'calibrate',
-  'fogReveal',
-  'fogHide',
-  'fogRect',
-  'draw',
-  'erase',
-  'measure',
-]
+const EDIT_TOOLS: ToolItem[] = ['select', 'wall', 'door', 'calibrate', 'fog', 'annotate', 'measure']
 
 /** Préparation › Cartes › one map: grid, background, decor, walls, objects, fog. */
 export function MapEditorPage() {
@@ -101,6 +91,7 @@ export function MapEditorPage() {
   }, [onChange, t])
 
   const controls = useMemo(() => (map ? cameraControls(map) : null), [map])
+  const scale = useCameraScale(map)
 
   if (!map) return <Navigate to={`/c/${campaign.id}/prep/maps`} replace />
 
@@ -110,18 +101,27 @@ export function MapEditorPage() {
 
   return (
     <div className="flex h-full min-h-[32rem] flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
-        <Link
-          to={`/c/${campaign.id}/prep/maps`}
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-ink-muted hover:bg-surface-2 hover:text-ink"
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-surface px-4">
+        <nav
+          aria-label={t.maps.breadcrumb}
+          className="flex min-w-0 flex-1 items-center gap-2 text-sm"
         >
-          <ArrowLeft className="size-4" aria-hidden />
-          {t.maps.back}
-        </Link>
-        <h1 className="min-w-0 flex-1 truncate font-display text-lg font-semibold text-ink">
-          {map.name}
-        </h1>
+          <Link
+            to={`/c/${campaign.id}/prep/maps`}
+            className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-ink-muted hover:bg-surface-2 hover:text-ink"
+          >
+            <ArrowLeft className="size-4" aria-hidden />
+            {t.maps.pageTitle}
+          </Link>
+          <span className="text-ink-faint" aria-hidden>
+            /
+          </span>
+          <h1 className="min-w-0 truncate font-title text-base font-semibold text-ink">
+            {map.name}
+          </h1>
+        </nav>
         <Button
+          variant="primary"
           size="sm"
           icon={<Play />}
           onClick={() => {
@@ -131,14 +131,12 @@ export function MapEditorPage() {
         >
           {t.maps.play}
         </Button>
-      </div>
-      <MapToolbar
-        tools={EDIT_TOOLS}
-        palette
-        onZoom={(f) => controls?.zoom(f)}
-        onFit={() => controls?.fit()}
-      />
+      </header>
       <div className="flex min-h-0 flex-1">
+        <MapToolbar tools={EDIT_TOOLS} orientation="rail">
+          <PaletteMenu />
+        </MapToolbar>
+        <MapPalette />
         <section aria-label={t.maps.canvas(map.name)} className="relative min-w-0 flex-1">
           <MapCanvas
             map={map}
@@ -151,6 +149,13 @@ export function MapEditorPage() {
             onChange={onChange}
             onBlocked={(m) => toast(m)}
             calibrateCells={calibrateCells}
+          />
+          <ToolOptions className="absolute top-3 left-1/2 z-10 -translate-x-1/2" />
+          <ZoomControl
+            scale={scale}
+            onZoom={(f) => controls?.zoom(f)}
+            onFit={() => controls?.fit()}
+            className="absolute right-4 bottom-4 z-10"
           />
         </section>
         <PanelDock.Provider value>

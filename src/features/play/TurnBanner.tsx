@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion'
-import { CircleStop, Crown, Play, SkipForward } from 'lucide-react'
+import { ChevronRight, CircleStop, Crown, Play, SkipForward } from 'lucide-react'
+import { Fragment } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
 import { entityName } from '@/domain/entity'
-import { canStart } from '@/domain/turns'
+import { canStart, type PlayGroup, type TurnState } from '@/domain/turns'
+import type { Entity } from '@/domain/types'
 import { Portrait } from '@/features/characters/Portrait'
 import { useGameActions } from '@/features/game/useGameActions'
 import { useT } from '@/i18n'
@@ -12,153 +14,203 @@ import { useCampaignStore } from '@/stores/campaignStore'
 import { useUiStore } from '@/stores/uiStore'
 
 /**
- * Turn banner (D-226): which group plays, its characters in order with the
- * active one highlighted, the following groups, and the GM's turn at the end.
+ * Turn bar (D-226, DA §8.21): the round, every group in playing order with
+ * its characters, the GM's turn at the end, and the next-turn button.
  */
 export function TurnBanner() {
   const t = useT()
   const actions = useGameActions()
   const play = useCampaignStore((s) => s.play)
   const entities = useCampaignStore(useShallow((s) => s.entities))
-  const openQuick = useUiStore((s) => s.openQuick)
   const turn = play.turn
+  const groups = play.groups.filter((g) => g.memberIds.length)
+  const currentIndex =
+    turn.status === 'playing' ? play.groups.findIndex((g) => g.id === turn.groupId) : -1
+  const currentGroup = currentIndex >= 0 ? play.groups[currentIndex] : undefined
 
-  if (turn.status === 'stopped')
-    return (
-      <Bar>
-        <p className="min-w-0 flex-1 text-sm text-ink-muted">
-          {canStart(play) ? t.turns.banner : t.turns.noGroupYet}
-        </p>
-        <Button
-          variant="primary"
-          icon={<Play />}
-          disabled={!canStart(play)}
-          onClick={actions.startTurns}
-        >
-          {t.turns.start}
-        </Button>
-      </Bar>
-    )
-
-  if (turn.status === 'gm')
-    return (
-      <Bar tone="gold">
-        <RoundChip round={turn.round} />
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
-            <Crown className="size-5 text-gold" aria-hidden />
-            {t.turns.gmTurn}
-          </p>
-          <p className="text-sm text-ink-muted">{t.turns.gmTurnHint}</p>
-        </div>
-        <Button variant="ghost" icon={<CircleStop />} onClick={actions.stopTurns}>
-          {t.turns.stop}
-        </Button>
-        <Button variant="primary" icon={<Play />} onClick={actions.resumeTurns} autoFocus>
-          {t.turns.resume}
-        </Button>
-      </Bar>
-    )
-
-  const group = play.groups.find((g) => g.id === turn.groupId)
-  const position = group ? group.memberIds.indexOf(turn.memberId) : -1
-  const later = play.groups.slice(play.groups.findIndex((g) => g.id === turn.groupId) + 1)
-  return (
-    <Bar>
-      <RoundChip round={turn.round} />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium tracking-wide text-ink-muted uppercase">
-          {t.turns.playing(group?.name ?? '')}
-        </p>
-        <ol className="mt-1 flex flex-wrap items-center gap-2" aria-label={group?.name}>
-          {group?.memberIds.map((id, index) => {
-            const e = entities[id]
-            if (!e) return null
-            const current = id === turn.memberId
-            const name = entityName(e)
-            return (
-              <li key={id}>
-                <button
-                  type="button"
-                  onClick={() => openQuick(id)}
-                  aria-current={current ? 'step' : undefined}
-                  aria-label={`${t.turns.open(name)}${current ? ` — ${t.turns.current(name)}` : index < position ? ` (${t.turns.done})` : ''}`}
-                  className={cn(
-                    'flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm transition-all',
-                    current
-                      ? 'border-accent bg-accent-soft font-semibold text-ink shadow-soft'
-                      : 'border-line bg-surface text-ink-muted hover:text-ink',
-                    index < position && 'opacity-60',
-                  )}
-                >
-                  <span className="relative">
-                    <Portrait
-                      src={e.identity.portrait}
-                      name={name}
-                      size="sm"
-                      className="size-8 text-xs"
-                    />
-                    {current && (
-                      <motion.span
-                        className="absolute -inset-1 rounded-full ring-2 ring-accent"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        aria-hidden
-                      />
-                    )}
-                  </span>
-                  {name}
-                </button>
-              </li>
-            )
-          })}
-        </ol>
-        {later.some((g) => g.memberIds.length) && (
-          <p className="mt-1 truncate text-xs text-ink-muted">
-            {t.turns.upcoming} :{' '}
-            {later
-              .filter((g) => g.memberIds.length)
-              .map((g) => g.name)
-              .join(' → ')}{' '}
-            → {t.turns.gmTurn}
-          </p>
-        )}
-      </div>
-      <Button variant="ghost" icon={<CircleStop />} onClick={actions.stopTurns}>
-        {t.turns.stop}
-      </Button>
-      <Button
-        variant="primary"
-        icon={<SkipForward />}
-        onClick={actions.nextTurn}
-        title={t.turns.nextHint}
-      >
-        {t.turns.next}
-      </Button>
-    </Bar>
-  )
-}
-
-function Bar({ children, tone }: { children: React.ReactNode; tone?: 'gold' }) {
-  const t = useT()
   return (
     <section
       aria-label={t.turns.banner}
-      className={cn(
-        'glass relative z-10 flex flex-wrap items-center gap-3 border-b px-4 py-3',
-        tone === 'gold' ? 'border-gold/60 bg-gold-soft/60' : 'border-line',
-      )}
+      className="relative z-20 flex min-h-16 shrink-0 items-center gap-3.5 border-b border-line bg-[var(--codex-bar)] px-4 py-2"
     >
-      {children}
+      {turn.status !== 'stopped' && (
+        <>
+          <span className="tabular shrink-0 font-display text-sm font-bold tracking-[0.14em] text-gold-text uppercase">
+            {t.turns.round(turn.round)}
+          </span>
+          <span className="h-7 w-px shrink-0 bg-line" aria-hidden />
+        </>
+      )}
+      {/* For screen readers and tests: who plays, in words. */}
+      <p className="sr-only" aria-live="polite">
+        {turn.status === 'playing'
+          ? t.turns.playing(currentGroup?.name ?? '')
+          : turn.status === 'gm'
+            ? `${t.turns.gmTurn}. ${t.turns.gmTurnHint}`
+            : canStart(play)
+              ? t.turns.banner
+              : t.turns.noGroupYet}
+      </p>
+
+      {groups.length === 0 ? (
+        <p className="min-w-0 flex-1 text-sm text-ink-muted" aria-hidden>
+          {t.turns.noGroupYet}
+        </p>
+      ) : (
+        <ol
+          aria-label={t.turns.order}
+          className="flex min-w-0 flex-1 [scrollbar-width:none] items-center gap-2 overflow-x-auto px-1 py-1"
+        >
+          {groups.map((group, index) => (
+            <Fragment key={group.id}>
+              {index > 0 && <ChevronRight className="size-3 shrink-0 text-ink-muted" aria-hidden />}
+              <GroupChip
+                group={group}
+                entities={entities}
+                turn={turn}
+                state={
+                  turn.status === 'stopped'
+                    ? 'idle'
+                    : group.id === currentGroup?.id
+                      ? 'current'
+                      : turn.status === 'gm' ||
+                          play.groups.findIndex((g) => g.id === group.id) < currentIndex
+                        ? 'done'
+                        : 'upcoming'
+                }
+              />
+            </Fragment>
+          ))}
+          <ChevronRight className="size-3 shrink-0 text-ink-muted" aria-hidden />
+          <li
+            className={cn(
+              'flex h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-3 text-[0.8125rem] font-semibold',
+              turn.status === 'gm'
+                ? 'border-accent bg-accent-soft text-accent-text'
+                : 'border-dashed border-line-strong text-ink-muted',
+            )}
+            aria-current={turn.status === 'gm' ? 'step' : undefined}
+          >
+            <Crown className="size-3.5" aria-hidden />
+            {t.turns.gmTurn}
+          </li>
+        </ol>
+      )}
+
+      <div className="flex shrink-0 items-center gap-2">
+        {turn.status === 'stopped' ? (
+          <Button
+            variant="primary"
+            icon={<Play />}
+            disabled={!canStart(play)}
+            onClick={actions.startTurns}
+          >
+            {t.turns.start}
+          </Button>
+        ) : (
+          <>
+            <Button variant="ghost" icon={<CircleStop />} onClick={actions.stopTurns}>
+              {t.turns.stop}
+            </Button>
+            {turn.status === 'gm' ? (
+              <Button variant="primary" icon={<Play />} onClick={actions.resumeTurns} autoFocus>
+                {t.turns.resume}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                icon={<SkipForward />}
+                onClick={actions.nextTurn}
+                title={t.turns.nextHint}
+              >
+                {t.turns.next}
+              </Button>
+            )}
+          </>
+        )}
+      </div>
     </section>
   )
 }
 
-function RoundChip({ round }: { round: number }) {
+function GroupChip({
+  group,
+  entities,
+  turn,
+  state,
+}: {
+  group: PlayGroup
+  entities: Record<string, Entity>
+  turn: TurnState
+  state: 'idle' | 'current' | 'done' | 'upcoming'
+}) {
   const t = useT()
+  const openQuick = useUiStore((s) => s.openQuick)
+  const current = state === 'current'
+  const position =
+    current && turn.status === 'playing' ? group.memberIds.indexOf(turn.memberId) : -1
   return (
-    <span className="tabular shrink-0 rounded-md bg-ink px-2.5 py-1 font-display text-sm font-semibold text-bg">
-      {t.turns.round(round)}
-    </span>
+    <li
+      className={cn(
+        'flex shrink-0 items-center gap-2 rounded-[14px] py-1.5 pr-2.5 pl-1.5',
+        current ? 'bg-gold-soft shadow-[inset_0_0_0_1px_var(--codex-gold-line)]' : 'bg-surface-2',
+      )}
+    >
+      <span
+        className={cn(
+          'max-w-28 truncate pl-1 text-xs font-bold tracking-wide uppercase',
+          current ? 'text-gold-text' : 'text-ink-muted',
+        )}
+      >
+        {group.name}
+      </span>
+      <ol className="flex items-center gap-1.5" aria-label={group.name}>
+        {group.memberIds.map((id, index) => {
+          const e = entities[id]
+          if (!e) return null
+          const name = entityName(e)
+          const active = current && index === position
+          const played = current && index < position
+          return (
+            <li key={id} className="relative">
+              <button
+                type="button"
+                onClick={() => openQuick(id)}
+                aria-current={active ? 'step' : undefined}
+                aria-label={`${t.turns.open(name)}${active ? ` — ${t.turns.current(name)}` : played ? ` (${t.turns.done})` : ''}`}
+                title={name}
+                className={cn(
+                  'relative block rounded-full transition-[filter]',
+                  // Already played: desaturated (an opacity would break text contrast).
+                  (played || state === 'done') && 'grayscale',
+                )}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="turn-halo"
+                    className={cn(
+                      'absolute inset-0',
+                      e.kind === 'enemy' ? 'rounded-[9px]' : 'rounded-full',
+                    )}
+                    style={{
+                      boxShadow:
+                        '0 0 0 2px var(--codex-bg), 0 0 0 4px var(--codex-gold), 0 0 12px var(--codex-gold-glow)',
+                    }}
+                    transition={{ duration: 0.3, ease: [0.65, 0, 0.35, 1] }}
+                    aria-hidden
+                  />
+                )}
+                <Portrait
+                  src={e.identity.portrait}
+                  name={name}
+                  size="sm"
+                  className={cn('size-[34px] text-xs', e.kind === 'enemy' && 'rounded-[9px]')}
+                />
+              </button>
+            </li>
+          )
+        })}
+      </ol>
+    </li>
   )
 }

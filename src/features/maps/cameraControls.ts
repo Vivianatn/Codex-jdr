@@ -35,3 +35,11 @@ export function cameraControls(map: GameMap) {
     },
   }
 }
+
+/** Current zoom of a map (for the zoom control). */
+export function useCameraScale(map: GameMap | undefined) {
+  return useMapViewStore((s) => {
+    if (!map) return 1
+    return (s.cameras[map.id] ?? fitCamera(map, s.viewport.width, s.viewport.height)).scale
+  })
+}

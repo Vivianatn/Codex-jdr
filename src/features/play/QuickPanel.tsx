@@ -54,7 +54,7 @@ export function QuickPanel() {
     <motion.aside
       key={entity.id}
       aria-label={t.quick.title(name)}
-      className="glass fixed top-14 right-0 bottom-0 z-20 w-full max-w-md overflow-y-auto border-l border-line p-4 shadow-overlay"
+      className="codex-glass fixed top-[7.5rem] right-4 bottom-4 z-30 w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
       initial={{ x: 40, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}

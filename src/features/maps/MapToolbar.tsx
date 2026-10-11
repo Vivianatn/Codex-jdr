@@ -1,6 +1,10 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import {
+  Brush,
+  Check,
   Circle as CircleIcon,
+  Cloud,
   Crosshair,
   DoorOpen,
   Eraser,
@@ -20,12 +24,9 @@ import {
   Square,
   SquareDashed,
   Triangle,
-  Brush,
   type LucideIcon,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { IconButton } from '@/components/ui/Button'
-import { DECOR_KINDS, OBJECT_KINDS, type ElementKind } from '@/domain/maps'
+import { forwardRef, useEffect, type ComponentPropsWithoutRef, type ReactNode } from 'react'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { MAP_LAYERS, useMapViewStore, type MapTool } from '@/stores/mapViewStore'
@@ -49,100 +50,215 @@ const TOOL_ICONS: Record<MapTool, LucideIcon> = {
   place: Shapes,
 }
 
-const ITEM =
-  'flex min-h-9 cursor-pointer items-center gap-2 rounded-sm px-2.5 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2'
-const MENU =
-  'z-50 max-h-[70vh] min-w-52 overflow-y-auto rounded-md border border-line bg-surface p-1 shadow-overlay'
+export type ToolGroupKey = 'area' | 'fog' | 'annotate'
 
-/** Tool bar over the map; `tools` lists what this screen offers. */
+const TOOL_GROUPS: Record<ToolGroupKey, { icon: LucideIcon; tools: MapTool[]; key: string }> = {
+  area: { icon: CircleIcon, tools: ['areaCircle', 'areaCone', 'areaLine', 'areaSquare'], key: 'z' },
+  fog: { icon: Cloud, tools: ['fogReveal', 'fogHide', 'fogRect'], key: 'f' },
+  annotate: { icon: Pencil, tools: ['draw', 'erase'], key: 'n' },
+}
+
+/** Keyboard shortcuts of single tools (DA §8.23). */
+const TOOL_KEYS: Partial<Record<MapTool, string>> = {
+  select: 'v',
+  measure: 'm',
+  ping: 'p',
+  wall: 'w',
+  door: 'd',
+  calibrate: 'c',
+}
+
+export type ToolItem = MapTool | ToolGroupKey
+
+const isGroup = (item: ToolItem): item is ToolGroupKey => item in TOOL_GROUPS
+
+const BUTTON =
+  'inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted transition-colors duration-150 hover:bg-surface-2 hover:text-ink [&_svg]:size-5 [&_svg]:stroke-[1.75]'
+const ACTIVE = 'bg-accent-soft text-accent-text hover:bg-accent-soft hover:text-accent-text'
+const MENU =
+  'z-50 max-h-[70vh] min-w-52 overflow-y-auto rounded-xl border border-line bg-surface-raised p-1 shadow-lifted'
+const ITEM =
+  'flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2 [&_svg]:size-4'
+
+function Tip({
+  label,
+  children,
+  side,
+}: {
+  label: string
+  children: ReactNode
+  side: 'top' | 'right'
+}) {
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content
+          side={side}
+          sideOffset={8}
+          className="z-50 max-w-64 rounded-lg bg-ink px-2 py-1.5 text-xs font-medium text-bg shadow-lifted"
+        >
+          {label}
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  )
+}
+
+const ToolButton = forwardRef<
+  HTMLButtonElement,
+  ComponentPropsWithoutRef<'button'> & { active: boolean; label: string }
+>(function ToolButton({ active, label, className, children, ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      aria-label={label}
+      aria-pressed={active}
+      className={cn(BUTTON, active && ACTIVE, className)}
+      {...props}
+    >
+      {children}
+    </button>
+  )
+})
+
+/**
+ * Map tools (DA §8.23): a floating bar centred at the bottom during play, a
+ * vertical rail in the editor. Areas, fog and annotations are grouped.
+ */
 export function MapToolbar({
   tools,
-  palette = false,
-  onZoom,
-  onFit,
+  orientation = 'bar',
   children,
 }: {
-  tools: MapTool[]
-  palette?: boolean
-  onZoom: (factor: number) => void
-  onFit: () => void
+  tools: ToolItem[]
+  orientation?: 'bar' | 'rail'
   children?: ReactNode
 }) {
   const t = useT()
   const tool = useMapViewStore((s) => s.tool)
   const setTool = useMapViewStore((s) => s.setTool)
-  const placeKind = useMapViewStore((s) => s.placeKind)
-  const setPlaceKind = useMapViewStore((s) => s.setPlaceKind)
+  const side = orientation === 'bar' ? 'top' : 'right'
+  useToolShortcuts(tools)
+
+  const label = (key: MapTool) =>
+    TOOL_KEYS[key] ? `${t.maps.tool[key]} (${TOOL_KEYS[key]!.toUpperCase()})` : t.maps.tool[key]
+
+  return (
+    <div
+      role="toolbar"
+      aria-label={t.maps.tools}
+      aria-orientation={orientation === 'bar' ? 'horizontal' : 'vertical'}
+      className={cn(
+        'flex gap-1 p-1',
+        orientation === 'bar'
+          ? 'codex-glass items-center !rounded-[14px]'
+          : 'w-[60px] flex-col items-center border-r border-line bg-surface py-2',
+      )}
+    >
+      {tools.map((item) => {
+        if (!isGroup(item)) {
+          const Icon = TOOL_ICONS[item]
+          return (
+            <Tip key={item} label={label(item)} side={side}>
+              <ToolButton active={tool === item} label={label(item)} onClick={() => setTool(item)}>
+                <Icon aria-hidden />
+              </ToolButton>
+            </Tip>
+          )
+        }
+        const group = TOOL_GROUPS[item]
+        const active = group.tools.includes(tool)
+        const Icon = active ? TOOL_ICONS[tool] : group.icon
+        const groupLabel = `${t.maps.toolGroups[item]} (${group.key.toUpperCase()})`
+        return (
+          <DropdownMenu.Root key={item}>
+            <Tip label={groupLabel} side={side}>
+              <DropdownMenu.Trigger asChild>
+                <ToolButton active={active} label={groupLabel}>
+                  <Icon aria-hidden />
+                </ToolButton>
+              </DropdownMenu.Trigger>
+            </Tip>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                className={MENU}
+                side={side}
+                sideOffset={8}
+                aria-label={t.maps.toolGroups[item]}
+              >
+                {group.tools.map((key) => {
+                  const ItemIcon = TOOL_ICONS[key]
+                  return (
+                    <DropdownMenu.Item key={key} className={ITEM} onSelect={() => setTool(key)}>
+                      <ItemIcon className="text-ink-muted" aria-hidden />
+                      <span className="flex-1">{t.maps.tool[key]}</span>
+                      {tool === key && <Check className="text-accent-text" aria-hidden />}
+                    </DropdownMenu.Item>
+                  )
+                })}
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+        )
+      })}
+      {children}
+    </div>
+  )
+}
+
+/** Single-letter shortcuts for the tools on screen; a group key cycles its tools. */
+function useToolShortcuts(tools: ToolItem[]) {
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const target = e.target as HTMLElement | null
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))
+        return
+      const key = e.key.toLowerCase()
+      const { tool, setTool } = useMapViewStore.getState()
+      for (const item of tools) {
+        if (isGroup(item)) {
+          const group = TOOL_GROUPS[item]
+          if (group.key !== key) continue
+          const i = group.tools.indexOf(tool)
+          setTool(group.tools[(i + 1) % group.tools.length]!)
+          return
+        }
+        if (TOOL_KEYS[item] === key) {
+          setTool(item)
+          return
+        }
+      }
+    }
+    window.addEventListener('keydown', down)
+    return () => window.removeEventListener('keydown', down)
+  }, [tools])
+}
+
+/** Options of the current tool (brush size, drawing colour) and its hint. */
+export function ToolOptions({ className }: { className?: string }) {
+  const t = useT()
+  const tool = useMapViewStore((s) => s.tool)
   const brush = useMapViewStore((s) => s.brush)
   const setBrush = useMapViewStore((s) => s.setBrush)
   const drawColor = useMapViewStore((s) => s.drawColor)
   const drawGmOnly = useMapViewStore((s) => s.drawGmOnly)
   const setDraw = useMapViewStore((s) => s.setDraw)
-  const hidden = useMapViewStore((s) => s.hiddenLayers)
-  const toggleLayer = useMapViewStore((s) => s.toggleLayer)
+  if (tool === 'select') return null
   const hint = tool.startsWith('area')
     ? t.maps.toolHint.area
     : ((t.maps.toolHint as Record<string, string>)[tool] ?? '')
-
   return (
-    <div className="glass flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5">
-      <div role="toolbar" aria-label={t.maps.tools} className="flex flex-wrap items-center gap-0.5">
-        {tools.map((key) => {
-          const Icon = TOOL_ICONS[key]
-          return (
-            <IconButton
-              key={key}
-              size="sm"
-              label={t.maps.tool[key]}
-              icon={<Icon />}
-              variant={tool === key ? 'secondary' : 'ghost'}
-              aria-pressed={tool === key}
-              className={cn(tool === key && 'bg-accent-soft text-accent-text')}
-              onClick={() => setTool(key)}
-            />
-          )
-        })}
-        {palette && (
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
-              <button
-                type="button"
-                aria-label={t.maps.palette}
-                aria-pressed={tool === 'place'}
-                className={cn(
-                  'inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-sm',
-                  tool === 'place'
-                    ? 'bg-accent-soft text-accent-text'
-                    : 'text-ink-muted hover:bg-surface-2 hover:text-ink',
-                )}
-              >
-                <Shapes className="size-4" aria-hidden />
-                {t.maps.kinds[placeKind]}
-              </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content className={MENU} sideOffset={4}>
-                <DropdownMenu.Label className="px-2.5 py-1 text-xs font-semibold text-ink-muted">
-                  {t.maps.decor}
-                </DropdownMenu.Label>
-                {DECOR_KINDS.map((k) => (
-                  <PaletteItem key={k} kind={k} onPick={setPlaceKind} />
-                ))}
-                <DropdownMenu.Separator className="my-1 h-px bg-line" />
-                <DropdownMenu.Label className="px-2.5 py-1 text-xs font-semibold text-ink-muted">
-                  {t.maps.objects}
-                </DropdownMenu.Label>
-                {OBJECT_KINDS.map((k) => (
-                  <PaletteItem key={k} kind={k} onPick={setPlaceKind} />
-                ))}
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-        )}
-      </div>
-
+    <div
+      className={cn(
+        'codex-glass flex max-w-[min(42rem,calc(100%-2rem))] flex-wrap items-center gap-x-4 gap-y-1 !rounded-xl px-3 py-1.5 text-xs text-ink-muted',
+        className,
+      )}
+    >
       {(tool === 'fogReveal' || tool === 'fogHide') && (
-        <label className="ml-2 flex items-center gap-2 text-xs text-ink-muted">
+        <label className="flex items-center gap-2">
           {t.maps.brush}
           <input
             type="range"
@@ -155,14 +271,14 @@ export function MapToolbar({
         </label>
       )}
       {tool === 'draw' && (
-        <div className="ml-2 flex items-center gap-3 text-xs text-ink-muted">
+        <>
           <label className="flex items-center gap-1.5">
             {t.maps.color}
             <input
               type="color"
               value={drawColor}
               onChange={(e) => setDraw({ drawColor: e.target.value })}
-              className="h-7 w-9 cursor-pointer rounded border border-line bg-transparent"
+              className="h-7 w-9 cursor-pointer rounded-md border border-line-strong bg-transparent"
             />
           </label>
           <label className="flex items-center gap-1.5">
@@ -174,54 +290,128 @@ export function MapToolbar({
             />
             {t.maps.gmOnly}
           </label>
-        </div>
+        </>
       )}
-
-      <p className="hidden min-w-0 flex-1 truncate px-2 text-xs text-ink-muted xl:block">{hint}</p>
-      {children}
-
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger asChild>
-          <IconButton size="sm" label={t.maps.layers} icon={<Layers />} />
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content className={MENU} align="end" sideOffset={4}>
-            {MAP_LAYERS.map((layer) => (
-              <DropdownMenu.CheckboxItem
-                key={layer}
-                className={ITEM}
-                checked={!hidden.includes(layer)}
-                onSelect={(e) => e.preventDefault()}
-                onCheckedChange={() => toggleLayer(layer)}
-              >
-                {hidden.includes(layer) ? (
-                  <EyeOff className="size-4 text-ink-muted" aria-hidden />
-                ) : (
-                  <Eye className="size-4 text-accent-text" aria-hidden />
-                )}
-                {t.maps.layer[layer]}
-              </DropdownMenu.CheckboxItem>
-            ))}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
-      <IconButton
-        size="sm"
-        label={t.maps.zoomOut}
-        icon={<Minus />}
-        onClick={() => onZoom(1 / 1.25)}
-      />
-      <IconButton size="sm" label={t.maps.zoomIn} icon={<Plus />} onClick={() => onZoom(1.25)} />
-      <IconButton size="sm" label={t.maps.fit} icon={<Maximize />} onClick={onFit} />
+      {hint && <p className="min-w-0 flex-1 basis-48">{hint}</p>}
     </div>
   )
 }
 
-function PaletteItem({ kind, onPick }: { kind: ElementKind; onPick: (k: ElementKind) => void }) {
+/** Zoom control in glass: − 100 % + and "see the whole map" (DA §10.5). */
+export function ZoomControl({
+  scale,
+  onZoom,
+  onFit,
+  className,
+}: {
+  scale: number
+  onZoom: (factor: number) => void
+  onFit: () => void
+  className?: string
+}) {
   const t = useT()
+  const small =
+    'inline-flex size-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink [&_svg]:size-4'
   return (
-    <DropdownMenu.Item className={ITEM} onSelect={() => onPick(kind)}>
-      {t.maps.kinds[kind]}
-    </DropdownMenu.Item>
+    <div className={cn('codex-glass flex items-center gap-0.5 !rounded-xl p-1', className)}>
+      <button
+        type="button"
+        className={small}
+        aria-label={t.maps.zoomOut}
+        onClick={() => onZoom(1 / 1.25)}
+      >
+        <Minus aria-hidden />
+      </button>
+      <span className="tabular w-12 text-center text-xs font-semibold text-ink">
+        {Math.round(scale * 100)} %
+      </span>
+      <button
+        type="button"
+        className={small}
+        aria-label={t.maps.zoomIn}
+        onClick={() => onZoom(1.25)}
+      >
+        <Plus aria-hidden />
+      </button>
+      <button type="button" className={small} aria-label={t.maps.fit} onClick={onFit}>
+        <Maximize aria-hidden />
+      </button>
+    </div>
+  )
+}
+
+/** Layer visibility, as a menu (play). */
+export function LayersMenu({ className }: { className?: string }) {
+  const t = useT()
+  const hidden = useMapViewStore((s) => s.hiddenLayers)
+  const toggleLayer = useMapViewStore((s) => s.toggleLayer)
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          aria-label={t.maps.layers}
+          className={cn(
+            'inline-flex size-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink [&_svg]:size-4',
+            className,
+          )}
+        >
+          <Layers aria-hidden />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content className={MENU} align="end" sideOffset={6}>
+          {MAP_LAYERS.map((layer) => (
+            <DropdownMenu.CheckboxItem
+              key={layer}
+              className={ITEM}
+              checked={!hidden.includes(layer)}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => toggleLayer(layer)}
+            >
+              {hidden.includes(layer) ? (
+                <EyeOff className="text-ink-muted" aria-hidden />
+              ) : (
+                <Eye className="text-accent-text" aria-hidden />
+              )}
+              {t.maps.layer[layer]}
+            </DropdownMenu.CheckboxItem>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  )
+}
+
+/** Layer visibility, as a list with eye toggles (editor palette). */
+export function LayersList() {
+  const t = useT()
+  const hidden = useMapViewStore((s) => s.hiddenLayers)
+  const toggleLayer = useMapViewStore((s) => s.toggleLayer)
+  return (
+    <ul className="space-y-0.5">
+      {[...MAP_LAYERS].reverse().map((layer) => {
+        const off = hidden.includes(layer)
+        return (
+          <li key={layer}>
+            <button
+              type="button"
+              aria-pressed={!off}
+              onClick={() => toggleLayer(layer)}
+              className="flex h-9 w-full items-center gap-2 rounded-lg px-2 text-sm text-ink hover:bg-surface-2"
+            >
+              {off ? (
+                <EyeOff className="size-4 text-ink-faint" aria-hidden />
+              ) : (
+                <Eye className="size-4 text-accent-text" aria-hidden />
+              )}
+              <span className={cn('flex-1 text-left', off && 'text-ink-muted')}>
+                {t.maps.layer[layer]}
+              </span>
+            </button>
+          </li>
+        )
+      })}
+    </ul>
   )
 }

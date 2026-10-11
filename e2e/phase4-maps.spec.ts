@@ -122,8 +122,10 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
     .toEqual(['door', 'wall', 'wall'])
 
   // A trap from the palette, with damage.
-  await page.getByRole('button', { name: 'Éléments' }).click()
-  await page.getByRole('menuitem', { name: 'Piège' }).click()
+  await page
+    .getByRole('complementary', { name: 'Éléments' })
+    .getByRole('button', { name: 'Piège' })
+    .click()
   await click(page, centre(9, 2))
   const trapPanel = page.getByRole('complementary', { name: 'Piège' })
   await trapPanel.getByRole('combobox', { name: 'Effet du piège' }).selectOption('damage')
@@ -208,8 +210,9 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
   // Area of effect: a circle around Lyra, 3 damage.
   await page
     .getByRole('toolbar', { name: 'Outils' })
-    .getByRole('button', { name: 'Zone d’effet : cercle' })
+    .getByRole('button', { name: 'Zone d’effet' })
     .click()
+  await page.getByRole('menuitem', { name: 'Zone d’effet : cercle' }).click()
   await drag(page, centre(8, 5), { x: centre(8, 5).x + C * 1.2, y: centre(8, 5).y })
   const area = page.getByRole('complementary', { name: /Zone d’effet — 1 cible/ })
   await area.getByLabel('Dés ou valeur').fill('3')

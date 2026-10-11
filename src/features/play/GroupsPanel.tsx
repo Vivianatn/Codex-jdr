@@ -43,7 +43,7 @@ export function GroupsPanel() {
 
   return (
     <div className="space-y-5">
-      <h2 className="flex items-center gap-2 font-sans text-xs font-semibold tracking-wider text-ink-muted uppercase">
+      <h2 className="flex items-center gap-2 font-display text-[0.6875rem] font-semibold tracking-[0.16em] text-ink-muted uppercase">
         <Users className="size-3.5" aria-hidden />
         {t.turns.groups}
       </h2>
@@ -78,7 +78,7 @@ export function GroupsPanel() {
       <section aria-labelledby="ungrouped-heading">
         <h3
           id="ungrouped-heading"
-          className="mb-2 font-sans text-xs font-semibold tracking-wider text-ink-muted uppercase"
+          className="mb-2 font-display text-[0.6875rem] font-semibold tracking-[0.16em] text-ink-muted uppercase"
         >
           {t.turns.ungrouped}
         </h3>
@@ -123,8 +123,8 @@ function GroupCard({
     <section
       aria-label={group.name}
       className={cn(
-        'space-y-2 rounded-lg border bg-surface p-3',
-        active ? 'border-accent shadow-soft' : 'border-line',
+        'space-y-2 rounded-xl border p-2.5',
+        active ? 'border-gold-line bg-gold-soft/60' : 'border-line bg-surface/70',
       )}
     >
       <div className="flex items-end gap-1">
@@ -169,12 +169,15 @@ function GroupCard({
             if (!e) return null
             const name = entityName(e)
             return (
-              <li key={id} className="space-y-1.5 rounded-md bg-surface-2/60 p-2">
-                <div className="flex items-center gap-1">
-                  <OpenButton
-                    entity={e}
-                    current={turn.status === 'playing' && turn.memberId === id}
-                  />
+              <li key={id} className="space-y-1.5 rounded-[10px] bg-surface-2/70 p-1.5">
+                <OpenButton
+                  entity={e}
+                  current={turn.status === 'playing' && turn.memberId === id}
+                />
+                <StatusPills entity={e} rules={rules} limit={3} />
+                {/* HP field, then order and removal: the name keeps the full width. */}
+                <div className="flex items-center gap-0.5">
+                  <HpQuickInput entityId={id} name={name} compact className="min-w-0 flex-1" />
                   <IconButton
                     size="sm"
                     label={t.turns.moveUp(name)}
@@ -198,8 +201,6 @@ function GroupCard({
                     }
                   />
                 </div>
-                <StatusPills entity={e} rules={rules} limit={3} />
-                <HpQuickInput entityId={id} name={name} compact />
               </li>
             )
           })}
@@ -264,13 +265,13 @@ function OpenButton({ entity, current = false }: { entity: Entity; current?: boo
       aria-label={t.turns.open(name)}
       aria-current={current ? 'step' : undefined}
       className={cn(
-        'flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left hover:bg-surface-2',
-        current && 'bg-accent-soft',
+        'flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-[10px] px-1.5 py-1 text-left hover:bg-surface-2',
+        current && 'bg-gold-soft hover:bg-gold-soft',
       )}
     >
       <Portrait src={entity.identity.portrait} name={name} size="sm" className="size-8 text-xs" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-ink">{name}</span>
+        <span className="block truncate text-[0.8125rem] font-semibold text-ink">{name}</span>
         <HpBar
           current={entity.hp.current}
           max={max}

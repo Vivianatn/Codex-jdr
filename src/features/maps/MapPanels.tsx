@@ -55,7 +55,7 @@ export function MapPanel({
       className={
         docked
           ? 'flex w-80 shrink-0 flex-col overflow-hidden border-l border-line bg-bg'
-          : 'glass absolute top-2 right-2 bottom-2 z-10 flex w-80 flex-col overflow-hidden rounded-lg border border-line shadow-overlay'
+          : 'codex-glass absolute top-[4.5rem] right-4 bottom-24 z-20 flex w-80 flex-col overflow-hidden'
       }
     >
       <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">

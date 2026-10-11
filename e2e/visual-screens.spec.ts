@@ -149,8 +149,10 @@ for (const theme of ['light', 'dark'] as const) {
       ['Piège', 7, 6],
       ['Levier', 2, 6],
     ] as const) {
-      await page.getByRole('button', { name: 'Éléments' }).click()
-      await page.getByRole('menuitem', { name: kind }).click()
+      await page
+        .getByRole('complementary', { name: 'Éléments' })
+        .getByRole('button', { name: kind })
+        .click()
       await clickMap(page, { x: col * C + C / 2, y: row * C + C / 2 })
     }
     await toolbar.getByRole('button', { name: 'Sélection et déplacement' }).click()
@@ -173,7 +175,10 @@ for (const theme of ['light', 'dark'] as const) {
       await card.getByRole('button', { name: 'Ajouter au groupe Le groupe' }).click()
     }
     for (const name of ['Gorak', 'Lyra', 'Goule affamée', 'Brann']) {
-      await page.getByRole('button', { name: `Manipuler ${name}` }).click()
+      await page
+        .getByRole('complementary', { name: 'Accès rapide' })
+        .getByRole('button', { name: `Manipuler ${name}` })
+        .click()
       const quick = page.getByRole('complementary', { name: `Manipulation rapide — ${name}` })
       await quick.getByRole('button', { name: 'Placer sur la carte' }).click()
       if (name === 'Gorak') await shot(page, theme, '10-quick-panel')

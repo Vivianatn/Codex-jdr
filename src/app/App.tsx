@@ -15,6 +15,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
   useApplyPreferences()
   const animations = useSettingsStore((s) => s.animations)
   const theme = useResolvedTheme()
+  // In play, toasts sit at the bottom left of the board, clear of the groups
+  // column and the zoom control (DA §8.11, §10.6).
+  const playing = useSettingsStore((s) => s.surface === 'play')
 
   return (
     <MotionConfig
@@ -25,11 +28,14 @@ export function AppProviders({ children }: { children: ReactNode }) {
         {children}
         <Toaster
           theme={theme}
-          position="bottom-right"
+          position={playing ? 'bottom-left' : 'bottom-right'}
+          offset={playing ? { left: 296, bottom: 92 } : 20}
           closeButton
           toastOptions={{
             classNames: {
-              toast: '!rounded-md !border-line !bg-surface !text-ink !shadow-lifted !font-sans',
+              toast: playing
+                ? '!rounded-xl !border-[var(--codex-glass-line)] !bg-[var(--codex-surface-glass)] !backdrop-blur-[16px] !text-ink !shadow-lifted !font-sans'
+                : '!rounded-xl !border-line !bg-surface-raised !text-ink !shadow-lifted !font-sans',
               description: '!text-ink-muted',
             },
           }}

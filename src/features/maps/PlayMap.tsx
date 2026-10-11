@@ -1,5 +1,5 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { ExternalLink, ImagePlus, Map as MapIcon, MonitorPlay } from 'lucide-react'
+import { Dices, ExternalLink, ImagePlus, Map as MapIcon, MonitorPlay } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
@@ -14,15 +14,17 @@ import { fitImage, imageFromFile } from '@/lib/images'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useMapViewStore, type MapTool } from '@/stores/mapViewStore'
-import { cameraControls } from './cameraControls'
+import { useUiStore } from '@/stores/uiStore'
+import { cameraControls, useCameraScale } from './cameraControls'
 import { MapCanvas, type MapChange } from './MapCanvas'
 import { AreaPanel, ElementPanel, WallPanel } from './MapPanels'
-import { MapToolbar } from './MapToolbar'
+import { LayersMenu, MapToolbar, ToolOptions, ZoomControl, type ToolItem } from './MapToolbar'
 import { TokenSheets } from './TokenSheets'
 import { useCanvasLabels } from './useCanvasLabels'
 import { openViewChannel } from './viewChannel'
 
-const PLAY_TOOLS: MapTool[] = [
+const PLAY_TOOLS: ToolItem[] = ['select', 'measure', 'area', 'fog', 'ping', 'annotate']
+const PLAY_TOOL_KEYS: MapTool[] = [
   'select',
   'measure',
   'ping',
@@ -38,7 +40,7 @@ const PLAY_TOOLS: MapTool[] = [
 ]
 
 const ITEM =
-  'flex min-h-9 cursor-pointer items-center gap-2 rounded-sm px-2.5 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2'
+  'flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2'
 
 /** The map in play (D-228): tokens, doors, traps, areas, fog, and the players' view. */
 export function PlayMap() {
@@ -98,7 +100,7 @@ export function PlayMap() {
     view.select({ type: 'none' })
     view.openSheet(null)
     // Editor-only tools (walls, palette…) do not carry over into play.
-    if (!PLAY_TOOLS.includes(view.tool)) view.setTool('select')
+    if (!PLAY_TOOL_KEYS.includes(view.tool)) view.setTool('select')
     else view.setArea(null)
   }, [mapId])
 
@@ -109,13 +111,15 @@ export function PlayMap() {
     [mapId, updateMap],
   )
   const controls = useMemo(() => (map ? cameraControls(map) : null), [map])
+  const scale = useCameraScale(map)
+  const setDiceOpen = useUiStore((s) => s.setDiceOpen)
 
   const mapSelect = (
     <label className="flex items-center gap-1.5 text-xs text-ink-muted">
       <MapIcon className="size-4" aria-hidden />
       <span className="sr-only">{t.maps.chooseMap}</span>
       <select
-        className="h-8 max-w-44 rounded-md border border-line bg-surface px-2 text-sm text-ink"
+        className="h-9 max-w-44 rounded-lg border border-line-strong bg-surface px-2 text-sm text-ink"
         value={play.mapId ?? ''}
         onChange={(e) => {
           const id = e.target.value || null
@@ -164,15 +168,39 @@ export function PlayMap() {
     selection.type === 'element' ? map.elements.find((e) => e.id === selection.id) : undefined
   const wall = selection.type === 'wall' ? map.walls.find((w) => w.id === selection.id) : undefined
 
+  const toggle =
+    'flex h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-muted hover:bg-surface-2 hover:text-ink'
   return (
-    <div className="flex size-full flex-col">
-      <MapToolbar
-        tools={PLAY_TOOLS}
-        onZoom={(f) => controls?.zoom(f)}
-        onFit={() => controls?.fit()}
-      >
+    <div className="relative size-full">
+      <MapCanvas
+        map={map}
+        entities={entities}
+        rules={campaign.rules}
+        viewer="gm"
+        mode="play"
+        labels={labels}
+        mapNames={mapNames}
+        activeEntityId={activeEntityId}
+        onChange={onChange}
+        onTokenOpen={(id) => {
+          const view = useMapViewStore.getState()
+          view.openSheet(view.sheetId === id ? null : id)
+        }}
+        onDoorOpen={(id) => useMapViewStore.getState().select({ type: 'wall', id })}
+        onTokenMove={(tokenId, cell) => actions.moveToken(map.id, tokenId, cell)}
+        onDropEntity={(entityId, cell) => actions.placeToken(map.id, entityId, cell)}
+        onBlocked={(m) => toast(m)}
+        onPing={(point) => {
+          useMapViewStore.getState().addPing(point)
+          channel.current?.post({ type: 'ping', mapId: map.id, point })
+        }}
+      />
+      <TokenSheets map={map} entities={entities} />
+
+      {/* Map controls, top right (DA §10.6: everything floats over the board). */}
+      <div className="codex-glass absolute top-4 right-4 z-10 flex flex-wrap items-center gap-0.5 !rounded-xl p-1 pl-2">
         {mapSelect}
-        <label className="flex items-center gap-1.5 text-xs text-ink-muted">
+        <label className={toggle}>
           <input
             type="checkbox"
             checked={followTurn}
@@ -181,10 +209,7 @@ export function PlayMap() {
           />
           {t.maps.followTurn}
         </label>
-        <label
-          className="flex items-center gap-1.5 text-xs text-ink-muted"
-          title={t.mini.pinPlayersHint}
-        >
+        <label className={toggle} title={t.mini.pinPlayersHint}>
           <input
             type="checkbox"
             checked={pinSheets}
@@ -193,47 +218,48 @@ export function PlayMap() {
           />
           {t.mini.pinPlayers}
         </label>
-        <PlayerViewMenu campaignId={campaign.id} display={play.display} />
-      </MapToolbar>
-      <div className="relative min-h-0 flex-1">
-        <MapCanvas
-          map={map}
-          entities={entities}
-          rules={campaign.rules}
-          viewer="gm"
-          mode="play"
-          labels={labels}
-          mapNames={mapNames}
-          activeEntityId={activeEntityId}
-          onChange={onChange}
-          onTokenOpen={(id) => {
-            const view = useMapViewStore.getState()
-            view.openSheet(view.sheetId === id ? null : id)
-          }}
-          onDoorOpen={(id) => useMapViewStore.getState().select({ type: 'wall', id })}
-          onTokenMove={(tokenId, cell) => actions.moveToken(map.id, tokenId, cell)}
-          onDropEntity={(entityId, cell) => actions.placeToken(map.id, entityId, cell)}
-          onBlocked={(m) => toast(m)}
-          onPing={(point) => {
-            useMapViewStore.getState().addPing(point)
-            channel.current?.post({ type: 'ping', mapId: map.id, point })
-          }}
-        />
-        <TokenSheets map={map} entities={entities} />
-        {area ? (
-          <AreaPanel map={map} area={area} />
-        ) : element ? (
-          <ElementPanel
-            key={element.id}
-            map={map}
-            element={element}
-            mode="play"
-            onChange={onChange}
-          />
-        ) : wall ? (
-          <WallPanel key={wall.id} map={map} wall={wall} mode="play" onChange={onChange} />
-        ) : null}
+        <LayersMenu />
       </div>
+
+      {/* Tools, bottom centre. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-5 z-10 flex flex-col items-center gap-2 px-4">
+        <ToolOptions className="pointer-events-auto" />
+        <div className="pointer-events-auto">
+          <MapToolbar tools={PLAY_TOOLS}>
+            <span className="mx-0.5 h-7 w-px bg-line" aria-hidden />
+            <button
+              type="button"
+              onClick={() => setDiceOpen(true)}
+              aria-label={t.maps.rollDice}
+              title={t.maps.rollDice}
+              className="inline-flex size-11 items-center justify-center rounded-[10px] text-ink-muted hover:bg-surface-2 hover:text-ink [&_svg]:size-5"
+            >
+              <Dices aria-hidden />
+            </button>
+            <PlayerViewMenu campaignId={campaign.id} display={play.display} />
+          </MapToolbar>
+        </div>
+      </div>
+      <ZoomControl
+        scale={scale}
+        onZoom={(f) => controls?.zoom(f)}
+        onFit={() => controls?.fit()}
+        className="absolute right-4 bottom-5 z-10 hidden md:flex"
+      />
+
+      {area ? (
+        <AreaPanel map={map} area={area} />
+      ) : element ? (
+        <ElementPanel
+          key={element.id}
+          map={map}
+          element={element}
+          mode="play"
+          onChange={onChange}
+        />
+      ) : wall ? (
+        <WallPanel key={wall.id} map={map} wall={wall} mode="play" onChange={onChange} />
+      ) : null}
     </div>
   )
 }
@@ -264,21 +290,22 @@ function PlayerViewMenu({ campaignId, display }: { campaignId: string; display: 
           <button
             type="button"
             className={cn(
-              'inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-sm',
+              'inline-flex h-11 items-center gap-1.5 rounded-[10px] px-3 text-sm font-medium [&_svg]:size-5',
               display.mode === 'map'
                 ? 'text-ink-muted hover:bg-surface-2 hover:text-ink'
                 : 'bg-gold-soft text-gold-text',
             )}
           >
-            <MonitorPlay className="size-4" aria-hidden />
+            <MonitorPlay aria-hidden />
             {t.maps.playerView}
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            className="z-50 min-w-60 rounded-md border border-line bg-surface p-1 shadow-overlay"
+            className="z-50 min-w-60 rounded-xl border border-line bg-surface-raised p-1 shadow-lifted"
+            side="top"
             align="end"
-            sideOffset={4}
+            sideOffset={8}
           >
             <DropdownMenu.Item
               className={ITEM}
