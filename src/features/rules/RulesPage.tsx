@@ -8,6 +8,8 @@ import { campaignRepository } from '@/db/campaigns'
 import { ENTITY_KINDS } from '@/domain/types'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
+import { validateDice } from '@/dice'
+import { diceErrorMessage } from '@/features/game/diceErrors'
 import { useT } from '@/i18n'
 import {
   defaultRules,
@@ -238,8 +240,171 @@ export function RulesPage() {
               onCommit={(cellMeters) => patch('grid', { cellMeters })}
             />
           </Section>
+
+          <Section title={t.rulesPage.hpThresholds}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <NumberInput
+                label={t.rulesPage.woundedBelow}
+                hint="%"
+                value={Math.round(rules.hp.woundedBelow * 100)}
+                min={1}
+                max={100}
+                onCommit={(v) => patch('hp', { woundedBelow: v / 100 })}
+              />
+              <NumberInput
+                label={t.rulesPage.criticalBelow}
+                hint="%"
+                value={Math.round(rules.hp.criticalBelow * 100)}
+                min={1}
+                max={100}
+                onCommit={(v) => patch('hp', { criticalBelow: v / 100 })}
+              />
+            </div>
+          </Section>
+
+          <Section title={t.rulesPage.combat}>
+            <CheckboxField
+              label={t.rulesPage.strengthDamageBonus}
+              hint={t.rulesPage.strengthDamageBonusHint}
+              checked={rules.combat.strengthDamageBonus}
+              onChange={(strengthDamageBonus) => patch('combat', { strengthDamageBonus })}
+            />
+            <DiceRuleField
+              label={t.rulesPage.unarmedDamage}
+              value={rules.combat.unarmedDamage}
+              onCommit={(unarmedDamage) => patch('combat', { unarmedDamage })}
+            />
+          </Section>
+
+          <Section title={t.rulesPage.carry}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <NumberInput
+                label={t.rulesPage.kgPerStrength}
+                value={rules.carry.kgPerStrength}
+                min={0}
+                max={1000}
+                integer={false}
+                onCommit={(kgPerStrength) => patch('carry', { kgPerStrength })}
+              />
+              <NumberInput
+                label={t.rulesPage.overloadedDexPenalty}
+                value={rules.carry.overloadedDexPenalty}
+                min={0}
+                max={20}
+                onCommit={(overloadedDexPenalty) => patch('carry', { overloadedDexPenalty })}
+              />
+            </div>
+          </Section>
+
+          <Section title={t.rulesPage.fatigue}>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <NumberInput
+                label={t.rulesPage.maxExhaustion}
+                value={rules.fatigue.maxExhaustion}
+                min={0}
+                max={20}
+                onCommit={(maxExhaustion) => patch('fatigue', { maxExhaustion })}
+              />
+              <NumberInput
+                label={t.rulesPage.checkPenaltyPerLevel}
+                value={rules.fatigue.checkPenaltyPerLevel}
+                min={0}
+                max={20}
+                onCommit={(checkPenaltyPerLevel) => patch('fatigue', { checkPenaltyPerLevel })}
+              />
+              <DiceRuleField
+                label={t.rulesPage.shortRestHeal}
+                value={rules.fatigue.shortRestHeal}
+                onCommit={(shortRestHeal) => patch('fatigue', { shortRestHeal })}
+              />
+            </div>
+          </Section>
+
+          <Section title={`${t.rulesPage.luck} · ${t.rulesPage.xp} · ${t.rulesPage.disposition}`}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <NumberInput
+                label={t.rulesPage.pointsPerLuck}
+                value={rules.luck.pointsPerLuck}
+                min={0}
+                max={40}
+                onCommit={(pointsPerLuck) => patch('luck', { pointsPerLuck })}
+              />
+              <NumberInput
+                label={t.rulesPage.xpPerLevel}
+                value={rules.xp.perLevel}
+                min={0}
+                max={100000}
+                onCommit={(perLevel) => patch('xp', { perLevel })}
+              />
+              <NumberInput
+                label={t.rulesPage.dispositionStep}
+                value={rules.disposition.step}
+                min={0}
+                max={4}
+                onCommit={(step) => patch('disposition', { step })}
+              />
+              <NumberInput
+                label={t.rulesPage.dispositionCriticalStep}
+                value={rules.disposition.criticalStep}
+                min={0}
+                max={4}
+                onCommit={(criticalStep) => patch('disposition', { criticalStep })}
+              />
+            </div>
+          </Section>
+
+          <Section title={t.rulesPage.currency}>
+            <p className="text-xs text-ink-muted">{t.rulesPage.currencyHint}</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {rules.currency.map((coin, index) => (
+                <NumberInput
+                  key={coin.id}
+                  label={`${coin.name} (${coin.short})`}
+                  value={coin.value}
+                  min={1}
+                  max={1_000_000}
+                  onCommit={(value) =>
+                    save({
+                      ...rules,
+                      currency: rules.currency.map((c, i) => (i === index ? { ...c, value } : c)),
+                    })
+                  }
+                />
+              ))}
+            </div>
+          </Section>
         </div>
       </div>
     </PageTransition>
+  )
+}
+
+/** Dice expression rule field: refuses invalid notation instead of saving it. */
+function DiceRuleField({
+  label,
+  value,
+  onCommit,
+}: {
+  label: string
+  value: string
+  onCommit: (value: string) => void
+}) {
+  const t = useT()
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <CommitInput
+      label={label}
+      value={value}
+      error={error}
+      onCommit={(next) => {
+        try {
+          validateDice(next, { requireDice: true })
+          setError(null)
+          onCommit(next)
+        } catch (e) {
+          setError(diceErrorMessage(t, e))
+        }
+      }}
+    />
   )
 }

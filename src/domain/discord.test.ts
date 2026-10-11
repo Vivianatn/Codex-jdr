@@ -2,7 +2,9 @@ import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { defaultRules } from '@/rules'
 import { entityFromSheet, parseDiscordSheet, toDiscordMarkdown } from './discord'
-import { createEntity, newId } from './entity'
+import { plainCondition } from './conditions'
+import { createEntity, newId, normalizeSkill } from './entity'
+import { newItem } from './items'
 import { STAT_KEYS, type Entity, type SkillKind, type Stats } from './types'
 
 const rules = defaultRules()
@@ -82,9 +84,9 @@ const entityArb = fc
       stats: Object.fromEntries(STAT_KEYS.map((k, i) => [k, r.stats[i]])) as Stats,
     })
     e.hp.current = Math.max(0, e.hp.current - r.damage)
-    e.skills = r.skills.map((s) => ({ ...s, id: newId(), enabled: true, modifiers: [] }))
-    e.conditions = r.conditions.map((c) => ({ ...c, id: newId() }))
-    e.inventory = r.inventory.map((i) => ({ ...i, id: newId() }))
+    e.skills = r.skills.map((s) => normalizeSkill({ ...s, id: newId() }))
+    e.conditions = r.conditions.map((c) => plainCondition(c.name, c.note))
+    e.inventory = r.inventory.map((i) => newItem(i))
     return e
   })
 
@@ -135,26 +137,22 @@ describe('Discord export', () => {
       },
     })
     e.skills = [
-      {
+      normalizeSkill({
         id: '1',
         name: 'Rage',
         kind: 'active',
         stat: 'strength',
         description: 'Double les dégâts.',
-        enabled: true,
-        modifiers: [],
-      },
-      {
+      }),
+      normalizeSkill({
         id: '2',
         name: 'Peau de pierre',
         kind: 'class',
         stat: null,
         description: '',
-        enabled: true,
-        modifiers: [],
-      },
+      }),
     ]
-    e.inventory = [{ id: 'i', name: 'Potion de soin', quantity: 2, description: '' }]
+    e.inventory = [newItem({ name: 'Potion de soin', quantity: 2 })]
 
     expect(toDiscordMarkdown(e, rules)).toBe(
       [

@@ -203,7 +203,7 @@ describe('character sheet', () => {
     await user.type(screen.getByLabelText('Valeur'), '3')
     await user.type(screen.getByLabelText('Source'), 'Gantelets')
     await user.click(screen.getByRole('button', { name: 'Ajouter' }))
-    expect(screen.getByLabelText('Effectif 13')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tester Force (13)' })).toBeInTheDocument()
     expect(useCampaignStore.getState().entities[e.id]?.modifiers).toEqual([
       expect.objectContaining({ stat: 'strength', value: 3, label: 'Gantelets' }),
     ])

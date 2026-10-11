@@ -124,7 +124,9 @@ test('scenario 2 (part): create a Gobelin template and add 5 numbered copies', a
   // In play mode, the enemies appear in the quick-access bar.
   await page.getByRole('radio', { name: 'En jeu' }).click()
   await expect(
-    page.getByRole('complementary', { name: 'Accès rapide' }).getByText('Gobelin 5'),
+    page
+      .getByRole('complementary', { name: 'Accès rapide' })
+      .getByRole('button', { name: 'Ouvrir la fiche de Gobelin 5' }),
   ).toBeVisible()
 })
 
@@ -139,7 +141,7 @@ test('scenario 7: export, delete and re-import a campaign with its characters', 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('menuitem', { name: 'Exporter' }).click()
   const file = JSON.parse(await readFile(await (await downloadPromise).path(), 'utf8'))
-  expect(file).toMatchObject({ format: 'codex-campaign', version: 2 })
+  expect(file).toMatchObject({ format: 'codex-campaign', version: 3 })
   expect(file.entities).toHaveLength(1)
 
   const dump = () =>

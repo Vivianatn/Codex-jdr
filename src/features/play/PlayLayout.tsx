@@ -10,7 +10,11 @@ import { entityHpMax, entityName } from '@/domain/entity'
 import type { Entity } from '@/domain/types'
 import { HpBar } from '@/features/characters/HpBar'
 import { Portrait } from '@/features/characters/Portrait'
+import { HpQuickInput } from '@/features/characters/HpQuickInput'
+import { StatusPills } from '@/features/characters/StatusPills'
 import { useT } from '@/i18n'
+import { useUiStore } from '@/stores/uiStore'
+import { PlaySheetDrawer } from './PlaySheetDrawer'
 import { selectEntitiesOfKinds, useCampaignStore } from '@/stores/campaignStore'
 
 /**
@@ -68,6 +72,7 @@ export function PlayLayout() {
           entities={[]}
         />
       </aside>
+      <PlaySheetDrawer />
     </PageTransition>
   )
 }
@@ -83,7 +88,9 @@ function QuickSection({
   empty: string
   entities: Entity[]
 }) {
+  const t = useT()
   const campaign = useCampaign()
+  const openSheet = useUiStore((s) => s.openPlaySheet)
   return (
     <section>
       <h2 className="mb-2 flex items-center gap-2 font-sans text-xs font-semibold tracking-wider text-ink-muted uppercase [&>svg]:size-3.5">
@@ -97,23 +104,33 @@ function QuickSection({
       ) : (
         <ul className="space-y-2">
           {entities.map((e) => (
-            <li
-              key={e.id}
-              className="flex items-center gap-2.5 rounded-md bg-surface px-2.5 py-2 shadow-soft"
-            >
-              <Portrait src={e.identity.portrait} name={entityName(e)} size="sm" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">{entityName(e)}</p>
-                <HpBar
-                  current={e.hp.current}
-                  max={entityHpMax(e, campaign.rules)}
-                  size="sm"
-                  showLabel={false}
-                />
+            <li key={e.id} className="space-y-2 rounded-md bg-surface px-2.5 py-2 shadow-soft">
+              <div className="flex items-center gap-2.5">
+                <Portrait src={e.identity.portrait} name={entityName(e)} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => openSheet(e.id)}
+                    className="block max-w-full truncate text-left text-sm font-medium text-ink hover:text-accent-text hover:underline"
+                    aria-label={t.sheet.open(entityName(e))}
+                  >
+                    {entityName(e)}
+                  </button>
+                  <HpBar
+                    current={e.hp.current}
+                    max={entityHpMax(e, campaign.rules)}
+                    size="sm"
+                    showLabel={false}
+                    thresholds={campaign.rules.hp}
+                    entityId={e.id}
+                  />
+                </div>
+                <span className="tabular text-xs text-ink-muted">
+                  {e.hp.current}/{entityHpMax(e, campaign.rules)}
+                </span>
               </div>
-              <span className="tabular text-xs text-ink-muted">
-                {e.hp.current}/{entityHpMax(e, campaign.rules)}
-              </span>
+              <StatusPills entity={e} rules={campaign.rules} limit={3} />
+              <HpQuickInput entityId={e.id} name={entityName(e)} compact />
             </li>
           ))}
         </ul>

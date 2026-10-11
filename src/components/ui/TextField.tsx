@@ -1,4 +1,4 @@
-import { useId, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { forwardRef, useId, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
 
 export const FIELD =
@@ -47,23 +47,29 @@ export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   hint?: string
   error?: string | null
+  /** Classes for the input itself (`className` sizes the whole field). */
+  inputClassName?: string
 }
 
-export function TextField({ label, hint, error, className, id, ...props }: TextFieldProps) {
+export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
+  { label, hint, error, className, inputClassName, id, ...props },
+  ref,
+) {
   const autoId = useId()
   const fieldId = id ?? autoId
   return (
-    <FieldShell label={label} hint={hint} error={error} id={fieldId}>
+    <FieldShell label={label} hint={hint} error={error} id={fieldId} className={className}>
       <input
+        ref={ref}
         id={fieldId}
-        className={cn(FIELD, 'h-10', className)}
+        className={cn(FIELD, 'h-10', inputClassName)}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${fieldId}-error` : undefined}
         {...props}
       />
     </FieldShell>
   )
-}
+})
 
 export interface TextAreaFieldProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string

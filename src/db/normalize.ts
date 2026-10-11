@@ -1,4 +1,4 @@
-import { createEntity } from '@/domain/entity'
+import { createEntity, normalizeEntityShape } from '@/domain/entity'
 import { ENTITY_KINDS, STAT_KEYS, type Entity, type EntityKind } from '@/domain/types'
 import { defaultRules } from '@/rules'
 
@@ -19,7 +19,7 @@ export function normalizeEntity(value: unknown, campaignId: string): Entity | nu
   const pick = <T>(v: unknown, fallback: T): T =>
     v === undefined || v === null || typeof v !== typeof fallback ? fallback : (v as T)
   const stats = isRecord(value.stats) ? value.stats : {}
-  return {
+  return normalizeEntityShape({
     ...base,
     id: value.id,
     campaignId,
@@ -35,5 +35,8 @@ export function normalizeEntity(value: unknown, campaignId: string): Entity | nu
     details: { ...base.details, ...(isRecord(value.details) ? value.details : {}) },
     createdAt: pick(value.createdAt, base.createdAt),
     updatedAt: pick(value.updatedAt, base.updatedAt),
-  } as Entity
+    purse: pick(value.purse, 0),
+    exhaustion: pick(value.exhaustion, 0),
+    luckSpent: pick(value.luckSpent, 0),
+  } as Entity)
 }

@@ -259,7 +259,7 @@ describe('grid & config', () => {
 
   it('fills missing or invalid rule keys with defaults', () => {
     const merged = withDefaultRules({ hp: { perLevel: 2 }, grid: { cellMeters: 'x' } })
-    expect(merged.hp).toEqual({ base: 10, perLevel: 2 })
+    expect(merged.hp).toMatchObject({ base: 10, perLevel: 2 })
     expect(merged.grid.cellMeters).toBe(1)
     expect(merged.checks.criticalSuccess).toEqual({ major: [1], minor: [2] })
     expect(withDefaultRules(undefined)).toEqual(defaultRules())

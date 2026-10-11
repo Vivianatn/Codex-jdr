@@ -7,6 +7,7 @@ export const PREP_SECTIONS = [
   'bestiary',
   'allies',
   'items',
+  'conditions',
   'maps',
   'sessions',
   'quests',
@@ -25,12 +26,22 @@ interface UiState {
   lastPrepSection: Record<string, PrepSection>
   rememberPrepSection: (campaignId: string, section: PrepSection) => void
   forgetCampaign: (campaignId: string) => void
+  /** Dice tray drawer (not persisted). */
+  diceOpen: boolean
+  setDiceOpen: (open: boolean) => void
+  /** Character sheet opened over the map in play mode (not persisted). */
+  playSheetId: string | null
+  openPlaySheet: (id: string | null) => void
 }
 
 export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       lastPrepSection: {},
+      diceOpen: false,
+      setDiceOpen: (diceOpen) => set({ diceOpen }),
+      playSheetId: null,
+      openPlaySheet: (playSheetId) => set({ playSheetId }),
       rememberPrepSection: (campaignId, section) =>
         set((s) =>
           s.lastPrepSection[campaignId] === section

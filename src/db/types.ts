@@ -1,4 +1,5 @@
-import type { Entity } from '@/domain/types'
+import type { RollRecord } from '@/domain/rolls'
+import type { ConditionTemplate, Entity } from '@/domain/types'
 import type { RulesConfig } from '@/rules'
 
 export interface Campaign {
@@ -7,13 +8,32 @@ export interface Campaign {
   description: string
   /** House rules for this campaign (Préparation › Règles). */
   rules: RulesConfig
+  /** GM-made library entries and saved rolls, specific to this campaign. */
+  library: CampaignLibrary
   createdAt: number
   updatedAt: number
   lastOpenedAt: number | null
 }
 
+export interface DiceMacro {
+  id: string
+  name: string
+  expression: string
+}
+
+export interface CampaignLibrary {
+  /** Custom conditions (the built-in ones are in code). */
+  conditions: ConditionTemplate[]
+  /** Favourite / saved rolls of the dice tray. */
+  macros: DiceMacro[]
+}
+
+export function emptyLibrary(): CampaignLibrary {
+  return { conditions: [], macros: [] }
+}
+
 /** Current version of the campaign export file. Bump it when the shape changes. */
-export const CAMPAIGN_EXPORT_VERSION = 2
+export const CAMPAIGN_EXPORT_VERSION = 3
 export const CAMPAIGN_EXPORT_FORMAT = 'codex-campaign'
 
 export interface CampaignExport {
@@ -22,4 +42,5 @@ export interface CampaignExport {
   exportedAt: string
   campaign: Campaign
   entities: Entity[]
+  rolls: RollRecord[]
 }

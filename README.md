@@ -2,7 +2,7 @@
 
 Le compagnon du Maître du Jeu : un logiciel **local-first** pour préparer et mener des parties de jeu de rôle (système maison inspiré de _Donjons & Dragons_). Toutes les données restent sur ton appareil, dans le navigateur (IndexedDB). Tu peux exporter une campagne en JSON à tout moment.
 
-> État : **phase 1 — fiches** terminée : joueurs, alliés, familiers, bestiaire, assistant de création, fiche complète, règles de campagne, import/export Discord. Voir la [feuille de route](docs/SPEC.md#12-feuille-de-route-par-phases).
+> État : **phase 2 — dés et statistiques** terminée : lanceur de dés animé, tests de caractéristique, actions par statistique, états, inventaire et équipement, compétences actives, repos, XP et montée de niveau. Voir la [feuille de route](docs/SPEC.md#12-feuille-de-route-par-phases).
 
 ## Démarrer
 

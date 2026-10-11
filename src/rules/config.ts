@@ -27,6 +27,9 @@ export interface RulesConfig {
     base: number
     /** Max HP gained per level after the first. */
     perLevel: number
+    /** HP ratio under which a character is "Blessé" / "Critique" (0 HP = "À terre"). */
+    woundedBelow: number
+    criticalBelow: number
   }
   checks: {
     /** rollUnder: success if d20 ≤ value. rollOver: d20 + modifier ≥ difficulty. */
@@ -47,13 +50,47 @@ export interface RulesConfig {
   grid: {
     cellMeters: number
   }
+  combat: {
+    /** Melee damage gets the Strength modifier, floor((FOR − 10) / 2). */
+    strengthDamageBonus: boolean
+    /** Damage dice when no weapon is equipped. */
+    unarmedDamage: string
+  }
+  carry: {
+    /** Carrying capacity in kg per point of effective Strength. */
+    kgPerStrength: number
+    /** Dexterity malus while "Surchargé". */
+    overloadedDexPenalty: number
+  }
+  fatigue: {
+    maxExhaustion: number
+    /** Malus applied to every check per exhaustion level. */
+    checkPenaltyPerLevel: number
+    /** HP recovered by a short rest (dice expression). A long rest restores everything. */
+    shortRestHeal: string
+  }
+  luck: {
+    /** One luck point per N points of effective Luck. */
+    pointsPerLuck: number
+  }
+  xp: {
+    /** XP needed to go from level L to L + 1 = perLevel × L. */
+    perLevel: number
+  }
+  disposition: {
+    /** Gauge steps moved by a social check (success / major critical). */
+    step: number
+    criticalStep: number
+  }
+  /** Coins, largest first; `value` in the smallest unit. */
+  currency: { id: string; name: string; short: string; value: number }[]
 }
 
 /** Rules confirmed by the GM on 2026-10-11 (see docs/DECISIONS.md D-101). */
 export const DEFAULT_RULES: RulesConfig = {
   version: 1,
   stats: { rounding: 'ceil', min: 1, max: 20 },
-  hp: { base: 10, perLevel: 1 },
+  hp: { base: 10, perLevel: 1, woundedBelow: 0.5, criticalBelow: 0.25 },
   checks: {
     resolution: 'rollUnder',
     criticalSuccess: { major: [1], minor: [2] },
@@ -67,6 +104,18 @@ export const DEFAULT_RULES: RulesConfig = {
     enforceOnCreation: ['player'],
   },
   grid: { cellMeters: 1 },
+  // Phase 2 defaults (not decided by the GM yet, see DECISIONS D-201).
+  combat: { strengthDamageBonus: true, unarmedDamage: '1d4' },
+  carry: { kgPerStrength: 5, overloadedDexPenalty: 2 },
+  fatigue: { maxExhaustion: 6, checkPenaltyPerLevel: 1, shortRestHeal: '1d6' },
+  luck: { pointsPerLuck: 5 },
+  xp: { perLevel: 100 },
+  disposition: { step: 1, criticalStep: 2 },
+  currency: [
+    { id: 'gold', name: 'Or', short: 'po', value: 100 },
+    { id: 'silver', name: 'Argent', short: 'pa', value: 10 },
+    { id: 'copper', name: 'Cuivre', short: 'pc', value: 1 },
+  ],
 }
 
 export function defaultRules(): RulesConfig {

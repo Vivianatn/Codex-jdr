@@ -5,7 +5,15 @@ import { Dialog } from '@/components/ui/Dialog'
 import { CheckboxField, SelectField } from '@/components/ui/fields'
 import { TextAreaField, TextField } from '@/components/ui/TextField'
 import { newId } from '@/domain/entity'
-import { STAT_KEYS, type Skill, type SkillKind, type StatKey } from '@/domain/types'
+import { allConditionTemplates } from '@/domain/conditions'
+import {
+  STAT_KEYS,
+  type Skill,
+  type SkillEffectKind,
+  type SkillKind,
+  type StatKey,
+} from '@/domain/types'
+import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import { parseNumber } from '@/lib/numbers'
 
@@ -87,6 +95,8 @@ function SkillForm({
         value={skill.description}
         onChange={(e) => set({ description: e.target.value })}
       />
+
+      {skill.kind === 'active' && <ActiveFields skill={skill} set={set} />}
 
       {skill.kind !== 'active' && (
         <fieldset className="space-y-3 rounded-md border border-line p-3">
@@ -193,5 +203,77 @@ export function ModifierRow({
         {t.common.add}
       </Button>
     </div>
+  )
+}
+
+/** Uses, cooldown and effect of an active skill (SPEC §4.12). */
+function ActiveFields({ skill, set }: { skill: Skill; set: (patch: Partial<Skill>) => void }) {
+  const t = useT()
+  const campaign = useCampaign()
+  const conditions = allConditionTemplates(campaign.library.conditions)
+  const [uses, setUses] = useState(skill.usesMax === null ? '' : String(skill.usesMax))
+  const [cooldown, setCooldown] = useState(String(skill.cooldown))
+  return (
+    <fieldset className="space-y-4 rounded-md border border-line p-3">
+      <legend className="px-1 text-sm font-medium text-ink">{t.skills.effect}</legend>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <TextField
+          label={t.skills.uses}
+          hint={t.skills.usesHint}
+          value={uses}
+          inputMode="numeric"
+          onChange={(e) => {
+            setUses(e.target.value)
+            const n = parseNumber(e.target.value)
+            const usesMax = n !== null && n > 0 ? Math.round(n) : null
+            set({
+              usesMax,
+              usesLeft: usesMax === null ? null : Math.min(skill.usesLeft ?? usesMax, usesMax),
+            })
+          }}
+        />
+        <TextField
+          label={t.skills.cooldown}
+          value={cooldown}
+          inputMode="numeric"
+          onChange={(e) => {
+            setCooldown(e.target.value)
+            const n = parseNumber(e.target.value)
+            set({ cooldown: n !== null && n > 0 ? Math.round(n) : 0 })
+          }}
+        />
+        <SelectField<SkillEffectKind>
+          label={t.skills.effect}
+          value={skill.effect.kind}
+          onChange={(kind) => set({ effect: { ...skill.effect, kind } })}
+          options={(['none', 'damage', 'heal', 'condition'] as const).map((k) => ({
+            value: k,
+            label: t.skills.effectKinds[k],
+          }))}
+        />
+        {(skill.effect.kind === 'damage' || skill.effect.kind === 'heal') && (
+          <TextField
+            label={t.skills.effectExpression}
+            value={skill.effect.expression}
+            placeholder="2d6+1"
+            inputClassName="font-mono"
+            onChange={(e) => set({ effect: { ...skill.effect, expression: e.target.value } })}
+          />
+        )}
+        {skill.effect.kind === 'condition' && (
+          <SelectField<string>
+            label={t.skills.effectCondition}
+            value={skill.effect.conditionId ?? ''}
+            onChange={(conditionId) =>
+              set({ effect: { ...skill.effect, conditionId: conditionId || null } })
+            }
+            options={[
+              { value: '', label: t.common.none },
+              ...conditions.map((c) => ({ value: c.id, label: c.name })),
+            ]}
+          />
+        )}
+      </div>
+    </fieldset>
   )
 }

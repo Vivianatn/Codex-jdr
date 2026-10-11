@@ -1,4 +1,6 @@
 import { effectiveStat, hpMax, type RulesConfig } from '@/rules'
+import { normalizeCondition } from './conditions'
+import { equippedItems, isOverloaded, normalizeItem } from './items'
 import {
   STAT_KEYS,
   type DetailsByKind,
@@ -75,6 +77,9 @@ export function createEntity<K extends EntityKind>(
     skills: [],
     conditions: [],
     inventory: [],
+    purse: 0,
+    exhaustion: 0,
+    luckSpent: 0,
     journal: [],
     details: defaultDetails(kind),
     createdAt: now,
@@ -92,12 +97,43 @@ export function entityHpMax(entity: Pick<Entity, 'hp' | 'level'>, rules: RulesCo
 }
 
 /** Every modifier currently applied to a characteristic, with its source. */
-export function activeModifiers(entity: Entity, stat: StatKey): StatModifier[] {
+/**
+ * Every modifier currently applied to a characteristic, with its source:
+ * manual, enabled passive skills, equipped items, conditions, and — when the
+ * rules are given — the overload penalty on Dexterity.
+ */
+export function activeModifiers(
+  entity: Entity,
+  stat: StatKey,
+  rules?: RulesConfig,
+): StatModifier[] {
   const fromSkills = entity.skills
     .filter((skill) => skill.enabled && skill.kind !== 'active')
     .flatMap((skill) => skill.modifiers.map((m) => ({ ...m, label: m.label || skill.name })))
-  return [...entity.modifiers, ...fromSkills].filter((m) => m.stat === stat)
+  const fromItems = equippedItems(entity).flatMap((item) =>
+    item.modifiers.map((m) => ({ ...m, label: m.label || item.name })),
+  )
+  const fromConditions = entity.conditions.flatMap((c) =>
+    c.modifiers.map((m) => ({ ...m, label: m.label || c.name })),
+  )
+  const overload: StatModifier[] =
+    rules && stat === 'dexterity' && rules.carry.overloadedDexPenalty && isOverloaded(entity, rules)
+      ? [
+          {
+            id: 'overloaded',
+            stat,
+            value: -rules.carry.overloadedDexPenalty,
+            label: OVERLOADED_LABEL,
+          },
+        ]
+      : []
+  return [...entity.modifiers, ...fromSkills, ...fromItems, ...fromConditions, ...overload].filter(
+    (m) => m.stat === stat,
+  )
 }
+
+/** Data label of the automatic "Surchargé" modifier (shown as is). */
+export const OVERLOADED_LABEL = 'Surchargé'
 
 export interface EffectiveStat {
   base: number
@@ -105,10 +141,13 @@ export interface EffectiveStat {
   modifiers: StatModifier[]
 }
 
-export function effectiveStats(entity: Entity): Record<StatKey, EffectiveStat> {
+export function effectiveStats(
+  entity: Entity,
+  rules?: RulesConfig,
+): Record<StatKey, EffectiveStat> {
   return Object.fromEntries(
     STAT_KEYS.map((key) => {
-      const modifiers = activeModifiers(entity, key)
+      const modifiers = activeModifiers(entity, key, rules)
       const base = entity.stats[key]
       return [
         key,
@@ -208,7 +247,46 @@ export function instantiateTemplate(
 }
 
 export function emptySkill(kind: SkillKind): Skill {
-  return { id: newId(), name: '', kind, stat: null, description: '', enabled: true, modifiers: [] }
+  return {
+    id: newId(),
+    name: '',
+    kind,
+    stat: null,
+    description: '',
+    enabled: true,
+    modifiers: [],
+    usesMax: null,
+    usesLeft: null,
+    cooldown: 0,
+    cooldownLeft: 0,
+    effect: { kind: 'none', expression: '', conditionId: null },
+  }
+}
+
+/** Fills fields missing from skills saved before phase 2. */
+export function normalizeSkill(
+  raw: Partial<Skill> & { id: string; name: string; kind: SkillKind },
+): Skill {
+  const fallback = emptySkill(raw.kind)
+  return {
+    ...fallback,
+    ...raw,
+    id: raw.id,
+    effect: { ...fallback.effect, ...(raw.effect ?? {}) },
+  }
+}
+
+/** Upgrades an entity saved by an older version (phase 1) to the current shape. */
+export function normalizeEntityShape<E extends Entity>(entity: E): E {
+  return {
+    ...entity,
+    purse: entity.purse ?? 0,
+    exhaustion: entity.exhaustion ?? 0,
+    luckSpent: entity.luckSpent ?? 0,
+    skills: entity.skills.map(normalizeSkill),
+    conditions: entity.conditions.map(normalizeCondition),
+    inventory: entity.inventory.map(normalizeItem),
+  }
 }
 
 /** Characters that can own a familiar: players and allies. */

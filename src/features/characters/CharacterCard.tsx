@@ -8,6 +8,7 @@ import type { RulesConfig } from '@/rules'
 import { HpBar } from './HpBar'
 import { Portrait } from './Portrait'
 import { StatPill } from './StatPill'
+import { StatusPills } from './StatusPills'
 
 const listItemVariants = {
   hidden: { opacity: 0, y: 8 },
@@ -31,9 +32,7 @@ export function CharacterCard({
 }) {
   const t = useT()
   const name = entityName(entity)
-  const stats = effectiveStats(entity)
-  const shownConditions = entity.conditions.slice(0, 3)
-  const extra = entity.conditions.length - shownConditions.length
+  const stats = effectiveStats(entity, rules)
   return (
     <motion.li
       variants={listItemVariants}
@@ -56,25 +55,18 @@ export function CharacterCard({
             {badge}
           </div>
         </div>
-        <HpBar current={entity.hp.current} max={entityHpMax(entity, rules)} temp={entity.hp.temp} />
+        <HpBar
+          current={entity.hp.current}
+          max={entityHpMax(entity, rules)}
+          temp={entity.hp.temp}
+          thresholds={rules.hp}
+        />
         <div className="flex flex-wrap gap-1">
           {STAT_KEYS.map((key) => (
             <StatPill key={key} stat={key} value={stats[key].total} base={stats[key].base} />
           ))}
         </div>
-        {shownConditions.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {shownConditions.map((c) => (
-              <span
-                key={c.id}
-                className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-ink"
-              >
-                {c.name}
-              </span>
-            ))}
-            {extra > 0 && <span className="px-1 text-xs text-ink-muted">+{extra}</span>}
-          </div>
-        )}
+        <StatusPills entity={entity} rules={rules} limit={3} interactive={false} />
       </Link>
       {footer && <div className="border-t border-line px-4 py-3">{footer}</div>}
     </motion.li>

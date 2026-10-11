@@ -12,7 +12,14 @@ import type { RulesConfig } from '@/rules'
 import { HpBar } from './HpBar'
 import { PortraitPicker } from './PortraitPicker'
 import { IdentityTab, type SheetContext } from './sheet/IdentityTab'
-import { ConditionsTab, InventoryEditor, JournalTab } from './sheet/ListTabs'
+import { ConditionsTab } from './sheet/ConditionsTab'
+import { InventoryTab } from './sheet/InventoryTab'
+import { JournalTab } from './sheet/ListTabs'
+import { HpQuickInput } from './HpQuickInput'
+import { StatusPills } from './StatusPills'
+import { useCampaignStore } from '@/stores/campaignStore'
+import { useGameActions } from '@/features/game/useGameActions'
+import { SkipForward } from 'lucide-react'
 import { SkillsTab } from './sheet/SkillsTab'
 import { StatsTab } from './sheet/StatsTab'
 import { useSheetEditor, type SheetChange } from './useSheetEditor'
@@ -44,6 +51,7 @@ export function CharacterSheet({
   context,
   kindLabel,
   actions,
+  defaultTab = 'identity',
 }: {
   entity: Entity
   rules: RulesConfig
@@ -51,10 +59,14 @@ export function CharacterSheet({
   context: SheetContext
   kindLabel: string
   actions?: ReactNode
+  defaultTab?: string
 }) {
   const t = useT()
   const editor = useSheetEditor(entity, rules, onChange)
   const name = entityName(entity)
+  // Bestiary templates are edited, not played: no quick HP or turn controls.
+  const playable = useCampaignStore((s) => Boolean(s.entities[entity.id]))
+  const game = useGameActions()
 
   return (
     <article aria-labelledby="sheet-title" className="space-y-6">
@@ -81,17 +93,34 @@ export function CharacterSheet({
                 .join(' · ')}
             </p>
           </div>
-          <HpBar
-            current={entity.hp.current}
-            max={entityHpMax(entity, rules)}
-            temp={entity.hp.temp}
-            className="max-w-sm"
-          />
+          <div className="flex flex-wrap items-start gap-4">
+            <HpBar
+              current={entity.hp.current}
+              max={entityHpMax(entity, rules)}
+              temp={entity.hp.temp}
+              thresholds={rules.hp}
+              entityId={entity.id}
+              className="max-w-sm min-w-48 flex-1"
+            />
+            {playable && <HpQuickInput entityId={entity.id} name={name} compact className="w-40" />}
+          </div>
+          <StatusPills entity={entity} rules={rules} />
         </div>
-        <div className="flex flex-wrap gap-2">{actions}</div>
+        <div className="flex flex-wrap gap-2">
+          {playable && (
+            <Button
+              icon={<SkipForward />}
+              onClick={() => game.passTurn(entity.id)}
+              title={t.turn.passHint}
+            >
+              {t.turn.pass}
+            </Button>
+          )}
+          {actions}
+        </div>
       </header>
 
-      <Tabs defaultValue="identity">
+      <Tabs defaultValue={defaultTab}>
         <TabList label={t.sheet.sections}>
           <Tab value="identity">{t.sheet.tabs.identity}</Tab>
           <Tab value="stats">{t.sheet.tabs.stats}</Tab>
@@ -116,12 +145,7 @@ export function CharacterSheet({
           <ConditionsTab entity={entity} editor={editor} />
         </TabPanel>
         <TabPanel value="inventory">
-          <InventoryEditor
-            items={entity.inventory}
-            onAdd={editor.addItem}
-            onUpdate={editor.updateItem}
-            onRemove={editor.removeItem}
-          />
+          <InventoryTab entity={entity} editor={editor} />
         </TabPanel>
         <TabPanel value="journal">
           <JournalTab entity={entity} />

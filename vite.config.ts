@@ -11,8 +11,8 @@ export default defineConfig({
   // Relative base so the build also works inside the Tauri shell (phase 6).
   base: './',
   build: {
-    // Single-bundle local app (~215 kB gzip). Route-level code splitting is planned for phase 6.
-    chunkSizeWarningLimit: 800,
+    // Single-bundle local app (~280 kB gzip in phase 2). Route-level code splitting: phase 6 (D-011).
+    chunkSizeWarningLimit: 1000,
   },
   test: {
     environment: 'jsdom',

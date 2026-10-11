@@ -4,6 +4,100 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Phase 2 — Dés et statistiques (2026-10-11)
+
+### D-201 · Règles par défaut à valider par le MJ
+
+Ces règles n'étaient pas fixées par le cahier des charges ni par tes réponses. Elles ont toutes une valeur par défaut raisonnable et se modifient dans **Préparation › Règles** :
+
+| Règle                                      | Valeur par défaut                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| Bonus de Force aux dégâts au corps à corps | oui, `(Force − 10) / 2` arrondi à l'inférieur                            |
+| Dégâts à mains nues                        | `1d4`                                                                    |
+| Capacité de charge                         | 5 kg par point de Force effective                                        |
+| Malus « Surchargé »                        | −2 en Dextérité                                                          |
+| Épuisement                                 | 6 niveaux maximum, −1 à tous les tests par niveau                        |
+| Repos court                                | +`1d6` PV                                                                |
+| Repos long                                 | PV au maximum, −1 épuisement, points de chance et utilisations restaurés |
+| Points de chance                           | 1 point par tranche de 5 de Chance effective                             |
+| XP                                         | passer du niveau N à N+1 coûte 100 × N XP                                |
+| Seuils de PV                               | « Blessé » sous 50 %, « Critique » sous 25 %                             |
+| Disposition                                | ±1 cran par test social, ±2 sur un critique majeur                       |
+| Monnaie                                    | 1 po = 10 pa = 100 pc                                                    |
+
+### D-202 · Moteur de dés
+
+- Grammaire complète dans `src/dice/parser.ts` : `NdM`, `d%`, `kh`/`kl`/`k`/`dh`/`dl`, + − × / et parenthèses, avec au plus 100 dés, 2 à 1000 faces et 120 caractères. Chaque erreur a un code et une position, traduits en français (« « ? » inattendu (caractère 8) »).
+- La division s'arrondit selon la **règle d'arrondi de la campagne** (`2d20/2` au supérieur par défaut). Les valeurs restent exactes jusqu'au résultat final.
+- Le hasard vient de `crypto.getRandomValues`. Les tests utilisent un générateur à graine (mulberry32), et la distribution de `2d20/2` est vérifiée sur 100 000 tirages, avec une tolérance de 0,4 point par valeur (≈ 5 écarts-types).
+- Pour un test, le d20 « naturel » est le dé gardé (avantage = `2d20kh1`, désavantage = `2d20kl1`).
+
+### D-203 · Historique des jets
+
+Les jets sont des faits, pas des actions : ils ne s'annulent pas avec Ctrl+Z, mais les effets qu'ils déclenchent (dégâts, états, utilisations…) s'annulent. Ils sont stockés dans une table `rolls` par campagne, avec au plus 500 jets (les plus anciens sont supprimés), et inclus dans l'export JSON. Le journal d'un personnage fusionne ses événements et ses jets ; on évite ainsi de dupliquer les jets dans la fiche.
+
+### D-204 · Tests et actions par caractéristique (§4)
+
+- **Clic** sur la valeur d'une caractéristique : test normal. **Clic droit / appui long** ou bouton **⋯** (accessible au clavier) : avantage, désavantage, test secret, bonus/malus, puis les actions propres à la caractéristique.
+- Malus d'épuisement appliqué à tous les tests. Les faces critiques l'emportent toujours (D-101).
+- Faits en phase 2 : attaque au corps à corps (Force) et à distance (Dextérité) avec dégâts de l'arme équipée appliqués à la cible ; test opposé avec duel animé ; jets de résistance ; concentration ; discrétion, crochetage, esquive ; connaissances, énigme, identification d'objet ; persuasion, intimidation, tromperie (jauge de disposition d'un allié) ; intuition en jet secret ; résistance mentale ; relance avec un point de chance.
+- Reportés : initiative et partage d'XP (phase 3, combat) ; déplacement, perception révélant des éléments du plateau, dégâts de zone sur des jetons (phase 4, plateau) ; tables de butin et d'événements, marchands et marchandage (phase 3 et extras de la phase 6) ; notes de lore à difficulté (avec les notes de campagne) ; indices d'énigme progressifs.
+
+### D-205 · Test opposé
+
+Une réussite bat un échec ; à égalité, une réussite critique (majeure > mineure) l'emporte et un échec critique pénalise ; à égalité encore, la plus grande marge gagne. Si tout est identique, c'est une égalité, et on relance.
+
+### D-206 · Tests sociaux
+
+La jauge de disposition (§4.7) n'existe que sur les **alliés** : les tests de persuasion, d'intimidation et de tromperie ciblent donc un allié. Une réussite fait monter la jauge d'un cran, un échec la fait baisser d'un cran ; un critique majeur la déplace de deux crans.
+
+### D-207 · États automatiques, jamais stockés
+
+« Blessé », « Critique », « À terre » (selon les PV), « Surchargé » (poids > capacité) et « Épuisement N » sont **calculés** à l'affichage. Ils ne peuvent donc jamais être désynchronisés, et un soin les fait disparaître. Le malus de Dextérité de « Surchargé » s'applique automatiquement aux valeurs effectives. L'état « à terre » de la liste du §4.10 (renversé) s'appelle **« Au sol »**, pour ne pas le confondre avec « À terre » à 0 PV.
+
+### D-208 · « Passer un tour »
+
+C'est le début du tour d'un personnage (§4.10, §6), dans cet ordre : effets par tour des états (dégâts ou soins tirés aux dés, PV temporaires consommés d'abord), rappel des jets pour se libérer (notification avec un bouton « Tenter »), décompte des durées avec notification à l'expiration, puis décompte des temps de recharge des compétences. Le tout forme **une seule** action annulable. Le suivi de combat de la phase 3 appellera la même fonction (`startOfTurn`).
+
+### D-209 · Bibliothèque d'états
+
+Les 13 états prédéfinis sont dans le code et ne se modifient pas. Le MJ crée ses propres états, ou **duplique** un état prédéfini pour l'adapter, dans **Préparation › États**. Les états personnalisés appartiennent à la campagne et partent avec son export. Un état appliqué à un personnage est une **copie** du modèle : modifier le modèle ensuite ne change pas les états déjà en cours.
+
+### D-210 · Objets, équipement, monnaie
+
+- Un objet a : type, rareté (liseré coloré), poids, valeur, emplacement d'équipement, modificateurs actifs une fois équipé, défense, dégâts, effet « Utiliser » et propriété cachée.
+- Les emplacements sont main principale, main secondaire, armure et deux accessoires. Équiper un emplacement occupé déséquipe l'objet qui s'y trouvait.
+- Défense = Dextérité effective + bonus de défense des objets équipés.
+- La bourse est stockée en **plus petite pièce**. Les montants se saisissent librement (`+3 po`, `2 po 5 pa`, `-50 pc`), et la conversion s'affiche automatiquement.
+- Le transfert d'objets entre personnages se fait par glisser-déposer sur le nom du destinataire, ou par le menu « Donner à… » (accessible au clavier). Les objets identiques s'empilent.
+- La **bibliothèque d'objets** (Préparation › Objets) est commune à toutes les campagnes, comme le bestiaire.
+
+### D-211 · Compétences actives
+
+Une compétence active a un nombre d'utilisations par repos long (ou illimité), un temps de recharge en tours et un effet : dégâts, soin (même jet pour toutes les cibles) ou application d'un état. Au lancement, un test de la caractéristique liée peut être demandé. **Lancer consomme l'utilisation et lance la recharge, même si le test échoue.** Les cibles se choisissent parmi les personnages de la campagne ; le ciblage sur le plateau viendra en phase 4.
+
+### D-212 · Saisie rapide des PV
+
+Le champ unique accepte `-7`, `+5`, `t+4` (ou `t4`), et aussi des dés (`-2d6`). **Un nombre seul compte comme des dégâts**, le cas le plus fréquent en partie. Le champ se vide après chaque application pour qu'on puisse taper le coup suivant directement. Il se trouve dans l'en-tête de la fiche, dans l'onglet Statistiques et dans la barre d'accès rapide du mode En jeu.
+
+### D-213 · Animations des dés
+
+Le résultat s'affiche **immédiatement** ; les dés roulent pendant environ 0,65 s puis se posent. Sur un critique, une gerbe de particules dorées ; sur un échec critique, un tremblement et une teinte rouge. Une option « Animation des dés » permet de couper l'animation sans toucher aux autres animations. Les animations désactivées et le réglage système « réduire les animations » sont toujours respectés.
+
+### D-214 · Fiche en jeu
+
+En mode En jeu, cliquer sur un nom dans la barre d'accès rapide ouvre sa fiche dans un tiroir par-dessus la carte. Il n'y a qu'une fiche à la fois pour l'instant ; l'épinglage de plusieurs fiches côte à côte arrive en phase 5. Les modèles du bestiaire ne se « jouent » pas : pas de PV rapides ni de « Passer un tour » sur eux.
+
+### D-215 · Reporté : webhook Discord
+
+L'envoi des jets vers un salon Discord (§7, optionnel) est reporté aux finitions de la phase 6. Il envoie des données vers un service externe et demande une configuration et une confirmation explicites.
+
+### D-216 · Données v3
+
+Le schéma Dexie passe en v3 avec deux nouvelles tables, `rolls` et `itemLibrary`. Une campagne gagne une `library` (états personnalisés et jets favoris). Les personnages gagnent `purse`, `exhaustion` et `luckSpent`, et leurs objets, compétences et états ont des champs plus riches. La migration complète les campagnes (règles, bibliothèque) et les personnages existants, avec un test v2 → v3. L'export passe en `version: 3` (avec les jets) ; les fichiers v1 et v2 s'importent toujours.
+
+---
+
 ## Phase 1 — Fiches (2026-10-11)
 
 ### D-101 · Règles confirmées par le MJ
@@ -128,7 +222,7 @@ Inter (variable) et Cinzel sont livrées via `@fontsource`, sans Google Fonts : 
 
 ### D-011 · Taille du bundle
 
-Un seul bundle de ≈ 215 kB gzip en phase 0. Pour une app locale, c'est bien en dessous de l'objectif d'ouverture en moins de 2 s. Le seuil d'avertissement de Vite est relevé à 800 kB ; le découpage par route (`React.lazy`) est prévu avec l'optimisation de la phase 6, ou plus tôt si le plateau (Konva/Pixi) alourdit beaucoup le bundle.
+Un seul bundle de ≈ 215 kB gzip en phase 0. Pour une app locale, c'est bien en dessous de l'objectif d'ouverture en moins de 2 s. Le seuil d'avertissement de Vite est relevé à 800 kB (1 000 kB en phase 2, ≈ 280 kB gzip) ; le découpage par route (`React.lazy`) est prévu avec l'optimisation de la phase 6, ou plus tôt si le plateau (Konva/Pixi) alourdit beaucoup le bundle.
 
 ### D-012 · Modales
 

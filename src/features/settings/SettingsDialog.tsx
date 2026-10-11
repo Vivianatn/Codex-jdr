@@ -2,6 +2,7 @@ import { Monitor, Moon, Settings, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { IconButton } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
+import { CheckboxField } from '@/components/ui/fields'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { useT } from '@/i18n'
 import { useResolvedTheme } from '@/app/usePreferences'
@@ -41,7 +42,8 @@ export function SettingsDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const t = useT()
-  const { theme, animations, setTheme, setAnimations } = useSettingsStore()
+  const { theme, animations, setTheme, setAnimations, diceAnimation, setDiceAnimation } =
+    useSettingsStore()
 
   return (
     <Dialog
@@ -82,6 +84,12 @@ export function SettingsDialog({
             ]}
           />
           <p className="text-xs text-ink-muted">{t.settings.animationsHint}</p>
+          <CheckboxField
+            label={t.settings.diceAnimation}
+            hint={t.settings.diceAnimationHint}
+            checked={diceAnimation}
+            onChange={setDiceAnimation}
+          />
         </section>
 
         <section className="space-y-2">

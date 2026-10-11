@@ -1,13 +1,17 @@
 import { newId } from '@/domain/entity'
-import type { Entity } from '@/domain/types'
+import type { RollRecord } from '@/domain/rolls'
+import type { ConditionTemplate, Entity } from '@/domain/types'
 import { defaultRules, withDefaultRules, type RulesConfig } from '@/rules'
 import { db as defaultDb, type CodexDB } from './db'
 import { normalizeEntity } from './normalize'
 import {
   CAMPAIGN_EXPORT_FORMAT,
   CAMPAIGN_EXPORT_VERSION,
+  emptyLibrary,
   type Campaign,
   type CampaignExport,
+  type CampaignLibrary,
+  type DiceMacro,
 } from './types'
 
 export type ImportErrorCode =
@@ -40,6 +44,7 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
         name,
         description: input.description?.trim() ?? '',
         rules: defaultRules(),
+        library: emptyLibrary(),
         createdAt: timestamp,
         updatedAt: timestamp,
         lastOpenedAt: null,
@@ -78,14 +83,19 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
       await db.campaigns.update(id, { rules, updatedAt: now() })
     },
 
+    async updateLibrary(id: string, library: CampaignLibrary): Promise<void> {
+      await db.campaigns.update(id, { library, updatedAt: now() })
+    },
+
     async markOpened(id: string): Promise<void> {
       await db.campaigns.update(id, { lastOpenedAt: now() })
     },
 
     /** Deletes the campaign and everything it owns. */
     async remove(id: string): Promise<void> {
-      await db.transaction('rw', db.campaigns, db.entities, async () => {
+      await db.transaction('rw', db.campaigns, db.entities, db.rolls, async () => {
         await db.entities.where('campaignId').equals(id).delete()
+        await db.rolls.where('campaignId').equals(id).delete()
         await db.campaigns.delete(id)
       })
     },
@@ -94,19 +104,21 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
       const campaign = await db.campaigns.get(id)
       if (!campaign) throw new Error(`Campaign ${id} not found`)
       const entities = await db.entities.where('campaignId').equals(id).toArray()
+      const rolls = await db.rolls.where('campaignId').equals(id).sortBy('at')
       return {
         format: CAMPAIGN_EXPORT_FORMAT,
         version: CAMPAIGN_EXPORT_VERSION,
         exportedAt: new Date(now()).toISOString(),
         campaign,
         entities: entities.sort((a, b) => a.createdAt - b.createdAt),
+        rolls,
       }
     },
 
     /** Accepts raw file text or an already-parsed object. */
     async importCampaign(input: string | unknown, copySuffix = '(copie)'): Promise<ImportResult> {
       const data = parseExport(input)
-      return db.transaction('rw', db.campaigns, db.entities, async () => {
+      return db.transaction('rw', db.campaigns, db.entities, db.rolls, async () => {
         const existing = await db.campaigns.get(data.campaign.id)
         const campaign: Campaign = existing
           ? {
@@ -128,8 +140,15 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
           return moved
         })
 
+        const rolls = data.rolls.map((r) => ({
+          ...r,
+          id: remap ? newId() : r.id,
+          campaignId: campaign.id,
+          entityId: r.entityId ? (ids.get(r.entityId) ?? null) : null,
+        }))
         await db.campaigns.add(campaign)
         await db.entities.bulkAdd(entities)
+        await db.rolls.bulkPut(rolls)
         return { campaign, renamed: Boolean(existing) }
       })
     },
@@ -144,7 +163,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function isCampaignCore(value: unknown): value is Omit<Campaign, 'rules'> & { rules?: unknown } {
+function isCampaignCore(
+  value: unknown,
+): value is Omit<Campaign, 'rules' | 'library'> & { rules?: unknown; library?: unknown } {
   if (!isRecord(value)) return false
   return (
     typeof value.id === 'string' &&
@@ -181,17 +202,31 @@ export function parseExport(input: string | unknown): CampaignExport {
   if (data.entities !== undefined && !Array.isArray(data.entities))
     throw new CampaignImportError('invalidCampaign')
 
-  const campaign: Campaign = { ...data.campaign, rules: withDefaultRules(data.campaign.rules) }
+  const library = isRecord(data.campaign.library) ? data.campaign.library : {}
+  const campaign: Campaign = {
+    ...data.campaign,
+    rules: withDefaultRules(data.campaign.rules),
+    library: {
+      conditions: Array.isArray(library.conditions)
+        ? (library.conditions as ConditionTemplate[])
+        : [],
+      macros: Array.isArray(library.macros) ? (library.macros as DiceMacro[]) : [],
+    },
+  }
   const entities = ((data.entities as unknown[] | undefined) ?? []).map((raw) => {
     const entity = normalizeEntity(raw, campaign.id)
     if (!entity) throw new CampaignImportError('invalidCampaign')
     return entity
   })
+  const rolls = (Array.isArray(data.rolls) ? data.rolls : []).filter(
+    (r): r is RollRecord => isRecord(r) && typeof r.id === 'string' && typeof r.total === 'number',
+  )
   return {
     format: CAMPAIGN_EXPORT_FORMAT,
     version: CAMPAIGN_EXPORT_VERSION,
     exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
     campaign,
     entities,
+    rolls,
   }
 }

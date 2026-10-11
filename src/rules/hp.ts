@@ -48,11 +48,18 @@ export function applyHpDelta(
 
 export type HpBand = 'healthy' | 'wounded' | 'critical' | 'down'
 
-/** Green above 50 %, amber below, red below 25 %, "à terre" at 0. */
-export function hpBand(current: number, max: number): HpBand {
+/** Green above 50 %, amber below, red below 25 %, "à terre" at 0 (thresholds from the rules). */
+export function hpBand(
+  current: number,
+  max: number,
+  thresholds: Pick<RulesConfig['hp'], 'woundedBelow' | 'criticalBelow'> = {
+    woundedBelow: 0.5,
+    criticalBelow: 0.25,
+  },
+): HpBand {
   if (current <= 0) return 'down'
   const ratio = max > 0 ? current / max : 0
-  if (ratio < 0.25) return 'critical'
-  if (ratio < 0.5) return 'wounded'
+  if (ratio < thresholds.criticalBelow) return 'critical'
+  if (ratio < thresholds.woundedBelow) return 'wounded'
   return 'healthy'
 }

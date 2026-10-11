@@ -1,5 +1,7 @@
 import { hpFormulaParts, hpMax, hpRollFromMax, isValidDie, type RulesConfig } from '@/rules'
-import { createEntity, effectiveStats, entityHpMax, newId } from './entity'
+import { plainCondition } from './conditions'
+import { createEntity, effectiveStats, entityHpMax, newId, normalizeSkill } from './entity'
+import { newItem } from './items'
 import {
   STAT_KEYS,
   type Entity,
@@ -432,8 +434,8 @@ export function entityFromSheet<K extends EntityKind>(
   return {
     ...entity,
     hp: { roll, current: Math.min(sheet.hp.current ?? max, max), temp: 0 },
-    skills: sheet.skills.map((s) => ({ ...s, id: newId(), enabled: true, modifiers: [] })),
-    conditions: sheet.conditions.map((c) => ({ ...c, id: newId() })),
-    inventory: sheet.inventory.map((i) => ({ ...i, id: newId() })),
+    skills: sheet.skills.map((s) => normalizeSkill({ ...s, id: newId() })),
+    conditions: sheet.conditions.map((c) => plainCondition(c.name, c.note)),
+    inventory: sheet.inventory.map((i) => newItem(i)),
   }
 }

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { defaultRules } from '@/rules'
+import { newItem } from './items'
 import {
   activeModifiers,
+  normalizeSkill,
   cloneEntity,
   createEntity,
   effectiveStats,
@@ -34,33 +36,25 @@ describe('effective stats', () => {
     e.stats.strength = 12
     e.modifiers = [{ id: 'm1', stat: 'strength', value: 2, label: 'Gantelets' }]
     e.skills = [
-      {
+      normalizeSkill({
         id: 's1',
         name: 'Colosse',
         kind: 'class',
-        stat: null,
-        description: '',
-        enabled: true,
         modifiers: [{ id: 'm2', stat: 'strength', value: 1, label: '' }],
-      },
-      {
+      }),
+      normalizeSkill({
         id: 's2',
         name: 'Rage',
         kind: 'active',
-        stat: 'strength',
-        description: '',
-        enabled: true,
         modifiers: [{ id: 'm3', stat: 'strength', value: 5, label: '' }],
-      },
-      {
+      }),
+      normalizeSkill({
         id: 's3',
         name: 'Endurci',
         kind: 'passive',
-        stat: null,
-        description: '',
         enabled: false,
         modifiers: [{ id: 'm4', stat: 'strength', value: 3, label: '' }],
-      },
+      }),
     ]
     expect(effectiveStats(e).strength.total).toBe(15)
     expect(activeModifiers(e, 'strength').map((m) => m.label)).toEqual(['Gantelets', 'Colosse'])
@@ -75,7 +69,7 @@ describe('journal & cloning', () => {
 
   it('clones with fresh ids and an empty journal', () => {
     const e = withJournal(createEntity('player', 'c1', rules), 'created', 'x')
-    e.inventory = [{ id: 'i1', name: 'Potion', quantity: 2, description: '' }]
+    e.inventory = [newItem({ id: 'i1', name: 'Potion', quantity: 2 })]
     const copy = cloneEntity(e)
     expect(copy.id).not.toBe(e.id)
     expect(copy.inventory[0]?.id).not.toBe('i1')

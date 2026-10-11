@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { db } from '@/db/db'
+import { normalizeEntityShape } from '@/domain/entity'
 import type { Entity } from '@/domain/types'
 import { createHistory, withHistory } from './history'
 
@@ -41,7 +42,8 @@ export const useCampaignStore = create<CampaignDataState>()(
         .untracked(() => set({ campaignId, status: 'loading', entities: {} }))
       const list = await db.entities.where('campaignId').equals(campaignId).toArray()
       if (get().campaignId !== campaignId) return // another campaign was opened meanwhile
-      const entities = Object.fromEntries(list.map((e) => [e.id, e]))
+      // Older saves are upgraded in memory; the next auto-save writes the new shape.
+      const entities = Object.fromEntries(list.map((e) => [e.id, normalizeEntityShape(e)]))
       lastSaved = entities
       campaignHistory.getState().untracked(() => set({ status: 'ready', entities }))
       campaignHistory.getState().clear()

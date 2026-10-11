@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash } from 'lucide-react'
+import { Pencil, Plus, Trash, WandSparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Button, IconButton } from '@/components/ui/Button'
 import type { Entity, Skill, SkillKind } from '@/domain/types'
@@ -6,7 +6,10 @@ import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { nextExtraSkillLevel, type RulesConfig } from '@/rules'
 import { emptySkill } from '@/domain/entity'
+import { skillBlock } from '@/domain/progress'
 import { SkillDialog } from '../SkillDialog'
+import { useCampaignStore } from '@/stores/campaignStore'
+import { SkillLaunchDialog } from '../play/PlayDialogs'
 import type { SheetEditor } from '../useSheetEditor'
 
 const GROUPS: SkillKind[] = ['class', 'active', 'passive']
@@ -17,11 +20,14 @@ export function SkillList({
   onSave,
   onRemove,
   onToggle,
+  onLaunch,
 }: {
   skills: Skill[]
   onSave: (skill: Skill) => void
   onRemove: (skill: Skill) => void
   onToggle?: (skill: Skill) => void
+  /** Shown on active skills when the sheet is playable. */
+  onLaunch?: (skill: Skill) => void
 }) {
   const t = useT()
   const [editing, setEditing] = useState<Skill | null>(null)
@@ -90,6 +96,21 @@ export function SkillList({
                       </p>
                     )}
                   </div>
+                  {skill.kind === 'active' && (skill.usesMax !== null || skill.cooldown > 0) && (
+                    <SkillCounters skill={skill} />
+                  )}
+                  {onLaunch && skill.kind === 'active' && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      icon={<WandSparkles />}
+                      disabled={Boolean(skillBlock(skill))}
+                      onClick={() => onLaunch(skill)}
+                      aria-label={t.skills.launchSkill(skill.name)}
+                    >
+                      {t.skills.launch}
+                    </Button>
+                  )}
                   {onToggle && skill.kind !== 'active' && (
                     <label className="flex items-center gap-1.5 pt-1 text-xs text-ink-muted">
                       <input
@@ -141,6 +162,8 @@ export function SkillsTab({
   editor: SheetEditor
 }) {
   const t = useT()
+  const playable = useCampaignStore((s) => Boolean(s.entities[entity.id]))
+  const [launching, setLaunching] = useState<string | null>(null)
   const next = nextExtraSkillLevel(entity.level, rules)
   const total = entity.skills.filter((s) => s.kind !== 'class').length
   return (
@@ -154,7 +177,21 @@ export function SkillsTab({
         onSave={editor.saveSkill}
         onRemove={editor.removeSkill}
         onToggle={(skill) => editor.toggleSkill(skill.id)}
+        onLaunch={playable ? (skill) => setLaunching(skill.id) : undefined}
       />
+      {launching && (
+        <SkillLaunchDialog entity={entity} skillId={launching} onClose={() => setLaunching(null)} />
+      )}
     </div>
   )
+}
+
+function SkillCounters({ skill }: { skill: Skill }) {
+  const t = useT()
+  const parts = [
+    skill.usesMax !== null ? t.skills.usesLeft(skill.usesLeft ?? skill.usesMax, skill.usesMax) : '',
+    skill.cooldownLeft > 0 ? t.skills.cooldownLeft(skill.cooldownLeft) : '',
+  ].filter(Boolean)
+  if (!parts.length) return null
+  return <span className="tabular pt-1.5 text-xs text-ink-muted">{parts.join(' · ')}</span>
 }

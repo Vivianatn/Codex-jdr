@@ -3,6 +3,8 @@ import { Ornament } from '@/components/Brand'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { BestiaryPage } from '@/features/characters/BestiaryPage'
 import { CharacterListPage } from '@/features/characters/CharacterListPage'
+import { ConditionsPage } from '@/features/library/ConditionsPage'
+import { ItemsPage } from '@/features/library/ItemsPage'
 import { RulesPage } from '@/features/rules/RulesPage'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
@@ -12,7 +14,7 @@ import { SECTION_ICONS, sectionLabel } from './sections'
 
 type PlaceholderSection = Exclude<
   PrepSection,
-  'dashboard' | 'players' | 'allies' | 'bestiary' | 'rules'
+  'dashboard' | 'players' | 'allies' | 'bestiary' | 'rules' | 'items' | 'conditions'
 >
 
 /** Routes each prep section to its page. Sections not built yet show an informative empty state. */
@@ -62,6 +64,10 @@ export function PrepSectionPage() {
       return <BestiaryPage />
     case 'rules':
       return <RulesPage />
+    case 'items':
+      return <ItemsPage />
+    case 'conditions':
+      return <ConditionsPage />
     default:
       return <Placeholder section={section} />
   }

@@ -1,7 +1,9 @@
 import { entityHpMax, entityName, newId, withJournal } from '@/domain/entity'
+import { equip, unequip } from '@/domain/items'
 import type {
   AllyDetails,
   Condition,
+  EquipSlot,
   EnemyDetails,
   FamiliarDetails,
   PlayerDetails,
@@ -167,6 +169,14 @@ export function useSheetEditor(entity: Entity, rules: RulesConfig, change: Sheet
 
     updateItem(item: Item) {
       edit((e) => ({ ...e, inventory: e.inventory.map((i) => (i.id === item.id ? item : i)) }))
+    },
+
+    equip(itemId: string, slot: EquipSlot) {
+      edit((e) => equip(e, itemId, slot))
+    },
+
+    unequip(itemId: string) {
+      edit((e) => unequip(e, itemId))
     },
 
     removeItem(item: Item) {

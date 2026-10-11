@@ -13,9 +13,12 @@ export interface SettingsState {
   theme: ThemePreference
   animations: AnimationLevel
   locale: Locale
+  /** Animated dice in the roll feed (results are shown either way). */
+  diceAnimation: boolean
   setTheme: (theme: ThemePreference) => void
   setAnimations: (level: AnimationLevel) => void
   setLocale: (locale: Locale) => void
+  setDiceAnimation: (on: boolean) => void
 }
 
 /**
@@ -28,15 +31,22 @@ export const useSettingsStore = create<SettingsState>()(
       theme: 'light',
       animations: 'full',
       locale: 'fr',
+      diceAnimation: true,
       setTheme: (theme) => set({ theme }),
       setAnimations: (animations) => set({ animations }),
       setLocale: (locale) => set({ locale }),
+      setDiceAnimation: (diceAnimation) => set({ diceAnimation }),
     }),
     {
       name: SETTINGS_STORAGE_KEY,
       version: 1,
       storage: createJSONStorage(() => localStorage),
-      partialize: ({ theme, animations, locale }) => ({ theme, animations, locale }),
+      partialize: ({ theme, animations, locale, diceAnimation }) => ({
+        theme,
+        animations,
+        locale,
+        diceAnimation,
+      }),
     },
   ),
 )

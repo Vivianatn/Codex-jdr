@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowLeft, Hammer, Swords } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, Outlet, useMatch, useNavigate, useParams } from 'react-router'
 import { LogoMark } from '@/components/Brand'
 import { IconButton } from '@/components/ui/Button'
@@ -10,10 +10,15 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { campaignRepository } from '@/db/campaigns'
 import { useT } from '@/i18n'
 import { useCampaignStore } from '@/stores/campaignStore'
+import { useRollStore } from '@/stores/rollStore'
+import { DiceButton } from '@/features/dice/DicePanel'
+import { CampaignOverlays } from './CampaignOverlays'
+import { withDefaultRules } from '@/rules'
+import { emptyLibrary } from '@/db/types'
 import { useUiStore } from '@/stores/uiStore'
 import { AppHeader } from './AppHeader'
 import { UndoRedo } from './UndoRedo'
-import type { CampaignContext } from './campaignContext'
+import { CampaignReactContext, type CampaignContext } from './campaignContext'
 
 export type GameMode = 'prep' | 'play'
 
@@ -33,11 +38,25 @@ export function CampaignLayout() {
     if (!campaignId) return
     void campaignRepository.markOpened(campaignId)
     void useCampaignStore.getState().load(campaignId)
+    void useRollStore.getState().load(campaignId)
   }, [campaignId])
+
+  // Older records may miss newer rule keys; normalise once per change.
+  const normalized = useMemo(
+    () =>
+      campaign
+        ? {
+            ...campaign,
+            rules: withDefaultRules(campaign.rules),
+            library: campaign.library ?? emptyLibrary(),
+          }
+        : null,
+    [campaign],
+  )
 
   if (campaign === undefined || (campaign && !ready)) return null
 
-  if (campaign === null) {
+  if (campaign === null || !normalized) {
     return (
       <div className="flex min-h-full flex-col">
         <AppHeader start={<BackToCampaigns />} />
@@ -58,21 +77,29 @@ export function CampaignLayout() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <AppHeader
-        start={
-          <>
-            <BackToCampaigns />
-            <span className="truncate font-display text-base font-semibold text-ink">
-              {campaign.name}
-            </span>
-          </>
-        }
-        center={<ModeSwitch campaignId={campaign.id} />}
-        end={<UndoRedo />}
-      />
-      <Outlet context={{ campaign } satisfies CampaignContext} />
-    </div>
+    <CampaignReactContext.Provider value={normalized}>
+      <div className="flex h-full flex-col">
+        <AppHeader
+          start={
+            <>
+              <BackToCampaigns />
+              <span className="truncate font-display text-base font-semibold text-ink">
+                {campaign.name}
+              </span>
+            </>
+          }
+          center={<ModeSwitch campaignId={campaign.id} />}
+          end={
+            <>
+              <UndoRedo />
+              <DiceButton />
+            </>
+          }
+        />
+        <Outlet context={{ campaign: normalized } satisfies CampaignContext} />
+        <CampaignOverlays />
+      </div>
+    </CampaignReactContext.Provider>
   )
 }
 

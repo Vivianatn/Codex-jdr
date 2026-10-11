@@ -27,6 +27,16 @@ export interface StatModifier {
 /** `class` is the class passive ("caractéristique physique"), distinct from regular passives. */
 export type SkillKind = 'active' | 'passive' | 'class'
 
+export type SkillEffectKind = 'none' | 'damage' | 'heal' | 'condition'
+
+export interface SkillEffect {
+  kind: SkillEffectKind
+  /** Dice expression for damage / heal ("2d6+1"). */
+  expression: string
+  /** Condition applied to the targets (library id) when kind = condition. */
+  conditionId: string | null
+}
+
 export interface Skill {
   id: string
   name: string
@@ -36,23 +46,128 @@ export interface Skill {
   /** Passives and class passives can be switched off to test the sheet without them. */
   enabled: boolean
   modifiers: StatModifier[]
+  /** Uses before a long rest; null = unlimited. */
+  usesMax: number | null
+  usesLeft: number | null
+  /** Turns to wait after use (0 = none) and turns still to wait. */
+  cooldown: number
+  cooldownLeft: number
+  effect: SkillEffect
 }
 
-export interface Condition {
+/** Curated icon keys, mapped to Lucide icons in the UI. */
+export const CONDITION_ICONS = [
+  'skull',
+  'flame',
+  'zap',
+  'eye-off',
+  'heart',
+  'ghost',
+  'eye',
+  'arrow-down',
+  'droplet',
+  'sparkles',
+  'brain',
+  'snail',
+  'shield',
+  'snowflake',
+  'moon',
+  'star',
+] as const
+export type ConditionIcon = (typeof CONDITION_ICONS)[number]
+
+export const CONDITION_COLORS = [
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'blue',
+  'violet',
+  'pink',
+  'gray',
+] as const
+export type ConditionColor = (typeof CONDITION_COLORS)[number]
+
+/** What a condition does, shared by the library entry and the applied condition. */
+export interface ConditionEffects {
+  icon: ConditionIcon
+  color: ConditionColor
+  modifiers: StatModifier[]
+  /** Rolled at the start of each turn of the affected character. */
+  perTurn: { kind: 'damage' | 'heal'; expression: string } | null
+  /** Characteristic tested to break free, or null. */
+  save: StatKey | null
+  /** "Concentration": taking damage prompts a Constitution check. */
+  concentration: boolean
+}
+
+/** A condition in the library (built-in or created by the GM). */
+export interface ConditionTemplate extends ConditionEffects {
+  id: string
+  name: string
+  description: string
+  /** Default duration in turns; null = until removed. */
+  duration: number | null
+}
+
+/** A condition applied to a character. */
+export interface Condition extends ConditionEffects {
   id: string
   name: string
   note: string
+  /** Library entry it comes from, if any. */
+  templateId: string | null
+  /** Turns left; null = until removed. */
+  remaining: number | null
 }
+
+export const ITEM_TYPES = ['weapon', 'armor', 'accessory', 'consumable', 'misc'] as const
+export type ItemType = (typeof ITEM_TYPES)[number]
+
+export const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'] as const
+export type Rarity = (typeof RARITIES)[number]
+
+export const EQUIP_SLOTS = ['mainHand', 'offHand', 'armor', 'accessory1', 'accessory2'] as const
+export type EquipSlot = (typeof EQUIP_SLOTS)[number]
 
 export interface Item {
   id: string
   name: string
   quantity: number
   description: string
+  type: ItemType
+  rarity: Rarity
+  /** Weight of one unit, in kg. */
+  weight: number
+  /** Price of one unit, in the smallest coin. */
+  value: number
+  /** Equipment slot it occupies, or null when carried. */
+  slot: EquipSlot | null
+  /** Applied while equipped. */
+  modifiers: StatModifier[]
+  /** Defense bonus while equipped (armour, shield). */
+  defense: number
+  /** Weapon damage dice ("1d8"), empty if not a weapon. */
+  damage: string
+  /** Consumable effect of "Utiliser" (one unit). */
+  use: { kind: 'heal' | 'damage'; expression: string } | null
+  /** Hidden property revealed by an Intelligence check. */
+  hidden: { text: string; difficulty: number; identified: boolean } | null
 }
 
 export type JournalKind =
-  'created' | 'imported' | 'level' | 'hp' | 'stats' | 'skill' | 'condition' | 'item' | 'edit'
+  | 'created'
+  | 'imported'
+  | 'level'
+  | 'hp'
+  | 'stats'
+  | 'skill'
+  | 'condition'
+  | 'item'
+  | 'edit'
+  | 'roll'
+  | 'rest'
+  | 'money'
 
 export interface JournalEntry {
   id: string
@@ -121,6 +236,12 @@ interface EntityBase {
   skills: Skill[]
   conditions: Condition[]
   inventory: Item[]
+  /** Money, in the smallest coin (see rules.currency). */
+  purse: number
+  /** Exhaustion level (0 = rested). */
+  exhaustion: number
+  /** Luck points spent since the last long rest. */
+  luckSpent: number
   journal: JournalEntry[]
   createdAt: number
   updatedAt: number
