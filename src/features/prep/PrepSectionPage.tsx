@@ -1,5 +1,4 @@
 import { useParams } from 'react-router'
-import { Ornament } from '@/components/Brand'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { BestiaryPage } from '@/features/characters/BestiaryPage'
 import { CharacterListPage } from '@/features/characters/CharacterListPage'
@@ -94,7 +93,7 @@ function Placeholder({ section }: { section: PlaceholderSection }) {
   return (
     <PageTransition key={section} className="px-4 py-8 sm:px-8">
       <h1 className="type-screen-title text-ink">{sectionLabel(t, section)}</h1>
-      <Ornament className="my-6 max-w-sm" />
+      <div className="h-8" aria-hidden />
       <EmptyState icon={<Icon />} title={copy.emptyTitle} body={copy.emptyBody} />
     </PageTransition>
   )

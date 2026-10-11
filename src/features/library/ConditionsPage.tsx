@@ -1,7 +1,6 @@
 import { Copy, Pencil, Plus, Trash } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Ornament } from '@/components/Brand'
 import { Button, IconButton } from '@/components/ui/Button'
 import { campaignRepository } from '@/db/campaigns'
 import { emptyConditionTemplate } from '@/domain/conditions'
@@ -40,7 +39,7 @@ export function ConditionsPage() {
           {t.conditions.new}
         </Button>
       </div>
-      <Ornament className="my-6 max-w-sm" />
+      <div className="h-8" aria-hidden />
 
       {custom.length === 0 ? (
         <p className="mb-6 text-sm text-ink-muted">{t.sections.conditions.emptyBody}</p>

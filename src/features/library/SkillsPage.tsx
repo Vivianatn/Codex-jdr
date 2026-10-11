@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
-import { Ornament } from '@/components/Brand'
 import { Button, IconButton } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -76,7 +75,7 @@ export function SkillsPage() {
         </div>
         {list.length > 0 && newButton}
       </div>
-      <Ornament className="my-6 max-w-sm" />
+      <div className="h-8" aria-hidden />
 
       {list.length === 0 ? (
         <EmptyState

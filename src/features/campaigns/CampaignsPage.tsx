@@ -60,9 +60,10 @@ export function CampaignsPage() {
       />
 
       <PageTransition>
-        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-8">
+        <main id="main" className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-14 sm:px-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
+              <p className="mb-2 type-eyebrow">{t.campaigns.welcome}</p>
               <h1 className="type-screen-title text-ink sm:text-[2.5rem]">{t.campaigns.title}</h1>
               <p className="mt-2 text-ink-muted">{t.campaigns.subtitle}</p>
             </div>
@@ -73,7 +74,7 @@ export function CampaignsPage() {
               </div>
             )}
           </div>
-          <Ornament variant="stats" className="my-8" />
+          <Ornament className="mt-5 mb-10" />
 
           {campaigns === undefined ? null : campaigns.length === 0 ? (
             <EmptyState

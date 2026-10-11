@@ -235,5 +235,5 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
   // Pause from the GM window reaches the players.
   await page.getByRole('button', { name: 'Vue joueurs' }).click()
   await page.getByRole('menuitemradio', { name: 'Une pause' }).click()
-  await expect(players.getByText('La partie reprend bientôt.')).toBeVisible()
+  await expect(players.getByText('Une courte pause. On reprend dans un instant.')).toBeVisible()
 })

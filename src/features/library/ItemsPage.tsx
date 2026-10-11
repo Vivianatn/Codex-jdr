@@ -4,7 +4,6 @@ import { Gem, Gift, Pencil, Plus, Trash } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
-import { Ornament } from '@/components/Brand'
 import { Button, IconButton } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { itemLibrary } from '@/db/itemLibrary'
@@ -68,7 +67,7 @@ export function ItemsPage() {
         </div>
         {items && items.length > 0 && newButton}
       </div>
-      <Ornament className="my-6 max-w-sm" />
+      <div className="h-8" aria-hidden />
 
       {items === undefined ? null : items.length === 0 ? (
         <EmptyState

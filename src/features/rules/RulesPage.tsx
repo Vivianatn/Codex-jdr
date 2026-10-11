@@ -1,7 +1,6 @@
 import { Plus, RotateCcw, Trash } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { Ornament } from '@/components/Brand'
 import { Button, IconButton } from '@/components/ui/Button'
 import { TextField } from '@/components/ui/TextField'
 import { CheckboxField, CommitInput, NumberInput, SelectField } from '@/components/ui/fields'
@@ -93,7 +92,7 @@ export function RulesPage() {
             {t.rulesPage.reset}
           </Button>
         </div>
-        <Ornament className="my-6 max-w-sm" />
+        <div className="h-8" aria-hidden />
 
         <div className="space-y-6">
           <Section title={t.rulesPage.stats}>

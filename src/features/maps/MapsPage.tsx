@@ -2,7 +2,6 @@ import { Copy, Map as MapIcon, Pencil, Play, Plus, Trash } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import { Ornament } from '@/components/Brand'
 import { Button, IconButton } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { NumberInput } from '@/components/ui/fields'
@@ -44,7 +43,7 @@ export function MapsPage() {
         </div>
         {list.length > 0 && newButton}
       </div>
-      <Ornament className="my-6 max-w-sm" />
+      <div className="h-8" aria-hidden />
 
       {list.length === 0 ? (
         <EmptyMaps action={newButton} />

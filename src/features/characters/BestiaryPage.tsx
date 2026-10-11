@@ -4,7 +4,6 @@ import { ClipboardPaste, Plus, Skull } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useShallow } from 'zustand/react/shallow'
-import { Ornament } from '@/components/Brand'
 import { Button } from '@/components/ui/Button'
 import { buttonClasses } from '@/components/ui/buttonStyles'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -50,7 +49,7 @@ export function BestiaryPage() {
           </div>
         )}
       </div>
-      <Ornament className="my-6 max-w-sm" />
+      <div className="h-8" aria-hidden />
 
       {templates === undefined ? null : templates.length === 0 && enemies.length === 0 ? (
         <EmptyState

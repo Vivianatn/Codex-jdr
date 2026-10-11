@@ -505,7 +505,7 @@ export const fr = {
     displayImage: 'Image d’ambiance',
     displayImageImport: 'Choisir une image',
     pause: 'Pause',
-    pauseBody: 'La partie reprend bientôt.',
+    pauseBody: 'Une courte pause. On reprend dans un instant.',
     followGm: 'Suivre la caméra du MJ',
     freeCamera: 'Caméra libre',
     fullscreen: 'Plein écran',
@@ -1251,6 +1251,7 @@ export const fr = {
     conditions: 'États',
   },
   campaigns: {
+    welcome: 'Bon retour, maître du jeu',
     title: 'Tes campagnes',
     subtitle: 'Choisis une campagne à préparer ou à mener.',
     new: 'Nouvelle campagne',

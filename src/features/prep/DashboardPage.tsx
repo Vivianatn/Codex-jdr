@@ -1,6 +1,5 @@
 import { Swords } from 'lucide-react'
 import { Link } from 'react-router'
-import { Ornament } from '@/components/Brand'
 import { buttonClasses } from '@/components/ui/buttonStyles'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useCampaign } from '@/features/shell/campaignContext'
@@ -16,7 +15,7 @@ export function DashboardPage() {
       <div className="max-w-3xl">
         <h1 className="type-screen-title text-ink">{campaign.name}</h1>
         <p className="mt-2 text-ink-muted">{campaign.description || t.dashboard.subtitle}</p>
-        <Ornament variant="stats" className="my-8" />
+        <div className="h-8" aria-hidden />
 
         <section
           aria-labelledby="next-steps"
