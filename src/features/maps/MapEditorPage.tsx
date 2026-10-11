@@ -7,7 +7,6 @@ import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useMapViewStore } from '@/stores/mapViewStore'
-import { cameraControls, useCameraScale } from './cameraControls'
 import { MapCanvas, type MapChange } from './MapCanvas'
 import { ElementPanel, MapSettingsPanel, WallPanel } from './MapPanels'
 import { PanelDock } from './panelDock'
@@ -90,8 +89,6 @@ export function MapEditorPage() {
     return () => window.removeEventListener('keydown', down)
   }, [onChange, t])
 
-  const controls = useMemo(() => (map ? cameraControls(map) : null), [map])
-  const scale = useCameraScale(map)
 
   if (!map) return <Navigate to={`/c/${campaign.id}/prep/maps`} replace />
 
@@ -151,12 +148,7 @@ export function MapEditorPage() {
             calibrateCells={calibrateCells}
           />
           <ToolOptions className="absolute top-3 left-1/2 z-10 -translate-x-1/2" />
-          <ZoomControl
-            scale={scale}
-            onZoom={(f) => controls?.zoom(f)}
-            onFit={() => controls?.fit()}
-            className="absolute right-4 bottom-4 z-10"
-          />
+          <ZoomControl map={map} className="absolute right-4 bottom-4 z-10" />
         </section>
         <PanelDock.Provider value>
           {element ? (

@@ -2,7 +2,7 @@
 
 Le compagnon du Maître du Jeu : un logiciel **local-first** pour préparer et mener des parties de jeu de rôle (système maison inspiré de _Donjons & Dragons_). Toutes les données restent sur ton appareil, dans le navigateur (IndexedDB). Tu peux exporter une campagne en JSON à tout moment.
 
-> État : **phase 4 — plateau** terminée : cartes à grille carrée ou hexagonale, image de fond, décor, murs et portes, objets interactifs (coffres, pièges, leviers, passages, PNJ), brouillard de guerre, zones d’effet, mesures et vue joueurs sur un second écran (voir [DECISIONS D-228 à D-233](docs/DECISIONS.md)). Les tours par groupes (phase 3) remplacent le suivi de combat du cahier des charges.
+> État : **phase 4 — plateau** terminée, avec les mini-fiches en jeu et la direction artistique « Codex à la chandelle » ([docs/CODEX-DA.md](docs/CODEX-DA.md)) : préparation ivoire et or, mode En jeu sombre « à la lueur des bougies », plateau, vue joueurs, états vides illustrés. Voir [DECISIONS](docs/DECISIONS.md) D-228 à D-238.
 
 ## Démarrer
 
@@ -25,6 +25,7 @@ npm run dev        # http://localhost:5173
 | `npm run test:unit` | Tests unitaires et de composants (Vitest)               |
 | `npm run test:e2e`  | Tests end-to-end et accessibilité (Playwright + axe)    |
 | `npm run test:perf` | Mesure d’images/s du plateau avec 200 jetons            |
+| `npm run screens`   | Captures des écrans principaux, thèmes clair et sombre  |
 | `npm run format`    | Prettier                                                |
 
 Le hook de pre-commit (Husky) lance le lint, la vérification des types et les tests unitaires.
@@ -35,6 +36,7 @@ Première exécution des tests e2e : `npx playwright install chromium`.
 
 - [Cahier des charges](docs/SPEC.md)
 - [Journal des décisions](docs/DECISIONS.md)
+- [Direction artistique](docs/CODEX-DA.md)
 
 ## Crédits
 

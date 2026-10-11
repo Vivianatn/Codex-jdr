@@ -6,7 +6,12 @@ import { CheckboxField } from '@/components/ui/fields'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { useT } from '@/i18n'
 import { useResolvedTheme } from '@/app/usePreferences'
-import { useSettingsStore, type AnimationLevel, type ThemePreference } from '@/stores/settingsStore'
+import {
+  useSettingsStore,
+  type AnimationLevel,
+  type ThemePreference,
+  type TextSize,
+} from '@/stores/settingsStore'
 
 export function SettingsButton() {
   const t = useT()
@@ -47,8 +52,20 @@ export function SettingsDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const t = useT()
-  const { theme, animations, setTheme, setAnimations, diceAnimation, setDiceAnimation } =
-    useSettingsStore()
+  const {
+    theme,
+    animations,
+    setTheme,
+    setAnimations,
+    diceAnimation,
+    setDiceAnimation,
+    playDark,
+    setPlayDark,
+    paperGrain,
+    setPaperGrain,
+    textSize,
+    setTextSize,
+  } = useSettingsStore()
 
   return (
     <Dialog
@@ -70,6 +87,34 @@ export function SettingsDialog({
               { value: 'light', label: t.settings.themeLight, icon: <Sun /> },
               { value: 'dark', label: t.settings.themeDark, icon: <Moon /> },
               { value: 'system', label: t.settings.themeSystem, icon: <Monitor /> },
+            ]}
+          />
+          <CheckboxField
+            label={t.settings.playDark}
+            hint={t.settings.playDarkHint}
+            checked={playDark}
+            onChange={setPlayDark}
+          />
+          <CheckboxField
+            label={t.settings.paperGrain}
+            hint={t.settings.paperGrainHint}
+            checked={paperGrain}
+            onChange={setPaperGrain}
+          />
+        </section>
+
+        <section className="space-y-2">
+          <h3 className="font-sans text-sm font-medium tracking-normal text-ink">
+            {t.settings.textSize}
+          </h3>
+          <SegmentedControl<'100' | '112' | '125'>
+            label={t.settings.textSize}
+            value={String(textSize) as '100' | '112' | '125'}
+            onValueChange={(v) => setTextSize(Number(v) as TextSize)}
+            options={[
+              { value: '100', label: '100 %' },
+              { value: '112', label: '112 %' },
+              { value: '125', label: '125 %' },
             ]}
           />
         </section>

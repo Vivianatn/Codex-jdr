@@ -15,7 +15,7 @@ import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useMapViewStore, type MapTool } from '@/stores/mapViewStore'
 import { useUiStore } from '@/stores/uiStore'
-import { cameraControls, useCameraScale } from './cameraControls'
+import { cameraControls } from './cameraControls'
 import { MapCanvas, type MapChange } from './MapCanvas'
 import { AreaPanel, ElementPanel, WallPanel } from './MapPanels'
 import { LayersMenu, MapToolbar, ToolOptions, ZoomControl, type ToolItem } from './MapToolbar'
@@ -110,8 +110,6 @@ export function PlayMap() {
     },
     [mapId, updateMap],
   )
-  const controls = useMemo(() => (map ? cameraControls(map) : null), [map])
-  const scale = useCameraScale(map)
   const setDiceOpen = useUiStore((s) => s.setDiceOpen)
 
   const mapSelect = (
@@ -240,12 +238,7 @@ export function PlayMap() {
           </MapToolbar>
         </div>
       </div>
-      <ZoomControl
-        scale={scale}
-        onZoom={(f) => controls?.zoom(f)}
-        onFit={() => controls?.fit()}
-        className="absolute right-4 bottom-5 z-10 hidden md:flex"
-      />
+      <ZoomControl map={map} className="absolute right-4 bottom-5 z-10 hidden md:flex" />
 
       {area ? (
         <AreaPanel map={map} area={area} />

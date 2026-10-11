@@ -26,10 +26,18 @@ import {
   Triangle,
   type LucideIcon,
 } from 'lucide-react'
-import { forwardRef, useEffect, type ComponentPropsWithoutRef, type ReactNode } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useMemo,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from 'react'
+import type { GameMap } from '@/domain/maps'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { MAP_LAYERS, useMapViewStore, type MapTool } from '@/stores/mapViewStore'
+import { cameraControls, useCameraScale } from './cameraControls'
 
 const TOOL_ICONS: Record<MapTool, LucideIcon> = {
   select: MousePointer2,
@@ -297,19 +305,16 @@ export function ToolOptions({ className }: { className?: string }) {
   )
 }
 
-/** Zoom control in glass: − 100 % + and "see the whole map" (DA §10.5). */
-export function ZoomControl({
-  scale,
-  onZoom,
-  onFit,
-  className,
-}: {
-  scale: number
-  onZoom: (factor: number) => void
-  onFit: () => void
-  className?: string
-}) {
+/**
+ * Zoom control in glass: − 100 % + and "see the whole map" (DA §10.5). It
+ * reads the camera itself so camera moves never re-render the whole page.
+ */
+export function ZoomControl({ map, className }: { map: GameMap; className?: string }) {
   const t = useT()
+  const scale = useCameraScale(map)
+  const controls = useMemo(() => cameraControls(map), [map])
+  const onZoom = (factor: number) => controls.zoom(factor)
+  const onFit = () => controls.fit()
   const small =
     'inline-flex size-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink [&_svg]:size-4'
   return (

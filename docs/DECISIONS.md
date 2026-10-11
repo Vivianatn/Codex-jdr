@@ -12,6 +12,24 @@ La référence est [CODEX-DA.md](CODEX-DA.md), produit par Claude Design à part
 
 Le document pose `data-theme="dark"` sur le conteneur de l'écran En jeu. Mais les menus, toasts et boîtes de dialogue s'ouvrent hors de ce conteneur (portails Radix) et seraient restés clairs. Le réglage « En jeu, toujours en sombre » (activé par défaut) bascule donc toute la page tant que l'écran En jeu est affiché ; la Vue joueurs est toujours sombre. L'interrupteur de thème de l'en-tête, en jeu, lève aussi ce réglage. Le grain de papier n'apparaît qu'en Préparation.
 
+### D-238 · Application de la DA : ce qui est fait, ce qui reste
+
+Le plan d'application du document (§12) a été suivi dans l'ordre, un commit par étape : tokens, polices, plateau, écran En jeu et éditeur, composants de base, composants de jeu, mouvement, Vue joueurs, ornements, états vides, réglages, vérification. Un test axe dédié (`e2e/da-a11y.spec.ts`) couvre les écrans refaits dans les deux thèmes. `npm run screens` produit les captures de contrôle.
+
+Choix d'application :
+
+- **Réglages** : ils restent une boîte de dialogue, enrichie de « En jeu, toujours en sombre », « Taille du texte » et « Grain de papier ». La page à navigation du document (§10.9) viendra avec la phase 6. Il n'y a pas de sons à régler.
+- **Performance** : le compteur de zoom lit la caméra lui-même (sinon toute la page se redessinait à chaque image). Avec 200 jetons, le plateau tient la même cadence qu'avec aucun : les jetons ne coûtent plus rien de mesurable. La valeur absolue dépend de la charge de la machine (25 à 42 images/s mesurées le même soir, sans jeton, en rendu logiciel).
+
+Éléments du document non réalisés, car ils dépendent de fonctions qui n'existent pas encore :
+
+- menu radial au clic droit sur un jeton (§8.10) et palette de commandes Ctrl K (§10.1, §10.2) ;
+- tableau de bord avec prochaine séance, quêtes et « À ne pas oublier » (§10.2) : il attend les phases sessions et quêtes ;
+- fiche en deux colonnes avec carte d'identité à coins enluminés (§10.3), panneau de détail du bestiaire (§10.4), tiroirs épinglés côte à côte (§8.9) ;
+- lanceur de dés en grande boîte de dialogue à trois colonnes et « lancer express » R (§10.7). Le panneau de dés existant a les nouveaux résultats.
+- icônes game-icons.net (§11.2) : il faut d'abord récupérer les fichiers et leurs auteurs. Lucide reste utilisé en attendant.
+- disposition tablette (colonne des groupes de 72 px, panneau rapide en volet bas) (§10.6).
+
 ### D-237 · Composants de jeu : écarts assumés
 
 - **« Épique » reste le nom de la quatrième rareté.** Le cahier des charges (§4.11) dit « épique » ; l'écart 8 du document de DA affirme le contraire à tort. Elle prend les couleurs « très rare » du document.

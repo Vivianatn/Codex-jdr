@@ -11,6 +11,7 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 - Write tests with the code, not after.
 - Code and comments in English. **All UI text in French**, through `src/i18n/locales/fr.ts` (typed: `const t = useT(); t.nav.players`). Address the GM with « tu ».
 - During play: no blocking modals (except delete confirmations) — use drawers and toasts.
+- **Art direction: [docs/CODEX-DA.md](docs/CODEX-DA.md)** (« Codex à la chandelle »). Every UI change follows it: tokens only (no raw colours outside `boardTheme.ts` and illustrations), type styles (`type-screen-title`, `type-eyebrow`, `type-section`…), glass only over the board, ornaments only where §6 allows. Gaps and deviations are logged in DECISIONS (D-235–238).
 
 ## Environment
 
@@ -27,6 +28,7 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 | `npm run test:unit`                  | Vitest, once (also runs in the pre-commit hook)       |
 | `npm run test:e2e`                   | Playwright + axe (starts its own dev server on :4173) |
 | `npm run test:perf`                  | 200-token map FPS measurement (run alone)             |
+| `npm run screens`                    | Screenshots of the main screens, both themes          |
 
 ## Architecture
 
@@ -44,5 +46,6 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 - `src/components/ui/` — generic accessible primitives on top of Radix (Button, Dialog, SegmentedControl…).
 - `src/db/` — Dexie schema, v7 (+ `maps`, `assets`; v6 added `skills`, bestiary & items per campaign): campaigns (+ library), entities, per-campaign bestiary and item library, rolls (`db.ts`, never edit an existing `version()` block, add a new one + migration test) and repositories.
 - `src/stores/` — Zustand stores. `history.ts` is the undo/redo middleware (`createHistory` + `withHistory`) every game-action store must use. `campaignStore.ts` holds the open campaign's characters in memory (source of truth) and auto-saves them to Dexie; call `flushAutosave()` before reading Dexie directly.
-- `src/styles/tokens.css` — raw design tokens (`--codex-*`), mapped to Tailwind utilities in `index.css` (`bg-surface`, `text-ink-muted`, `bg-stat-strength`…). Use the `*-text` variants (`text-accent-text`, `text-gold-text`, `text-hp-text`) for coloured text so AA contrast holds in both themes.
+- `src/styles/tokens.css` — design tokens of the DA (`--codex-*`, light and dark), mapped to Tailwind utilities in `index.css` (`bg-surface`, `text-ink-muted`, `bg-stat-strength-soft`, `border-rarity-legendary`…). Coloured text always uses a `*-text` token, pill backgrounds a `*-soft` token. Type styles and `codex-glass` live in `index.css`. The board's colours are literals in `src/features/maps/boardTheme.ts` (canvas cannot read CSS variables); board icons are Lucide paths in `boardIcons.ts`; empty-state drawings in `src/components/illustrations.tsx`; ornaments in `src/components/Brand.tsx`.
+- Theme: `useResolvedTheme()` (preparation theme, play screen forced dark by default, players' window always dark — D-235). Screens declare themselves with `useSurface('play' | 'players')`.
 - Tests: unit/component tests sit next to the code (`*.test.ts(x)`); `src/test/renderApp.tsx` renders the whole app on a memory router; e2e in `e2e/`.
