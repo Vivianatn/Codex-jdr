@@ -1,6 +1,12 @@
 import { starterConditions } from '@/domain/conditions'
 import type { RollRecord } from '@/domain/rolls'
-import type { ConditionTemplate, Entity, SkillDefinition } from '@/domain/types'
+import type {
+  ConditionTemplate,
+  EnemyTemplate,
+  Entity,
+  LibraryItem,
+  SkillDefinition,
+} from '@/domain/types'
 import type { RulesConfig } from '@/rules'
 
 export interface Campaign {
@@ -35,7 +41,7 @@ export function emptyLibrary(): CampaignLibrary {
 }
 
 /** Current version of the campaign export file. Bump it when the shape changes. */
-export const CAMPAIGN_EXPORT_VERSION = 5
+export const CAMPAIGN_EXPORT_VERSION = 6
 export const CAMPAIGN_EXPORT_FORMAT = 'codex-campaign'
 
 export interface CampaignExport {
@@ -47,4 +53,7 @@ export interface CampaignExport {
   rolls: RollRecord[]
   /** Skill library (v5+). */
   skills: SkillDefinition[]
+  /** Enemy templates and item library of the campaign (v6+). */
+  bestiary: EnemyTemplate[]
+  items: LibraryItem[]
 }

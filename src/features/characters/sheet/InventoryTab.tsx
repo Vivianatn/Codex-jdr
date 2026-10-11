@@ -4,6 +4,7 @@ import {
   CircleDot,
   Coins,
   Gift,
+  Minus,
   Package,
   Pencil,
   Plus,
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState, type DragEvent, type FormEvent } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { Button } from '@/components/ui/Button'
+import { Button, IconButton } from '@/components/ui/Button'
 import { SelectField } from '@/components/ui/fields'
 import { TextField } from '@/components/ui/TextField'
 import { itemLibrary } from '@/db/itemLibrary'
@@ -546,7 +547,6 @@ function ItemDetails({
   const frame = RARITY_FRAME[item.rarity]
   const hidden = item.hidden && !item.hidden.identified
   const rows: [string, string][] = [
-    [t.inventory.quantity, String(item.quantity)],
     ...(item.damage ? [[t.inventory.damage, item.damage] as [string, string]] : []),
     ...(item.defense ? [[t.derived.defense, `+${item.defense}`] as [string, string]] : []),
     ...item.modifiers.map(
@@ -597,6 +597,27 @@ function ItemDetails({
               <p className="mt-2 text-sm whitespace-pre-line text-ink">{item.description}</p>
             )}
           </div>
+        </div>
+        <div className="mt-3 flex items-center gap-2 border-t border-line pt-3 text-sm">
+          <span className="text-ink-muted">{t.inventory.quantity}</span>
+          <IconButton
+            size="sm"
+            variant="secondary"
+            label={t.inventory.less(item.name)}
+            icon={<Minus />}
+            disabled={item.quantity <= 1}
+            onClick={() => editor.updateItem({ ...item, quantity: item.quantity - 1 })}
+          />
+          <span className="tabular w-8 text-center font-semibold text-ink" aria-live="polite">
+            {item.quantity}
+          </span>
+          <IconButton
+            size="sm"
+            variant="secondary"
+            label={t.inventory.more(item.name)}
+            icon={<Plus />}
+            onClick={() => editor.updateItem({ ...item, quantity: item.quantity + 1 })}
+          />
         </div>
         {rows.length > 0 && (
           <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-line pt-3 text-sm sm:grid-cols-3">
@@ -716,7 +737,8 @@ function GiveTarget({ entity, fromId }: { entity: Entity; fromId: string }) {
 
 function AddItems({ onNew, editor }: { onNew: () => void; editor: SheetEditor }) {
   const t = useT()
-  const library = useLiveQuery(() => itemLibrary.list(), []) ?? []
+  const campaign = useCampaign()
+  const library = useLiveQuery(() => itemLibrary.list(campaign.id), [campaign.id]) ?? []
   const [fromLibrary, setFromLibrary] = useState('')
   return (
     <div className="flex flex-wrap items-end gap-4 border-t border-line pt-4">
@@ -729,7 +751,10 @@ function AddItems({ onNew, editor }: { onNew: () => void; editor: SheetEditor })
           onSubmit={(e) => {
             e.preventDefault()
             const template = library.find((i) => i.id === fromLibrary) ?? library[0]
-            if (template) editor.addItem({ ...template, slot: null })
+            if (template) {
+              const { campaignId: _campaign, ...item } = template
+              editor.addItem({ ...item, slot: null })
+            }
           }}
         >
           <SelectField<string>

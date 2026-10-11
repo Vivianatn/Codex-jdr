@@ -605,6 +605,8 @@ export const fr = {
     detailsOf: (name: string) => `Description de ${name}`,
     unidentifiedHint: 'Cet objet cache quelque chose… Un test d’Intelligence peut le révéler.',
     weightShort: 'Poids',
+    less: (name: string) => `Retirer une unité de ${name}`,
+    more: (name: string) => `Ajouter une unité de ${name}`,
     valueShort: 'Valeur',
     weightOnly: (weight: string) => `${weight} kg portés`,
     slots: {
@@ -634,7 +636,7 @@ export const fr = {
     purseChanged: (amount: string) => `Bourse : ${amount}`,
     fromLibrary: 'Depuis la bibliothèque',
     pageTitle: 'Objets',
-    pageSubtitle: 'Bibliothèque d’objets partagée entre toutes tes campagnes sur cet appareil.',
+    pageSubtitle: 'Les objets de cette campagne, prêts à donner à tes personnages.',
     giveToCharacter: 'Donner à un personnage',
     noCharacter: 'Aucun personnage dans cette campagne.',
     templateSaved: 'Objet enregistré',
@@ -764,7 +766,7 @@ export const fr = {
   },
   bestiary: {
     templates: 'Modèles d’ennemis',
-    templatesHint: 'Partagés entre toutes tes campagnes sur cet appareil.',
+    templatesHint: 'Propres à cette campagne.',
     newTemplate: 'Nouveau modèle',
     instances: 'Ennemis de la campagne',
     instancesEmpty: 'Aucun ennemi dans cette campagne. Ajoute des exemplaires depuis un modèle.',
@@ -776,8 +778,7 @@ export const fr = {
       first === last ? `Sera créé : « ${first} »` : `Seront créés : de « ${first} » à « ${last} »`,
     spawned: (count: number, name: string) => `${count} × ${name} ajouté(s) à la campagne`,
     deleteTemplateTitle: (name: string) => `Supprimer le modèle « ${name} » ?`,
-    deleteTemplateBody:
-      'Le modèle disparaît de toutes tes campagnes. Les ennemis déjà créés à partir de lui sont conservés.',
+    deleteTemplateBody: 'Les ennemis déjà créés à partir de ce modèle sont conservés.',
     templateDeleted: (name: string) => `Modèle « ${name} » supprimé`,
     templateSaved: 'Modèle enregistré',
   },

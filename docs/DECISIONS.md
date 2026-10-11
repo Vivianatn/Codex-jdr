@@ -42,6 +42,18 @@ Comme pour les caractéristiques, les PV max se saisissent de deux façons : le 
 
 Un familier se rattache à un **joueur, un allié ou un ennemi**. Sur la fiche du maître, un panneau « Familiers » liste ses familiers et permet d'en détacher, de rattacher un familier sans maître ou d'en créer un directement pour lui ; l'assistant arrive alors avec le maître déjà choisi. Les cartes de familier affichent « Familier de … ». Supprimer un maître libère ses familiers, et Ctrl+Z rétablit le lien.
 
+### D-224 · Tout est propre à sa campagne
+
+Précision du MJ (2026-10-11) : **tout appartient à une campagne**. Le bestiaire et la bibliothèque d'objets, qui étaient communs à toutes les campagnes de l'appareil, deviennent propres à chaque campagne, comme les compétences (D-218) et les états (D-217).
+
+- Schéma v6 : `bestiary` et `itemLibrary` sont indexés par `campaignId`. La migration copie les anciens modèles et objets dans **chaque** campagne existante, pour ne rien perdre, et rebranche les ennemis déjà créés sur le modèle de leur propre campagne.
+- L'export (version 6) contient le bestiaire et les objets de la campagne. Une campagne importée en copie reçoit ses propres modèles et objets, avec les liens ennemi → modèle conservés. Supprimer une campagne supprime aussi son bestiaire et sa bibliothèque d'objets.
+- Cela remplace la partie « bibliothèques partagées » de D-106 et D-210.
+
+### D-225 · Inventaires entièrement manipulables par le MJ
+
+Le MJ fait ce qu'il veut de l'inventaire de **tous** les personnages, modèles du bestiaire compris : ajouter un objet, le modifier, le supprimer, l'équiper ou le déséquiper, régler sa quantité (boutons −1 / +1 dans le panneau de l'objet), le donner. L'import Discord garde l'inventaire de la fiche collée, que le MJ peut ensuite modifier librement. Seules les actions de jeu (Utiliser, Identifier, Donner) sont réservées aux personnages présents dans la campagne, pas aux modèles.
+
 ---
 
 ## Principe — Codex n'impose aucune règle (2026-10-11)

@@ -1,6 +1,13 @@
 import { newId } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
-import type { ConditionTemplate, Entity, SkillDefinition } from '@/domain/types'
+import { normalizeItem } from '@/domain/items'
+import type {
+  ConditionTemplate,
+  EnemyTemplate,
+  Entity,
+  LibraryItem,
+  SkillDefinition,
+} from '@/domain/types'
 import { starterConditions } from '@/domain/conditions'
 import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules, type RulesConfig } from '@/rules'
 import { db as defaultDb, type CodexDB } from './db'
@@ -94,12 +101,18 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
 
     /** Deletes the campaign and everything it owns. */
     async remove(id: string): Promise<void> {
-      await db.transaction('rw', [db.campaigns, db.entities, db.rolls, db.skills], async () => {
-        await db.entities.where('campaignId').equals(id).delete()
-        await db.skills.where('campaignId').equals(id).delete()
-        await db.rolls.where('campaignId').equals(id).delete()
-        await db.campaigns.delete(id)
-      })
+      await db.transaction(
+        'rw',
+        [db.campaigns, db.entities, db.rolls, db.skills, db.bestiary, db.itemLibrary],
+        async () => {
+          await db.entities.where('campaignId').equals(id).delete()
+          await db.bestiary.where('campaignId').equals(id).delete()
+          await db.itemLibrary.where('campaignId').equals(id).delete()
+          await db.skills.where('campaignId').equals(id).delete()
+          await db.rolls.where('campaignId').equals(id).delete()
+          await db.campaigns.delete(id)
+        },
+      )
     },
 
     async exportCampaign(id: string): Promise<CampaignExport> {
@@ -108,6 +121,8 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
       const entities = await db.entities.where('campaignId').equals(id).toArray()
       const rolls = await db.rolls.where('campaignId').equals(id).sortBy('at')
       const skills = await db.skills.where('campaignId').equals(id).sortBy('createdAt')
+      const bestiary = await db.bestiary.where('campaignId').equals(id).toArray()
+      const items = await db.itemLibrary.where('campaignId').equals(id).toArray()
       return {
         format: CAMPAIGN_EXPORT_FORMAT,
         version: CAMPAIGN_EXPORT_VERSION,
@@ -116,57 +131,79 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
         entities: entities.sort((a, b) => a.createdAt - b.createdAt),
         rolls,
         skills,
+        bestiary,
+        items,
       }
     },
 
     /** Accepts raw file text or an already-parsed object. */
     async importCampaign(input: string | unknown, copySuffix = '(copie)'): Promise<ImportResult> {
       const data = parseExport(input)
-      return db.transaction('rw', [db.campaigns, db.entities, db.rolls, db.skills], async () => {
-        const existing = await db.campaigns.get(data.campaign.id)
-        const campaign: Campaign = existing
-          ? {
-              ...data.campaign,
-              id: newId(),
-              name: `${data.campaign.name} ${copySuffix}`,
-              updatedAt: now(),
-            }
-          : data.campaign
+      return db.transaction(
+        'rw',
+        [db.campaigns, db.entities, db.rolls, db.skills, db.bestiary, db.itemLibrary],
+        async () => {
+          const existing = await db.campaigns.get(data.campaign.id)
+          const campaign: Campaign = existing
+            ? {
+                ...data.campaign,
+                id: newId(),
+                name: `${data.campaign.name} ${copySuffix}`,
+                updatedAt: now(),
+              }
+            : data.campaign
 
-        // Fresh ids if the campaign is a copy or if any id is already taken.
-        const taken = await db.entities.bulkGet(data.entities.map((e) => e.id))
-        const remap = existing || taken.some(Boolean)
-        const ids = new Map(data.entities.map((e) => [e.id, remap ? newId() : e.id]))
-        const entities = data.entities.map((e): Entity => {
-          const moved = { ...e, id: ids.get(e.id)!, campaignId: campaign.id } as Entity
-          if (moved.kind === 'familiar' && moved.details.ownerId)
-            moved.details = { ...moved.details, ownerId: ids.get(moved.details.ownerId) ?? null }
-          return moved
-        })
+          // Fresh ids if the campaign is a copy or if any id is already taken.
+          const taken = await db.entities.bulkGet(data.entities.map((e) => e.id))
+          const remap = existing || taken.some(Boolean)
+          const ids = new Map(data.entities.map((e) => [e.id, remap ? newId() : e.id]))
+          const templateIds = new Map(data.bestiary.map((t) => [t.id, remap ? newId() : t.id]))
+          const entities = data.entities.map((e): Entity => {
+            const moved = { ...e, id: ids.get(e.id)!, campaignId: campaign.id } as Entity
+            if (moved.kind === 'enemy' && moved.details.templateId)
+              moved.details = {
+                ...moved.details,
+                templateId: templateIds.get(moved.details.templateId) ?? moved.details.templateId,
+              }
+            if (moved.kind === 'familiar' && moved.details.ownerId)
+              moved.details = { ...moved.details, ownerId: ids.get(moved.details.ownerId) ?? null }
+            return moved
+          })
 
-        const rolls = data.rolls.map((r) => ({
-          ...r,
-          id: remap ? newId() : r.id,
-          campaignId: campaign.id,
-          entityId: r.entityId ? (ids.get(r.entityId) ?? null) : null,
-        }))
-        const skillIds = new Map(data.skills.map((d) => [d.id, remap ? newId() : d.id]))
-        const skills = data.skills.map((d) => ({
-          ...d,
-          id: skillIds.get(d.id)!,
-          campaignId: campaign.id,
-        }))
-        for (const e of entities)
-          e.skills = e.skills.map((s) => ({
-            ...s,
-            sourceId: s.sourceId ? (skillIds.get(s.sourceId) ?? s.sourceId) : null,
+          const rolls = data.rolls.map((r) => ({
+            ...r,
+            id: remap ? newId() : r.id,
+            campaignId: campaign.id,
+            entityId: r.entityId ? (ids.get(r.entityId) ?? null) : null,
           }))
-        await db.campaigns.add(campaign)
-        await db.skills.bulkPut(skills)
-        await db.entities.bulkAdd(entities)
-        await db.rolls.bulkPut(rolls)
-        return { campaign, renamed: Boolean(existing) }
-      })
+          const skillIds = new Map(data.skills.map((d) => [d.id, remap ? newId() : d.id]))
+          const skills = data.skills.map((d) => ({
+            ...d,
+            id: skillIds.get(d.id)!,
+            campaignId: campaign.id,
+          }))
+          for (const e of entities)
+            e.skills = e.skills.map((s) => ({
+              ...s,
+              sourceId: s.sourceId ? (skillIds.get(s.sourceId) ?? s.sourceId) : null,
+            }))
+          await db.campaigns.add(campaign)
+          await db.skills.bulkPut(skills)
+          await db.entities.bulkAdd(entities)
+          await db.rolls.bulkPut(rolls)
+          await db.bestiary.bulkPut(
+            data.bestiary.map((t) => ({
+              ...t,
+              id: templateIds.get(t.id)!,
+              campaignId: campaign.id,
+            })),
+          )
+          await db.itemLibrary.bulkPut(
+            data.items.map((i) => ({ ...i, id: remap ? newId() : i.id, campaignId: campaign.id })),
+          )
+          return { campaign, renamed: Boolean(existing) }
+        },
+      )
     },
   }
 }
@@ -249,6 +286,15 @@ export function parseExport(input: string | unknown): CampaignExport {
       typeof d.name === 'string' &&
       typeof d.kind === 'string',
   )
+  const bestiary = (Array.isArray(data.bestiary) ? data.bestiary : [])
+    .map((raw) => normalizeEntity(raw, campaign.id))
+    .filter((e): e is EnemyTemplate => e !== null && e.kind === 'enemy')
+  const items = (Array.isArray(data.items) ? data.items : [])
+    .filter(
+      (i): i is LibraryItem =>
+        isRecord(i) && typeof i.id === 'string' && typeof i.name === 'string',
+    )
+    .map((i) => ({ ...normalizeItem(i), campaignId: campaign.id }))
   return {
     format: CAMPAIGN_EXPORT_FORMAT,
     version: CAMPAIGN_EXPORT_VERSION,
@@ -257,5 +303,7 @@ export function parseExport(input: string | unknown): CampaignExport {
     entities,
     rolls,
     skills,
+    bestiary,
+    items,
   }
 }

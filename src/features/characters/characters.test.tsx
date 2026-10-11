@@ -248,7 +248,10 @@ describe('Discord import', () => {
 describe('bestiary', () => {
   it('adds numbered copies of a template to the campaign', async () => {
     const c = await newCampaign()
-    const goblin = createEntity('enemy', '', rules, { identity: { pseudo: 'Gobelin' }, hpRoll: 4 })
+    const goblin = createEntity('enemy', c.id, rules, {
+      identity: { pseudo: 'Gobelin' },
+      hpRoll: 4,
+    })
     await bestiaryRepository.save(goblin)
     const { user } = renderApp(`/c/${c.id}/prep/bestiary`)
 

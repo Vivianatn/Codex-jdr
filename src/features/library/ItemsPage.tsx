@@ -26,7 +26,7 @@ const MENU_ITEM =
 export function ItemsPage() {
   const t = useT()
   const campaign = useCampaign()
-  const items = useLiveQuery(() => itemLibrary.list(), [])
+  const items = useLiveQuery(() => itemLibrary.list(campaign.id), [campaign.id])
   const characters = useCampaignStore(
     useShallow((s) =>
       Object.values(s.entities).sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr')),
@@ -151,7 +151,7 @@ export function ItemsPage() {
         item={editing}
         onClose={() => setEditing(null)}
         onSave={async (item) => {
-          await itemLibrary.save(item)
+          await itemLibrary.save(item, campaign.id)
           setEditing(null)
           toast.success(t.inventory.templateSaved)
         }}

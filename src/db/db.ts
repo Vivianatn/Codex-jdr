@@ -1,7 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { normalizeEntityShape } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
-import type { EnemyTemplate, Entity, Item, SkillDefinition } from '@/domain/types'
+import type { EnemyTemplate, Entity, Item, LibraryItem, SkillDefinition } from '@/domain/types'
 import { starterConditions } from '@/domain/conditions'
 import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules } from '@/rules'
 import { emptyLibrary, type Campaign } from './types'
@@ -40,6 +40,14 @@ export const SCHEMA = {
     itemLibrary: 'id, name',
     skills: 'id, campaignId',
   },
+  6: {
+    campaigns: 'id, name, updatedAt, lastOpenedAt',
+    entities: 'id, campaignId, [campaignId+kind]',
+    bestiary: 'id, campaignId, updatedAt',
+    rolls: 'id, campaignId, [campaignId+at]',
+    itemLibrary: 'id, campaignId, name',
+    skills: 'id, campaignId',
+  },
 } as const
 
 /**
@@ -54,7 +62,7 @@ export class CodexDB extends Dexie {
   /** Dice history, per campaign. */
   rolls!: EntityTable<RollRecord, 'id'>
   /** Item templates, shared by every campaign. */
-  itemLibrary!: EntityTable<Item, 'id'>
+  itemLibrary!: EntityTable<LibraryItem, 'id'>
   /** Skill library, per campaign (D-218). */
   skills!: EntityTable<SkillDefinition, 'id'>
 
@@ -105,6 +113,43 @@ export class CodexDB extends Dexie {
     // v5: skill library table. Existing skills are adopted into it when a
     // campaign is opened (adoptSkills), so no data is rewritten here.
     this.version(5).stores(SCHEMA[5])
+    // v6 (D-224): everything belongs to a campaign. The bestiary and the item
+    // library were shared by every campaign: each campaign gets its own copy,
+    // and existing enemies point to the template of their campaign.
+    this.version(6)
+      .stores(SCHEMA[6])
+      .upgrade(async (tx) => {
+        const campaigns = (await tx.table('campaigns').toArray()) as Campaign[]
+        const templates = (await tx.table('bestiary').toArray()) as EnemyTemplate[]
+        const items = (await tx.table('itemLibrary').toArray()) as Item[]
+        await tx.table('bestiary').clear()
+        await tx.table('itemLibrary').clear()
+        for (const [index, campaign] of campaigns.entries()) {
+          // The first campaign keeps the original ids.
+          const id = (old: string) => (index === 0 ? old : crypto.randomUUID())
+          const templateIds = new Map(templates.map((t) => [t.id, id(t.id)]))
+          await tx
+            .table('bestiary')
+            .bulkAdd(
+              templates.map((t) => ({ ...t, id: templateIds.get(t.id)!, campaignId: campaign.id })),
+            )
+          await tx
+            .table('itemLibrary')
+            .bulkAdd(items.map((i) => ({ ...i, id: id(i.id), campaignId: campaign.id })))
+          await tx
+            .table('entities')
+            .where('campaignId')
+            .equals(campaign.id)
+            .modify((e: Entity) => {
+              if (
+                e.kind === 'enemy' &&
+                e.details.templateId &&
+                templateIds.has(e.details.templateId)
+              )
+                e.details.templateId = templateIds.get(e.details.templateId)!
+            })
+        }
+      })
   }
 }
 

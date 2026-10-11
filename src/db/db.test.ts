@@ -1,6 +1,8 @@
 import Dexie from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
 import { starterConditions } from '@/domain/conditions'
+import { createEntity } from '@/domain/entity'
+import { newItem } from '@/domain/items'
 import { defaultRules } from '@/rules'
 import { CodexDB, SCHEMA } from './db'
 
@@ -30,7 +32,7 @@ describe('schema migrations', () => {
 
     const db = new CodexDB(name)
     await db.open()
-    expect(db.verno).toBe(5)
+    expect(db.verno).toBe(6)
     expect((await db.campaigns.get('c1'))?.rules).toEqual(defaultRules())
     expect((await db.campaigns.get('c1'))?.library).toEqual({
       conditions: starterConditions(),
@@ -162,6 +164,52 @@ describe('schema migrations', () => {
     expect(custom.rules.xp).toEqual({ mode: 'linear', perLevel: 250, table: [] })
     expect(custom.rules.carry.kgPerStrength).toBe(0)
     expect(custom.library.conditions.map((c) => c.name)).toEqual(['Maudit'])
+    db.close()
+  })
+
+  it('v5 → v6 gives every campaign its own bestiary and item library', async () => {
+    const name = 'codex-migration-' + crypto.randomUUID()
+    names.push(name)
+    const v5 = new Dexie(name)
+    for (const v of [1, 2, 3, 4, 5] as const) v5.version(v).stores(SCHEMA[v])
+    await v5.open()
+    const base = { description: '', createdAt: 1, updatedAt: 1, lastOpenedAt: null }
+    await v5.table('campaigns').bulkAdd([
+      {
+        ...base,
+        id: 'a',
+        name: 'A',
+        rules: defaultRules(),
+        library: { conditions: [], macros: [] },
+      },
+      {
+        ...base,
+        id: 'b',
+        name: 'B',
+        rules: defaultRules(),
+        library: { conditions: [], macros: [] },
+      },
+    ])
+    const goblin = createEntity('enemy', '', defaultRules(), { identity: { pseudo: 'Gobelin' } })
+    await v5.table('bestiary').add(goblin)
+    await v5.table('itemLibrary').add(newItem({ name: 'Potion' }))
+    // An enemy made from the shared template in campaign B.
+    const copy = createEntity('enemy', 'b', defaultRules())
+    copy.details.templateId = goblin.id
+    await v5.table('entities').add(copy)
+    v5.close()
+
+    const db = new CodexDB(name)
+    await db.open()
+    const inA = await db.bestiary.where('campaignId').equals('a').toArray()
+    const inB = await db.bestiary.where('campaignId').equals('b').toArray()
+    expect(inA.map((t) => t.identity.pseudo)).toEqual(['Gobelin'])
+    expect(inB.map((t) => t.identity.pseudo)).toEqual(['Gobelin'])
+    expect(inA[0]!.id).not.toBe(inB[0]!.id)
+    const enemy = await db.entities.get(copy.id)
+    expect(enemy?.kind === 'enemy' && enemy.details.templateId).toBe(inB[0]!.id)
+    expect(await db.itemLibrary.where('campaignId').equals('a').count()).toBe(1)
+    expect(await db.itemLibrary.where('campaignId').equals('b').count()).toBe(1)
     db.close()
   })
 })

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { CampaignImportError, createCampaignRepository, parseExport } from './campaigns'
 import { createEntity } from '@/domain/entity'
+import { newItem } from '@/domain/items'
 import { defaultRules } from '@/rules'
 import { CodexDB } from './db'
 
@@ -100,7 +101,7 @@ describe('export / import', () => {
 
 describe('schema', () => {
   it('opens at the current version with the expected tables', async () => {
-    expect(db.verno).toBe(5)
+    expect(db.verno).toBe(6)
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'bestiary',
       'campaigns',
@@ -226,5 +227,34 @@ describe('campaign content', () => {
       entities: [{ id: 'e1', kind: 'dragon' }],
     }
     expect(() => parseExport(file)).toThrow(CampaignImportError)
+  })
+})
+
+describe('everything belongs to its campaign (D-224)', () => {
+  it('export carries the bestiary and item library; a copy gets its own', async () => {
+    const rules = defaultRules()
+    const c = await repo.create({ name: 'Avec bestiaire' })
+    const goblin = createEntity('enemy', c.id, rules, { identity: { pseudo: 'Gobelin' } })
+    await db.bestiary.add(goblin)
+    await db.itemLibrary.add({ ...newItem({ name: 'Potion' }), campaignId: c.id })
+    const enemy = createEntity('enemy', c.id, rules)
+    enemy.details.templateId = goblin.id
+    await db.entities.add(enemy)
+
+    const file = await repo.exportCampaign(c.id)
+    expect(file.bestiary.map((t) => t.identity.pseudo)).toEqual(['Gobelin'])
+    expect(file.items.map((i) => i.name)).toEqual(['Potion'])
+
+    const { campaign } = await repo.importCampaign(file)
+    const copies = await db.bestiary.where('campaignId').equals(campaign.id).toArray()
+    expect(copies).toHaveLength(1)
+    expect(copies[0]!.id).not.toBe(goblin.id)
+    const [copiedEnemy] = await db.entities.where('campaignId').equals(campaign.id).toArray()
+    expect(copiedEnemy?.kind === 'enemy' && copiedEnemy.details.templateId).toBe(copies[0]!.id)
+
+    await repo.remove(c.id)
+    expect(await db.bestiary.where('campaignId').equals(c.id).count()).toBe(0)
+    expect(await db.itemLibrary.where('campaignId').equals(c.id).count()).toBe(0)
+    expect(await db.bestiary.where('campaignId').equals(campaign.id).count()).toBe(1)
   })
 })

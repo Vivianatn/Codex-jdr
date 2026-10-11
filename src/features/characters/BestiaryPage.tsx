@@ -22,7 +22,7 @@ const listVariants = { visible: { transition: { staggerChildren: 0.03 } } }
 export function BestiaryPage() {
   const t = useT()
   const campaign = useCampaign()
-  const templates = useLiveQuery(() => bestiaryRepository.list(), [])
+  const templates = useLiveQuery(() => bestiaryRepository.list(campaign.id), [campaign.id])
   const enemies = useCampaignStore(useShallow((s) => selectEntitiesOfKinds(s.entities, ['enemy'])))
   const [importing, setImporting] = useState(false)
   const base = `/c/${campaign.id}/prep/bestiary`

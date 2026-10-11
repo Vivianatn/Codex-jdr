@@ -153,7 +153,7 @@ function Wizard({ kind, ownerId }: { kind: EntityKind; ownerId: string | null })
   }
 
   const entity = useMemo(() => {
-    const e = createEntity(kind, kind === 'enemy' ? '' : campaign.id, rules, {
+    const e = createEntity(kind, campaign.id, rules, {
       identity: { ...draft.identity, pseudo: draft.identity.pseudo.trim() },
       level: Math.max(1, level),
       hpRoll: roll ?? 10,

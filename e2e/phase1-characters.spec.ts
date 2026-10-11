@@ -138,7 +138,7 @@ test('scenario 7: export, delete and re-import a campaign with its characters', 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('menuitem', { name: 'Exporter' }).click()
   const file = JSON.parse(await readFile(await (await downloadPromise).path(), 'utf8'))
-  expect(file).toMatchObject({ format: 'codex-campaign', version: 5 })
+  expect(file).toMatchObject({ format: 'codex-campaign', version: 6 })
   expect(file.entities).toHaveLength(1)
 
   const dump = () =>

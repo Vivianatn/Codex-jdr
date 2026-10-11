@@ -155,6 +155,9 @@ export type ItemType = (typeof ITEM_TYPES)[number]
 export const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'] as const
 export type Rarity = (typeof RARITIES)[number]
 
+/** An item of a campaign's item library (D-224). */
+export type LibraryItem = Item & { campaignId: string }
+
 /** Icon keys for items (mapped to drawings in the UI). */
 export const ITEM_ICONS = [
   'sword',

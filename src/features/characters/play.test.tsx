@@ -124,6 +124,20 @@ describe('inventory', () => {
     expect(entity(g.id).hp.current).toBeGreaterThanOrEqual(7)
   })
 
+  it('lets the GM adjust quantities freely, one undo step each', async () => {
+    const g = gorak()
+    g.inventory = [newItem({ name: 'Flèche', quantity: 2 })]
+    const { user } = await openSheet(g, 'Inventaire')
+    await user.click(screen.getByRole('button', { name: 'Flèche ×2, Commun' }))
+    await user.click(screen.getByRole('button', { name: 'Ajouter une unité de Flèche' }))
+    await user.click(screen.getByRole('button', { name: 'Ajouter une unité de Flèche' }))
+    expect(entity(g.id).inventory[0]?.quantity).toBe(4)
+    await user.click(screen.getByRole('button', { name: 'Retirer une unité de Flèche' }))
+    expect(entity(g.id).inventory[0]?.quantity).toBe(3)
+    campaignHistory.getState().undo()
+    expect(entity(g.id).inventory[0]?.quantity).toBe(4)
+  })
+
   it('changes the purse with tolerant input', async () => {
     const g = gorak()
     const { user } = await openSheet(g, 'Inventaire')

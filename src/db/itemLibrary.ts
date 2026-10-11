@@ -1,16 +1,18 @@
 import { normalizeItem } from '@/domain/items'
-import type { Item } from '@/domain/types'
+import type { Item, LibraryItem } from '@/domain/types'
 import { db as defaultDb, type CodexDB } from './db'
 
-/** Item templates: a library shared by every campaign on this device (SPEC §2.3). */
+/** Item templates of a campaign (SPEC §2.3, D-224). */
 export function createItemLibrary(db: CodexDB = defaultDb) {
   return {
-    async list(): Promise<Item[]> {
-      const all = (await db.itemLibrary.toArray()).map(normalizeItem)
-      return all.sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    async list(campaignId: string): Promise<LibraryItem[]> {
+      const all = await db.itemLibrary.where('campaignId').equals(campaignId).toArray()
+      return all
+        .map((i) => ({ ...normalizeItem(i), campaignId: i.campaignId }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
     },
-    async save(item: Item): Promise<void> {
-      await db.itemLibrary.put({ ...item, slot: null, quantity: 1 })
+    async save(item: Item, campaignId: string): Promise<void> {
+      await db.itemLibrary.put({ ...item, slot: null, quantity: 1, campaignId })
     },
     async remove(id: string): Promise<void> {
       await db.itemLibrary.delete(id)

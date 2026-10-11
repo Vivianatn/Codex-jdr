@@ -44,7 +44,10 @@ export function DiscordImportDialog({
     if (!sheet || !preview || blocking) return
     const name = entityName(preview)
     if (preview.kind === 'enemy') {
-      await actions.saveTemplate({ ...preview, campaignId: '' }, t.discordImport.imported(name))
+      await actions.saveTemplate(
+        { ...preview, campaignId: campaign.id },
+        t.discordImport.imported(name),
+      )
     } else {
       actions.addToCampaign(preview, t.discordImport.imported(name), t.discordImport.imported(name))
     }
