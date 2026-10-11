@@ -90,6 +90,7 @@ export function CharacterSheet({
           </div>
           <div className="flex flex-wrap items-start gap-4">
             <HpBar
+              size="lg"
               current={entity.hp.current}
               max={entityHpMax(entity, rules)}
               temp={entity.hp.temp}

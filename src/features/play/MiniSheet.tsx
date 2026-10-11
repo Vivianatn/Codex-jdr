@@ -46,10 +46,10 @@ export function MiniSheet({
         type="button"
         onClick={onExpand}
         aria-label={t.mini.expand(name)}
-        className="glass block w-52 rounded-md border border-line px-2 py-1.5 text-left shadow-lifted hover:border-accent"
+        className="codex-glass block w-[220px] !rounded-xl p-2.5 text-left hover:border-accent"
       >
         <span className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-xs font-semibold text-ink">{name}</span>
+          <span className="truncate text-sm font-semibold text-ink">{name}</span>
           <span className="tabular shrink-0 text-xs text-ink-muted">
             {entity.hp.current}/{max}
           </span>
@@ -66,7 +66,12 @@ export function MiniSheet({
         <span className="mt-1 grid grid-cols-7 gap-0.5 text-center">
           {STAT_KEYS.map((key) => (
             <span key={key} className="leading-tight">
-              <span className="block text-[0.6rem] font-semibold text-ink-muted">
+              <span
+                className={cn(
+                  'block text-[0.5625rem] font-bold tracking-[0.08em]',
+                  STAT_STYLES[key].text,
+                )}
+              >
                 {t.stats.abbr[key]}
               </span>
               <span className="tabular block text-xs font-semibold text-ink">
@@ -91,12 +96,9 @@ export function MiniSheet({
     )
 
   return (
-    <section
-      aria-label={t.mini.title(name)}
-      className="glass w-64 space-y-2 rounded-lg border border-line p-2.5 shadow-overlay"
-    >
+    <section aria-label={t.mini.title(name)} className="codex-glass w-[300px] space-y-2.5 p-4">
       <header className="flex items-center gap-1">
-        <h2 className="min-w-0 flex-1 truncate font-sans text-sm font-semibold tracking-normal text-ink">
+        <h2 className="min-w-0 flex-1 truncate font-title text-base font-semibold text-ink">
           {name}
         </h2>
         <IconButton size="sm" label={t.mini.full} icon={<FileText />} onClick={onFull} />
@@ -142,11 +144,13 @@ function StatRow({ entity, stat }: { entity: Entity; stat: StatKey }) {
   }
 
   return (
-    <li className="flex items-center gap-0.5 rounded-md border border-line bg-surface px-1 py-0.5">
-      <span className={cn('size-1.5 shrink-0 rounded-full', STAT_STYLES[stat].dot)} aria-hidden />
+    <li className={cn('flex items-center gap-0.5 rounded-lg px-1 py-0.5', STAT_STYLES[stat].soft)}>
       <abbr
         title={label}
-        className="w-7 shrink-0 text-[0.65rem] font-semibold text-ink-muted no-underline"
+        className={cn(
+          'w-7 shrink-0 pl-0.5 text-[0.625rem] font-bold tracking-[0.08em] no-underline',
+          STAT_STYLES[stat].text,
+        )}
       >
         {t.stats.abbr[stat]}
       </abbr>
@@ -189,7 +193,7 @@ function StatRow({ entity, stat }: { entity: Entity; stat: StatKey }) {
               setError(false)
               setEditing(true)
             }}
-            className="tabular min-w-0 flex-1 rounded-sm text-center text-sm font-semibold text-ink hover:bg-surface-2"
+            className="tabular min-w-0 flex-1 rounded-md text-center font-display text-base font-bold text-ink hover:bg-surface/70"
           >
             {total}
           </button>
@@ -247,7 +251,7 @@ function ConditionsRow({ entity }: { entity: Entity }) {
           onChange={(e) => {
             if (e.target.value) actions.addConditionFromTemplate([entity.id], e.target.value)
           }}
-          className="h-7 w-full rounded-md border border-line bg-surface px-1.5 text-xs text-ink"
+          className="h-8 w-full rounded-lg border border-line-strong bg-surface px-2 text-xs text-ink"
         >
           <option value="">{t.mini.addCondition}</option>
           {library.map((c) => (

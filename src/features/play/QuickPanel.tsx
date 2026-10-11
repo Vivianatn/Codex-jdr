@@ -94,7 +94,7 @@ function Header({
       {entity.identity.body ? (
         <BodyImage src={entity.identity.body} className="h-28 w-20 shrink-0" />
       ) : (
-        <Portrait src={entity.identity.portrait} name={name} />
+        <Portrait src={entity.identity.portrait} name={name} square={entity.kind === 'enemy'} />
       )}
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex items-start gap-2">

@@ -204,7 +204,8 @@ function GroupChip({
                   src={e.identity.portrait}
                   name={name}
                   size="sm"
-                  className={cn('size-[34px] text-xs', e.kind === 'enemy' && 'rounded-[9px]')}
+                  square={e.kind === 'enemy'}
+                  className="size-[34px] text-xs"
                 />
               </button>
             </li>

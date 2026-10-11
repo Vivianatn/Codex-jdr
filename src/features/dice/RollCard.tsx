@@ -38,10 +38,14 @@ export function RollCard({
   return (
     <motion.div
       className={cn(
-        'relative rounded-md border bg-surface',
+        'relative rounded-xl border',
         compact ? 'px-3 py-2' : 'p-4',
-        tone === 'gold' ? 'border-gold' : tone === 'red' ? 'border-hp/60' : 'border-line',
-        landed && tone === 'red' && !compact && 'bg-hp/5',
+        // DA §8.24: critical success in gold with a halo, critical failure in red.
+        tone === 'gold'
+          ? 'border-gold-line bg-gold-soft shadow-[0_0_18px_var(--codex-gold-glow)]'
+          : tone === 'red'
+            ? 'border-hp/60 bg-hp-soft'
+            : 'border-line bg-surface',
       )}
       animate={shake ? { x: [0, -8, 8, -6, 6, -3, 0] } : { x: 0 }}
       transition={{ duration: 0.45 }}
@@ -68,8 +72,9 @@ export function RollCard({
         <motion.span
           key={landed ? 'landed' : 'rolling'}
           className={cn(
-            'tabular font-display font-semibold text-ink',
-            compact ? 'text-xl' : 'text-3xl',
+            'tabular font-display font-bold',
+            tone === 'gold' ? 'text-gold-text' : tone === 'red' ? 'text-hp-text' : 'text-ink',
+            compact ? 'text-2xl' : 'text-[2.5rem] leading-none',
           )}
           initial={landed && rolling ? { scale: 1.4 } : false}
           animate={{ scale: 1 }}
@@ -101,14 +106,16 @@ export function RollCard({
       {outcome && (
         <p
           className={cn(
-            'mt-2 text-sm font-semibold',
+            'mt-2 text-sm',
             outcome.tone === 'gold' && 'text-gold-text',
             outcome.tone === 'red' && 'text-hp-text',
             outcome.tone === 'success' && 'text-heal-text',
-            outcome.tone === 'failure' && 'text-ink-muted',
+            outcome.tone === 'failure' && 'text-hp-text',
           )}
         >
-          {outcome.text}
+          <span className="font-display text-[0.8125rem] font-bold tracking-[0.18em] uppercase">
+            {outcome.text}
+          </span>
           {record.check && (
             <span className="ml-2 font-normal text-ink-muted">
               {t.dice.natural(record.check.natural)} ·{' '}

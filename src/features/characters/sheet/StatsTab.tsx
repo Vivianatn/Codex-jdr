@@ -89,6 +89,7 @@ export function StatsTab({
           <HpQuickInput entityId={entity.id} name={name} className="w-full sm:w-72" />
         </div>
         <HpBar
+          size="lg"
           current={entity.hp.current}
           max={max}
           temp={entity.hp.temp}
@@ -180,19 +181,31 @@ export function StatsTab({
               <StatContextMenu key={key} groups={groups}>
                 <li
                   className={cn(
-                    'rounded-lg border border-t-4 border-line bg-surface p-4',
+                    'rounded-[14px] border border-t-[3px] border-line bg-surface p-4 shadow-soft',
                     STAT_STYLES[key].border,
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="pt-1 font-sans text-sm font-semibold tracking-normal text-ink">
-                      {t.stats.names[key]}
-                    </h3>
+                    <div className="space-y-1.5 pt-1">
+                      <span
+                        className={cn(
+                          'inline-flex rounded-full px-2 py-[3px] text-xs font-bold tracking-[0.08em]',
+                          STAT_STYLES[key].soft,
+                          STAT_STYLES[key].text,
+                        )}
+                        aria-hidden
+                      >
+                        {t.stats.abbr[key]}
+                      </span>
+                      <h3 className="font-sans text-sm font-semibold tracking-normal text-ink">
+                        {t.stats.names[key]}
+                      </h3>
+                    </div>
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => actions.check(entity.id, key)}
-                        className="tabular rounded-md px-2 font-display text-2xl font-semibold text-ink transition-colors hover:bg-accent-soft hover:text-accent-text"
+                        className="tabular rounded-[10px] px-2 font-display text-[2.75rem] leading-none font-bold text-ink transition-colors hover:bg-accent-soft hover:text-accent-text"
                         aria-label={t.checks.test(t.stats.names[key], s.total)}
                         title={t.checks.test(t.stats.names[key], s.total)}
                       >

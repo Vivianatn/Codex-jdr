@@ -22,12 +22,14 @@ export function StatPill({
     <span
       title={`${t.stats.names[stat]} : ${value}${modified ? ` (${t.sheet.base} ${base})` : ''}`}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border border-line bg-surface px-1.5 py-0.5 text-[11px] leading-none',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] leading-none',
+        STAT_STYLES[stat].soft,
         className,
       )}
     >
-      <span className={cn('size-1.5 rounded-full', STAT_STYLES[stat].dot)} aria-hidden />
-      <span className="font-medium text-ink-muted">{t.stats.abbr[stat]}</span>
+      <span className={cn('font-bold tracking-[0.08em]', STAT_STYLES[stat].text)}>
+        {t.stats.abbr[stat]}
+      </span>
       <span
         className={cn('tabular font-semibold text-ink', modified && 'underline decoration-dotted')}
       >

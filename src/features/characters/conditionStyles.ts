@@ -38,66 +38,70 @@ export const CONDITION_ICON_COMPONENTS: Record<ConditionIcon, LucideIcon> = {
   star: Star,
 }
 
-/** Pill classes per condition colour (text stays ink for contrast). */
+/**
+ * Pill classes per condition colour, on the DA tokens (§8.16): soft
+ * background, text in the matching *-text tone (AA in both themes).
+ * The GM picks the colour; it maps onto the DA families.
+ */
 export const CONDITION_COLOR_CLASSES: Record<
   ConditionColor,
   { pill: string; icon: string; swatch: string; edge: string }
 > = {
   red: {
-    pill: 'bg-[#e05252]/15 border-[#e05252]/40',
-    icon: 'text-[#c43d3d] dark:text-[#f08080]',
-    swatch: 'bg-[#e05252]',
-    edge: 'border-l-[#e05252]',
+    pill: 'bg-hp-soft border-hp/35 text-hp-text',
+    icon: 'text-hp-text',
+    swatch: 'bg-hp',
+    edge: 'border-l-hp',
   },
   orange: {
-    pill: 'bg-[#e8833d]/15 border-[#e8833d]/40',
-    icon: 'text-[#b85f1f] dark:text-[#f0a46b]',
-    swatch: 'bg-[#e8833d]',
-    edge: 'border-l-[#e8833d]',
+    pill: 'bg-warning-soft border-warning/40 text-warning-text',
+    icon: 'text-warning-text',
+    swatch: 'bg-warning',
+    edge: 'border-l-warning',
   },
   yellow: {
-    pill: 'bg-[#d9a441]/18 border-[#d9a441]/45',
-    icon: 'text-[#8a6417] dark:text-[#e6bd6a]',
-    swatch: 'bg-[#d9a441]',
-    edge: 'border-l-[#d9a441]',
+    pill: 'bg-gold-soft border-gold-line/50 text-gold-text',
+    icon: 'text-gold-text',
+    swatch: 'bg-gold',
+    edge: 'border-l-gold',
   },
   green: {
-    pill: 'bg-[#3fa96b]/15 border-[#3fa96b]/40',
-    icon: 'text-[#23774a] dark:text-[#6fcf97]',
-    swatch: 'bg-[#3fa96b]',
-    edge: 'border-l-[#3fa96b]',
+    pill: 'bg-heal-soft border-heal/35 text-heal-text',
+    icon: 'text-heal-text',
+    swatch: 'bg-heal',
+    edge: 'border-l-heal',
   },
   blue: {
-    pill: 'bg-[#4a90d9]/15 border-[#4a90d9]/40',
-    icon: 'text-[#2f6db0] dark:text-[#8bb8ea]',
-    swatch: 'bg-[#4a90d9]',
-    edge: 'border-l-[#4a90d9]',
+    pill: 'bg-info-soft border-info/35 text-info-text',
+    icon: 'text-info-text',
+    swatch: 'bg-info',
+    edge: 'border-l-info',
   },
   violet: {
-    pill: 'bg-[#6d5bd0]/15 border-[#6d5bd0]/40',
-    icon: 'text-[#5a48bd] dark:text-[#a99cf2]',
-    swatch: 'bg-[#6d5bd0]',
-    edge: 'border-l-[#6d5bd0]',
+    pill: 'bg-stat-wisdom-soft border-stat-wisdom/35 text-stat-wisdom-text',
+    icon: 'text-stat-wisdom-text',
+    swatch: 'bg-stat-wisdom',
+    edge: 'border-l-stat-wisdom',
   },
   pink: {
-    pill: 'bg-[#d3558f]/15 border-[#d3558f]/40',
-    icon: 'text-[#b03a72] dark:text-[#e57aab]',
-    swatch: 'bg-[#d3558f]',
-    edge: 'border-l-[#d3558f]',
+    pill: 'bg-stat-charisma-soft border-stat-charisma/35 text-stat-charisma-text',
+    icon: 'text-stat-charisma-text',
+    swatch: 'bg-stat-charisma',
+    edge: 'border-l-stat-charisma',
   },
   gray: {
-    pill: 'bg-surface-2 border-line-strong',
+    pill: 'bg-surface-2 border-line-strong text-ink',
     icon: 'text-ink-muted',
-    swatch: 'bg-[#8a869c]',
+    swatch: 'bg-line-strong',
     edge: 'border-l-line-strong',
   },
 }
 
-/** Coloured edge per rarity (SPEC §4.11), plus a dot for the legend. */
+/** Coloured edge per rarity (SPEC §4.11, DA §8.19), plus a dot for the legend. */
 export const RARITY_CLASSES: Record<Rarity, { edge: string; dot: string }> = {
-  common: { edge: 'border-l-line-strong', dot: 'bg-line-strong' },
-  uncommon: { edge: 'border-l-heal', dot: 'bg-heal' },
-  rare: { edge: 'border-l-info', dot: 'bg-info' },
-  epic: { edge: 'border-l-accent', dot: 'bg-accent' },
-  legendary: { edge: 'border-l-gold', dot: 'bg-gold' },
+  common: { edge: 'border-l-rarity-common', dot: 'bg-rarity-common' },
+  uncommon: { edge: 'border-l-rarity-uncommon', dot: 'bg-rarity-uncommon' },
+  rare: { edge: 'border-l-rarity-rare', dot: 'bg-rarity-rare' },
+  epic: { edge: 'border-l-rarity-very-rare', dot: 'bg-rarity-very-rare' },
+  legendary: { edge: 'border-l-rarity-legendary', dot: 'bg-rarity-legendary' },
 }

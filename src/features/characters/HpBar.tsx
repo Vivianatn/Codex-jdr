@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { Droplet, Skull } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
@@ -11,6 +12,21 @@ const BAND_COLORS: Record<HpBand, string> = {
   wounded: 'bg-warning',
   critical: 'bg-hp',
   down: 'bg-hp',
+}
+
+/** Band label colour; critical and down also get an icon (never colour alone, DA §8.14). */
+const BAND_TEXT: Record<HpBand, string> = {
+  healthy: 'text-heal-text',
+  wounded: 'text-warning-text',
+  critical: 'text-hp-text',
+  down: 'text-ink-muted',
+}
+
+/** Track heights: 6 px (lists), 10 px (mini sheet), 12 px (sheet). */
+const TRACK = {
+  sm: 'h-1.5',
+  md: 'h-2.5 shadow-[inset_0_0_0_1px_var(--codex-line)]',
+  lg: 'h-3 shadow-[inset_0_0_0_1px_var(--codex-line)]',
 }
 
 /**
@@ -31,7 +47,7 @@ export function HpBar({
   current: number
   max: number
   temp?: number
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
   showLabel?: boolean
   thresholds?: Pick<RulesConfig['hp'], 'woundedBelow' | 'criticalBelow'>
   entityId?: string
@@ -48,7 +64,7 @@ export function HpBar({
   useEffect(() => {
     if (ratio >= previous.current) setGhost(ratio)
     else {
-      const timer = setTimeout(() => setGhost(ratio), 450)
+      const timer = setTimeout(() => setGhost(ratio), 400)
       previous.current = ratio
       return () => clearTimeout(timer)
     }
@@ -67,13 +83,15 @@ export function HpBar({
       transition={{ duration: 0.4 }}
     >
       {showLabel && (
-        <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
-          <span className="tabular font-semibold text-ink">
+        <div className="mb-1 flex items-baseline justify-between gap-2 text-[0.8125rem]">
+          <span className="tabular font-bold text-ink">
             {current}
-            <span className="font-normal text-ink-muted"> / {max}</span>
-            {temp > 0 && <span className="ml-1 text-info">+{temp}</span>}
+            <span className="font-medium text-ink-muted"> / {max}</span>
+            {temp > 0 && <span className="ml-1 font-semibold text-info-text">+{temp}</span>}
           </span>
-          <span className={cn('text-ink-muted', band !== 'healthy' && 'font-medium text-hp-text')}>
+          <span className={cn('inline-flex items-center gap-1 font-semibold', BAND_TEXT[band])}>
+            {band === 'critical' && <Droplet className="size-3" aria-hidden />}
+            {band === 'down' && <Skull className="size-3" aria-hidden />}
             {t.sheet.hpBands[band]}
           </span>
         </div>
@@ -85,23 +103,33 @@ export function HpBar({
         aria-valuemax={max}
         aria-valuenow={current}
         aria-valuetext={`${label} — ${t.sheet.hpBands[band]}`}
-        className={cn(
-          'relative overflow-hidden rounded-full bg-surface-2 ring-1 ring-line',
-          size === 'sm' ? 'h-1.5' : 'h-2',
-        )}
+        className={cn('relative overflow-hidden rounded-full bg-surface-2', TRACK[size])}
       >
         <motion.div
-          className="absolute inset-y-0 left-0 rounded-full bg-hp/35"
+          className="absolute inset-y-0 left-0 rounded-full bg-warning-soft"
           initial={false}
           animate={{ width: `${ghost * 100}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
+          transition={{ duration: 0.6, ease: [0.65, 0, 0.35, 1] }}
         />
         <motion.div
           className={cn('absolute inset-y-0 left-0 rounded-full', BAND_COLORS[band])}
           initial={false}
           animate={{ width: `${ratio * 100}%` }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         />
+        {temp > 0 && max > 0 && (
+          // Temporary HP: hatched segment right after the fill.
+          <div
+            className="absolute inset-y-0 rounded-full bg-hp-temp shadow-[inset_0_0_0_1px_var(--codex-info)]"
+            style={{
+              left: `${ratio * 100}%`,
+              width: `${Math.min(1 - ratio, temp / max) * 100}%`,
+              backgroundImage:
+                'repeating-linear-gradient(45deg, var(--codex-info) 0 1px, transparent 1px 4px)',
+            }}
+            aria-hidden
+          />
+        )}
         {shaking && (
           <motion.div
             className="absolute inset-0 bg-hp"

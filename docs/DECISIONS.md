@@ -12,6 +12,13 @@ La référence est [CODEX-DA.md](CODEX-DA.md), produit par Claude Design à part
 
 Le document pose `data-theme="dark"` sur le conteneur de l'écran En jeu. Mais les menus, toasts et boîtes de dialogue s'ouvrent hors de ce conteneur (portails Radix) et seraient restés clairs. Le réglage « En jeu, toujours en sombre » (activé par défaut) bascule donc toute la page tant que l'écran En jeu est affiché ; la Vue joueurs est toujours sombre. L'interrupteur de thème de l'en-tête, en jeu, lève aussi ce réglage. Le grain de papier n'apparaît qu'en Préparation.
 
+### D-237 · Composants de jeu : écarts assumés
+
+- **« Épique » reste le nom de la quatrième rareté.** Le cahier des charges (§4.11) dit « épique » ; l'écart 8 du document de DA affirme le contraire à tort. Elle prend les couleurs « très rare » du document.
+- **La mini-fiche reste modifiable** (D-234, demande du MJ). Le document la prévoit en lecture seule. Elle en reprend le style : verre, sigles colorés, chiffres en Cinzel, fonds doux par caractéristique. La version compacte garde les sept caractéristiques, que le MJ a demandées.
+- Les couleurs d'état choisies par le MJ (rouge, orange, jaune, vert, bleu, violet, rose, gris) sont rattachées aux familles du document (§8.16) : dégâts, alerte, bénéfique en or, soin, info, Sagesse, Charisme, neutre.
+- Les personnages qui ont déjà joué sont désaturés dans le bandeau plutôt qu'à 50 % d'opacité : l'opacité faisait échouer le contraste des initiales (vu par axe).
+
 ### D-236 · Plateau : thème en littéraux, tailles qui suivent la case
 
 - Les couleurs du plateau sont dans `src/features/maps/boardTheme.ts` (et non `src/board/`), à côté du canevas. Trois palettes : MJ clair, MJ sombre, joueurs.

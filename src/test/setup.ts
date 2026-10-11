@@ -24,3 +24,14 @@ if (!window.matchMedia) {
     dispatchEvent: () => false,
   })
 }
+
+// jsdom has no ResizeObserver; Radix measures tooltip arrows with it.
+if (!('ResizeObserver' in window)) {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  ;(window as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub
+  ;(globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub
+}

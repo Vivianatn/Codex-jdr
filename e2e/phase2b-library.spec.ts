@@ -84,6 +84,8 @@ test('HP given directly, body image, and a familiar attached to its master', asy
 
   // Attach a new familiar to Bran from his sheet.
   await page.getByRole('link', { name: 'Créer un familier pour ce personnage' }).click()
+  // Wait for the wizard: Bran's sheet also has a « Pseudo » field.
+  await expect(page.getByRole('heading', { level: 1, name: 'Nouveau familier' })).toBeVisible()
   await page.getByLabel(/Pseudo/).fill('Corbeau')
   await expect(page.getByLabel('Propriétaire')).toHaveValue(/.+/)
   await page.getByRole('button', { name: /Suivant/ }).click()

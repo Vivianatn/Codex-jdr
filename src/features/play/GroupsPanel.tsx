@@ -269,7 +269,13 @@ function OpenButton({ entity, current = false }: { entity: Entity; current?: boo
         current && 'bg-gold-soft hover:bg-gold-soft',
       )}
     >
-      <Portrait src={entity.identity.portrait} name={name} size="sm" className="size-8 text-xs" />
+      <Portrait
+        src={entity.identity.portrait}
+        name={name}
+        size="sm"
+        square={entity.kind === 'enemy'}
+        className="size-8 text-xs"
+      />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[0.8125rem] font-semibold text-ink">{name}</span>
         <HpBar
