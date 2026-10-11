@@ -1,6 +1,6 @@
 import { newId } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
-import type { ConditionTemplate, Entity } from '@/domain/types'
+import type { ConditionTemplate, Entity, SkillDefinition } from '@/domain/types'
 import { starterConditions } from '@/domain/conditions'
 import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules, type RulesConfig } from '@/rules'
 import { db as defaultDb, type CodexDB } from './db'
@@ -94,8 +94,9 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
 
     /** Deletes the campaign and everything it owns. */
     async remove(id: string): Promise<void> {
-      await db.transaction('rw', db.campaigns, db.entities, db.rolls, async () => {
+      await db.transaction('rw', [db.campaigns, db.entities, db.rolls, db.skills], async () => {
         await db.entities.where('campaignId').equals(id).delete()
+        await db.skills.where('campaignId').equals(id).delete()
         await db.rolls.where('campaignId').equals(id).delete()
         await db.campaigns.delete(id)
       })
@@ -106,6 +107,7 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
       if (!campaign) throw new Error(`Campaign ${id} not found`)
       const entities = await db.entities.where('campaignId').equals(id).toArray()
       const rolls = await db.rolls.where('campaignId').equals(id).sortBy('at')
+      const skills = await db.skills.where('campaignId').equals(id).sortBy('createdAt')
       return {
         format: CAMPAIGN_EXPORT_FORMAT,
         version: CAMPAIGN_EXPORT_VERSION,
@@ -113,13 +115,14 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
         campaign,
         entities: entities.sort((a, b) => a.createdAt - b.createdAt),
         rolls,
+        skills,
       }
     },
 
     /** Accepts raw file text or an already-parsed object. */
     async importCampaign(input: string | unknown, copySuffix = '(copie)'): Promise<ImportResult> {
       const data = parseExport(input)
-      return db.transaction('rw', db.campaigns, db.entities, db.rolls, async () => {
+      return db.transaction('rw', [db.campaigns, db.entities, db.rolls, db.skills], async () => {
         const existing = await db.campaigns.get(data.campaign.id)
         const campaign: Campaign = existing
           ? {
@@ -147,7 +150,19 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
           campaignId: campaign.id,
           entityId: r.entityId ? (ids.get(r.entityId) ?? null) : null,
         }))
+        const skillIds = new Map(data.skills.map((d) => [d.id, remap ? newId() : d.id]))
+        const skills = data.skills.map((d) => ({
+          ...d,
+          id: skillIds.get(d.id)!,
+          campaignId: campaign.id,
+        }))
+        for (const e of entities)
+          e.skills = e.skills.map((s) => ({
+            ...s,
+            sourceId: s.sourceId ? (skillIds.get(s.sourceId) ?? s.sourceId) : null,
+          }))
         await db.campaigns.add(campaign)
+        await db.skills.bulkPut(skills)
         await db.entities.bulkAdd(entities)
         await db.rolls.bulkPut(rolls)
         return { campaign, renamed: Boolean(existing) }
@@ -227,6 +242,13 @@ export function parseExport(input: string | unknown): CampaignExport {
   const rolls = (Array.isArray(data.rolls) ? data.rolls : []).filter(
     (r): r is RollRecord => isRecord(r) && typeof r.id === 'string' && typeof r.total === 'number',
   )
+  const skills = (Array.isArray(data.skills) ? data.skills : []).filter(
+    (d): d is SkillDefinition =>
+      isRecord(d) &&
+      typeof d.id === 'string' &&
+      typeof d.name === 'string' &&
+      typeof d.kind === 'string',
+  )
   return {
     format: CAMPAIGN_EXPORT_FORMAT,
     version: CAMPAIGN_EXPORT_VERSION,
@@ -234,5 +256,6 @@ export function parseExport(input: string | unknown): CampaignExport {
     campaign,
     entities,
     rolls,
+    skills,
   }
 }

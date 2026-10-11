@@ -1,5 +1,5 @@
 import { roll, type Rng } from '@/dice'
-import { clampHp, hpMax, type CheckOutcome, type RulesConfig } from '@/rules'
+import { clampHp, hpMaxAt, type CheckOutcome, type RulesConfig } from '@/rules'
 import { effectiveStats } from './entity'
 import { DISPOSITIONS, type Disposition, type Entity, type Skill } from './types'
 
@@ -121,7 +121,7 @@ export function shortRest<E extends Entity>(
   rng?: Rng,
 ): { entity: E; healed: number; breakdown: string } {
   const r = roll(rules.rests.shortRestHeal, { rng, rounding: rules.stats.rounding })
-  const max = hpMax(entity.hp.roll, entity.level, rules)
+  const max = hpMaxAt(entity.hp, entity.level, rules)
   const current = clampHp(entity.hp.current + Math.max(0, r.total), max)
   return {
     entity: { ...entity, hp: { ...entity.hp, current } },
@@ -137,7 +137,7 @@ export function longRest<E extends Entity>(entity: E, rules: RulesConfig): E {
     ...entity,
     hp: {
       ...entity.hp,
-      current: r.fullHp ? hpMax(entity.hp.roll, entity.level, rules) : entity.hp.current,
+      current: r.fullHp ? hpMaxAt(entity.hp, entity.level, rules) : entity.hp.current,
       temp: r.clearTempHp ? 0 : entity.hp.temp,
     },
     exhaustion: r.reduceExhaustion ? Math.max(0, entity.exhaustion - 1) : entity.exhaustion,

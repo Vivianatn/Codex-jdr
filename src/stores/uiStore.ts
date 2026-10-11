@@ -6,6 +6,7 @@ export const PREP_SECTIONS = [
   'players',
   'bestiary',
   'allies',
+  'skills',
   'items',
   'conditions',
   'maps',

@@ -20,7 +20,7 @@ import { diceErrorMessage } from '@/features/game/diceErrors'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { parseNumber } from '@/lib/numbers'
-import { hpMax, skillMilestonesReached } from '@/rules'
+import { hpMaxAt, skillMilestonesReached } from '@/rules'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
 
@@ -406,7 +406,7 @@ export function LevelUpDialog({
   const campaign = useCampaign()
   const rules = campaign.rules
   const from = entityHpMax(entity, rules)
-  const to = hpMax(entity.hp.roll, targetLevel, rules)
+  const to = hpMaxAt(entity.hp, targetLevel, rules)
   const milestone = skillMilestonesReached(entity.level, targetLevel, rules).length > 0
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()} title={t.levelUp.title(entityName(entity))}>

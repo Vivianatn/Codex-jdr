@@ -18,7 +18,7 @@ async function addGoblin(page: Page) {
   for (const s of STATS) await page.getByLabel(s).fill('8')
   await page.getByRole('button', { name: /Suivant/ }).click()
   await page.getByLabel('Jet de PV (1d20)').fill('10')
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: /Suivant/ }).click()
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: /Suivant/ }).click()
   await page.getByRole('button', { name: 'Créer la fiche' }).click()
   await page.getByRole('button', { name: 'Ajouter à la campagne : Gobelin' }).click()
   await page.getByRole('dialog').getByLabel('Nombre d’exemplaires').fill('1')
@@ -60,7 +60,7 @@ test('scenario 3 (without initiative): poison expires over turns, a skill goes o
 
   // An active skill with a 2-turn cooldown and a fixed damage effect.
   await page.getByRole('tab', { name: 'Compétences' }).click()
-  await page.getByRole('button', { name: 'Ajouter : Compétences actives' }).click()
+  await page.getByRole('button', { name: 'Nouvelle compétence : Compétences actives' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Nom').fill('Taillade')
   await dialog.getByLabel('Temps de recharge (tours)').fill('2')

@@ -1,5 +1,6 @@
-import { hpFormulaParts, hpMax, hpRollFromMax, isValidDie, type RulesConfig } from '@/rules'
+import { hpFormulaParts, hpRollFromMax, isValidDie, type RulesConfig } from '@/rules'
 import { plainCondition } from './conditions'
+import { normalize } from './text'
 import { createEntity, effectiveStats, entityHpMax, newId, normalizeSkill } from './entity'
 import { newItem } from './items'
 import {
@@ -76,7 +77,9 @@ export function toDiscordMarkdown(entity: Entity, rules: RulesConfig): string {
   lines.push('## Statistiques :')
   lines.push(`- Niveau : ${entity.level}`)
   lines.push(
-    `- ${HP_LABEL}: ${entity.hp.current}/${max} (${hpFormulaParts(entity.hp.roll, entity.level, rules).join(' + ')})`,
+    entity.hp.fixedMax === null
+      ? `- ${HP_LABEL}: ${entity.hp.current}/${max} (${hpFormulaParts(entity.hp.roll, entity.level, rules).join(' + ')})`
+      : `- ${HP_LABEL}: ${entity.hp.current}/${max}`,
   )
   for (const key of STAT_KEYS) {
     const { base, total } = effective[key]
@@ -141,16 +144,7 @@ export interface ParsedSheet {
   warnings: SheetWarning[]
 }
 
-/** Lowercase, no accents, single spaces — for tolerant label matching. */
-export function normalize(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[’`]/g, "'")
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
-}
+export { normalize } from './text'
 
 type Section = 'identity' | 'stats' | 'skills' | 'conditions' | 'inventory' | null
 
@@ -422,18 +416,22 @@ export function entityFromSheet<K extends EntityKind>(
   const identity: Partial<Identity> = { ...sheet.identity }
   if (kind === 'player') identity.discordName ||= sheet.title
   else identity.pseudo ||= sheet.title
-  const roll = sheet.hp.roll ?? 10
+  // HP that match no d20 are kept as given (character made before Codex).
+  const fromDie = sheet.hp.roll !== null && isValidDie(sheet.hp.roll)
+  const roll = fromDie ? sheet.hp.roll! : 10
+  const givenMax = !fromDie && sheet.hp.max !== null && sheet.hp.max > 0 ? sheet.hp.max : null
   const entity = createEntity(kind, campaignId, rules, {
     identity,
     level,
     hpRoll: roll,
+    hpMax: givenMax,
     stats: Object.fromEntries(STAT_KEYS.map((k) => [k, sheet.stats[k] ?? 10])) as Stats,
     now,
   })
-  const max = hpMax(roll, level, rules)
+  const max = entityHpMax(entity, rules)
   return {
     ...entity,
-    hp: { roll, current: Math.min(sheet.hp.current ?? max, max), temp: 0 },
+    hp: { ...entity.hp, current: Math.min(sheet.hp.current ?? max, max) },
     skills: sheet.skills.map((s) => normalizeSkill({ ...s, id: newId() })),
     conditions: sheet.conditions.map((c) => plainCondition(c.name, c.note)),
     inventory: sheet.inventory.map((i) => newItem(i)),

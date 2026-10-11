@@ -281,7 +281,7 @@ Mindset : se méfie des nobles
 
     const entity = entityFromSheet(sheet, 'player', 'c1', rules)
     expect(entity.identity.discordName).toBe('Lyra_88')
-    expect(entity.hp).toEqual({ roll: 16, current: 27, temp: 0 })
+    expect(entity.hp).toMatchObject({ roll: 16, fixedMax: null, current: 27, temp: 0 })
   })
 
   it('reports what is missing from the blank template', () => {

@@ -5,6 +5,8 @@ export function newItem(partial: Partial<Item> & { name: string }): Item {
   return {
     id: crypto.randomUUID(),
     quantity: 1,
+    icon: null,
+    image: null,
     description: '',
     type: 'misc',
     rarity: 'common',

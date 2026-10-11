@@ -58,10 +58,10 @@ describe('creation wizard', () => {
     await next()
 
     // 4. Skills: blocked until exactly 2 / 1 / 1
-    await screen.findByRole('button', { name: 'Ajouter : Compétences actives' })
+    await screen.findByRole('button', { name: 'Nouvelle compétence : Compétences actives' })
     expect(screen.getByRole('button', { name: /Suivant/ })).toBeDisabled()
     const addSkill = async (group: string, name: string) => {
-      await user.click(screen.getByRole('button', { name: `Ajouter : ${group}` }))
+      await user.click(screen.getByRole('button', { name: `Nouvelle compétence : ${group}` }))
       const dialog = await screen.findByRole('dialog')
       await user.type(within(dialog).getByLabelText('Nom'), name)
       await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }))
@@ -75,13 +75,10 @@ describe('creation wizard', () => {
     // A third active breaks the rule again.
     await addSkill('Compétences actives', 'Charge')
     expect(screen.getByRole('button', { name: /Suivant/ })).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'Retirer : Charge' }))
+    await user.click(screen.getByRole('button', { name: 'Retirer du personnage : Charge' }))
     await next()
 
-    // 5. Inventory, 6. Recap
-    await user.type(await screen.findByLabelText('Ajouter un objet'), 'Potion de soin')
-    await user.click(screen.getByRole('button', { name: 'Ajouter' }))
-    await next()
+    // 5. Recap (no inventory step: a new character always starts with an empty one)
     expect(await screen.findByText(/# fiche Gorak/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Créer la fiche' }))
 
@@ -99,7 +96,11 @@ describe('creation wizard', () => {
       'class',
       'passive',
     ])
-    expect(gorak?.inventory.map((i) => i.name)).toEqual(['Potion de soin'])
+    expect(gorak?.inventory).toEqual([])
+    // The skills were created in the campaign library and are linked to it.
+    const library = Object.values(useCampaignStore.getState().skills).map((d) => d.name)
+    expect(library.sort()).toEqual(['Charge', 'Cri de guerre', 'Endurci', 'Peau de pierre', 'Rage'])
+    expect(gorak?.skills.every((s) => s.sourceId !== null)).toBe(true)
     expect(gorak?.journal[0]?.text).toBe('Gorak rejoint la campagne')
     expect(router.state.location.pathname).toBe(`/c/${c.id}/prep/players/e/${gorak?.id}`)
 
@@ -125,8 +126,6 @@ describe('creation wizard', () => {
     await user.click(screen.getByRole('button', { name: /Suivant/ }))
     // Skills are not enforced for familiars by default.
     expect(await screen.findByText(/Facultatif/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Suivant/ }))
-    await screen.findByLabelText('Ajouter un objet')
     await user.click(screen.getByRole('button', { name: /Suivant/ }))
     await user.click(await screen.findByRole('button', { name: 'Créer la fiche' }))
     await screen.findByRole('heading', { level: 1, name: 'Plume' })
@@ -170,7 +169,9 @@ describe('character sheet', () => {
     // Skills can be added freely, outside the 10-level milestones.
     await user.click(screen.getByRole('tab', { name: 'Compétences' }))
     for (const name of ['Rage', 'Charge', 'Cri', 'Frappe']) {
-      await user.click(screen.getByRole('button', { name: 'Ajouter : Compétences actives' }))
+      await user.click(
+        screen.getByRole('button', { name: 'Nouvelle compétence : Compétences actives' }),
+      )
       const dialog = await screen.findByRole('dialog')
       await user.type(within(dialog).getByLabelText('Nom'), name)
       await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }))

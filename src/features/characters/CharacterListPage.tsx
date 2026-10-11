@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import type { EntityKind } from '@/domain/types'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
+import { entityName } from '@/domain/entity'
 import { useT } from '@/i18n'
 import { selectEntitiesOfKinds, useCampaignStore } from '@/stores/campaignStore'
 import { CharacterCard } from './CharacterCard'
@@ -107,6 +108,11 @@ export function CharacterListPage({
                         entity={entity}
                         rules={campaign.rules}
                         to={`/c/${campaign.id}/prep/${section}/e/${entity.id}`}
+                        badge={
+                          entity.kind === 'familiar' ? (
+                            <OwnerBadge ownerId={entity.details.ownerId} />
+                          ) : undefined
+                        }
                       />
                     ))}
                   </motion.ul>
@@ -118,5 +124,15 @@ export function CharacterListPage({
       )}
       <DiscordImportDialog open={importing} onOpenChange={setImporting} kinds={kinds} />
     </PageTransition>
+  )
+}
+
+function OwnerBadge({ ownerId }: { ownerId: string | null }) {
+  const t = useT()
+  const owner = useCampaignStore((s) => (ownerId ? s.entities[ownerId] : undefined))
+  return (
+    <p className="mt-0.5 truncate text-xs font-medium text-accent-text">
+      {owner ? t.familiars.of(entityName(owner)) : t.familiars.noOwner}
+    </p>
   )
 }

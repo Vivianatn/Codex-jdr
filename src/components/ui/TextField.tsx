@@ -49,16 +49,25 @@ export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string | null
   /** Classes for the input itself (`className` sizes the whole field). */
   inputClassName?: string
+  /** Keeps the label for screen readers only. */
+  hideLabel?: boolean
 }
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
-  { label, hint, error, className, inputClassName, id, ...props },
+  { label, hint, error, className, inputClassName, hideLabel, id, ...props },
   ref,
 ) {
   const autoId = useId()
   const fieldId = id ?? autoId
   return (
-    <FieldShell label={label} hint={hint} error={error} id={fieldId} className={className}>
+    <FieldShell
+      label={label}
+      hint={hint}
+      error={error}
+      id={fieldId}
+      className={className}
+      hideLabel={hideLabel}
+    >
       <input
         ref={ref}
         id={fieldId}

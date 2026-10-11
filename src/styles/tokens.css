@@ -75,7 +75,7 @@
   --codex-line-strong: #423e57;
 
   --codex-accent: #6d5bd0;
-  --codex-accent-hover: #7e6de0;
+  --codex-accent-hover: #5c4ac0; /* darker on hover: white text keeps AA contrast */
   --codex-accent-contrast: #ffffff;
   --codex-accent-soft: #2a2545;
   --codex-accent-text: #a99cf2;

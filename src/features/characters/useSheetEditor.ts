@@ -20,7 +20,7 @@ import { toast } from 'sonner'
 import {
   adjustCurrentForNewMax,
   clampHp,
-  hpMax,
+  hpMaxAt,
   skillMilestonesReached,
   type RulesConfig,
 } from '@/rules'
@@ -55,7 +55,7 @@ export function useSheetEditor(entity: Entity, rules: RulesConfig, change: Sheet
       edit(
         (e) => {
           const oldMax = entityHpMax(e, rules)
-          const newMax = hpMax(e.hp.roll, level, rules)
+          const newMax = hpMaxAt(e.hp, level, rules)
           const current = adjustCurrentForNewMax(e.hp.current, oldMax, newMax)
           return milestones.reduce(
             (next, m) => withJournal(next, 'skill', t.journal.skillMilestone(m)),
@@ -69,15 +69,28 @@ export function useSheetEditor(entity: Entity, rules: RulesConfig, change: Sheet
         toast.info(t.skills.milestoneToast(entityName(entity), m), { duration: 10_000 })
     },
 
+    /** Max HP from the d20 (switches back from a given max if needed). */
     hpRoll(roll: number) {
-      if (roll === entity.hp.roll) return
+      if (roll === entity.hp.roll && entity.hp.fixedMax === null) return
       edit((e) => {
-        const oldMax = entityHpMax(e, rules)
-        const newMax = hpMax(roll, e.level, rules)
-        return {
-          ...e,
-          hp: { ...e.hp, roll, current: adjustCurrentForNewMax(e.hp.current, oldMax, newMax) },
-        }
+        const hp = { ...e.hp, roll, fixedMax: null }
+        const current = adjustCurrentForNewMax(
+          e.hp.current,
+          entityHpMax(e, rules),
+          hpMaxAt(hp, e.level, rules),
+        )
+        return { ...e, hp: { ...hp, current } }
+      })
+    },
+
+    /** Max HP given directly at the current level, as for a character made before Codex. */
+    hpFixedMax(max: number) {
+      const value = Math.max(1, Math.round(max))
+      if (entity.hp.fixedMax !== null && entityHpMax(entity, rules) === value) return
+      edit((e) => {
+        const hp = { ...e.hp, fixedMax: value, fixedLevel: e.level }
+        const current = adjustCurrentForNewMax(e.hp.current, entityHpMax(e, rules), value)
+        return { ...e, hp: { ...hp, current } }
       })
     },
 

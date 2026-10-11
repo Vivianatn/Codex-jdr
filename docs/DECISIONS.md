@@ -4,6 +4,46 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Demandes du MJ (2026-10-11, suite de la phase 2)
+
+### D-218 · Compétences indépendantes
+
+Les compétences sont des **entités de la campagne** (bibliothèque **Préparation › Compétences**), attachables à n'importe quel type de personnage.
+
+- Un personnage porte une **copie liée** (`sourceId`) : toutes les règles continuent de lire `entity.skills`. Seuls les champs de définition (nom, type, caractéristique, description, modificateurs, utilisations max, recharge, effet) sont synchronisés. L'état propre au personnage (activée, utilisations restantes, recharge restante) est conservé.
+- La bibliothèque vit **dans le même état annulable que les personnages** (`useCampaignStore`). Modifier ou supprimer une compétence met à jour tous ceux qui l'ont, en **une seule** action annulable par Ctrl+Z. Une bibliothèque hors de l'historique laisserait une annulation remettre les fiches à une version de compétence que la bibliothèque n'a plus.
+- La bibliothèque est **propre à la campagne** et partie avec son export. Les compétences d'un modèle de bestiaire (partagé entre campagnes) sont reprises dans la bibliothèque de la campagne où on ajoute ses exemplaires.
+- Sur la fiche : ajouter depuis la bibliothèque, créer (ce qui ajoute à la bibliothèque), modifier (avec un avertissement si la compétence est partagée), et « Retirer du personnage », qui ne supprime pas de la bibliothèque. Supprimer depuis la bibliothèque retire la compétence de tous ceux qui l'ont, après confirmation.
+- Les compétences existantes et importées (Discord, anciennes sauvegardes) sont **adoptées automatiquement** : les copies identiques (même type, nom et description, sans tenir compte des accents ni de la casse) partagent une seule définition, les autres en créent une.
+- Données : table `skills` (schéma v5) et export v5. Les anciens fichiers s'importent toujours.
+
+### D-219 · Inventaire vide à la création
+
+L'assistant n'a plus d'étape Inventaire : un personnage commence toujours avec un inventaire vide, et les objets s'ajoutent ensuite depuis sa fiche. L'**import Discord** garde l'inventaire écrit dans la fiche collée, car il s'agit de reprendre un personnage qui existe déjà.
+
+### D-220 · Portrait et corps
+
+En plus du portrait rond (recadré), chaque personnage a une **image du corps** (`identity.body`). Elle s'importe par clic ou glisser-déposer, sans recadrage, avec ses proportions et sa transparence (WebP de 768 × 1152 au plus). On la voit dans l'onglet Identité, dans le tiroir de fiche en mode **En jeu** et au centre de l'écran d'inventaire. Les jetons du plateau l'utiliseront en phase 4.
+
+### D-221 · PV tirés ou donnés
+
+Comme pour les caractéristiques, les PV max se saisissent de deux façons : le **d20 tiré** (10 + d20 + Nv) ou les **PV max donnés**, pour un personnage créé avant Codex. Dans le second cas, on stocke la valeur et le niveau auquel elle a été donnée (`hp.fixedMax`, `hp.fixedLevel`) ; les niveaux suivants appliquent la règle « PV par niveau ». Le choix se fait dans l'assistant et dans l'onglet Statistiques. Un import Discord dont les PV ne correspondent à aucun d20 garde ces PV comme PV donnés au lieu d'inventer un jet.
+
+### D-222 · Inventaire façon jeu vidéo
+
+- L'écran présente :
+  - une **silhouette** : l'image du corps, avec les emplacements d'équipement autour (main principale, armure et accessoire 1 à gauche ; main secondaire et accessoire 2 à droite, plus la défense si la règle est active) ;
+  - un **sac** en grille de cases encadrées selon la rareté, avec une lueur pour épique et légendaire, un badge de quantité et un « ? » pour un objet non identifié ;
+  - un **panneau de description** de l'objet sélectionné, avec toutes ses caractéristiques et ses actions.
+- Les objets équipés quittent le sac pour la silhouette. On les équipe en glissant une case sur un emplacement compatible, et on les déséquipe en les glissant sur le sac. Chaque action existe aussi en bouton, pour le clavier et le tactile.
+- Un objet a une **icône** (36 dessins au choix, sinon celle de son type) ou une **image importée** (256 px au plus).
+
+### D-223 · Familiers rattachables
+
+Un familier se rattache à un **joueur, un allié ou un ennemi**. Sur la fiche du maître, un panneau « Familiers » liste ses familiers et permet d'en détacher, de rattacher un familier sans maître ou d'en créer un directement pour lui ; l'assistant arrive alors avec le maître déjà choisi. Les cartes de familier affichent « Familier de … ». Supprimer un maître libère ses familiers, et Ctrl+Z rétablit le lien.
+
+---
+
 ## Principe — Codex n'impose aucune règle (2026-10-11)
 
 ### D-217 · Toutes les mécaniques optionnelles sont désactivées par défaut

@@ -117,6 +117,8 @@ describe('inventory', () => {
       }),
     ]
     const { user } = await openSheet(g, 'Inventaire')
+    // Select the tile in the bag, then use it from its description panel.
+    await user.click(screen.getByRole('button', { name: 'Potion de soin ×2, Commun' }))
     await user.click(screen.getByRole('button', { name: 'Utiliser' }))
     expect(entity(g.id).inventory[0]?.quantity).toBe(1)
     expect(entity(g.id).hp.current).toBeGreaterThanOrEqual(7)

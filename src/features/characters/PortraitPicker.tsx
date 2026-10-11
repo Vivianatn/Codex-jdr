@@ -5,28 +5,11 @@ import { Button, IconButton } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
+import { imageFromFile } from '@/lib/images'
 import { Portrait } from './Portrait'
 
 const VIEW = 256
 const OUTPUT = 384
-
-function readFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => resolve(img)
-    img.onerror = reject
-    img.src = src
-  })
-}
 
 /** Medallion that accepts a click or a dropped image, then opens the cropper. */
 export function PortraitPicker({
@@ -46,8 +29,7 @@ export function PortraitPicker({
   async function open(file: File | undefined) {
     if (!file) return
     try {
-      if (!file.type.startsWith('image/')) throw new Error('not an image')
-      setImage(await loadImage(await readFile(file)))
+      setImage(await imageFromFile(file))
     } catch {
       toast.error(t.identity.invalidImage)
     }

@@ -205,6 +205,8 @@ export interface SelectFieldProps<V extends string> extends CommonProps {
   onChange: (value: V) => void
   options: { value: V; label: string }[]
   disabled?: boolean
+  /** Classes for the <select> itself (`className` sizes the whole field). */
+  selectClassName?: string
 }
 
 export function SelectField<V extends string>({
@@ -217,6 +219,7 @@ export function SelectField<V extends string>({
   onChange,
   options,
   disabled,
+  selectClassName,
 }: SelectFieldProps<V>) {
   const id = useId()
   return (
@@ -230,7 +233,7 @@ export function SelectField<V extends string>({
     >
       <select
         id={id}
-        className={cn(FIELD, 'h-10 pr-8')}
+        className={cn(FIELD, 'h-10 pr-8', selectClassName)}
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value as V)}

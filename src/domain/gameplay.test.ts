@@ -154,7 +154,7 @@ describe('conditions and turns', () => {
         (current, temp, seed) => {
           const e = {
             ...hero(),
-            hp: { roll: 14, current, temp },
+            hp: { roll: 14, fixedMax: null, fixedLevel: 1, current, temp },
             conditions: [conditionFromTemplate(template('burning'))],
           }
           const next = startOfTurn(e, rules, 25, seededRng(seed)).entity
@@ -278,11 +278,16 @@ describe('progress', () => {
       cooldown: 3,
       cooldownLeft: 2,
     })
-    const e = { ...hero(), hp: { roll: 14, current: 5, temp: 3 }, exhaustion: 2, skills: [skill] }
+    const e = {
+      ...hero(),
+      hp: { roll: 14, fixedMax: null, fixedLevel: 1, current: 5, temp: 3 },
+      exhaustion: 2,
+      skills: [skill],
+    }
     const short = shortRest(e, rules, d20(20))
     expect(short.entity.hp.current).toBeGreaterThan(5)
     const rested = longRest(e, rules)
-    expect(rested.hp).toEqual({ roll: 14, current: 25, temp: 0 })
+    expect(rested.hp).toMatchObject({ roll: 14, current: 25, temp: 0 })
     expect(rested.exhaustion).toBe(1)
     expect(rested.skills[0]).toMatchObject({ usesLeft: 2, cooldownLeft: 0 })
   })

@@ -1,4 +1,4 @@
-import { effectiveStat, hpMax, type RulesConfig } from '@/rules'
+import { effectiveStat, hpMaxAt, type RulesConfig } from '@/rules'
 import { normalizeCondition } from './conditions'
 import { equippedItems, isOverloaded, normalizeItem } from './items'
 import {
@@ -30,6 +30,7 @@ export function emptyIdentity(): Identity {
     description: '',
     mindset: '',
     portrait: null,
+    body: null,
   }
 }
 
@@ -53,6 +54,8 @@ export interface NewEntityInput {
   hpRoll?: number
   stats?: Stats
   now?: number
+  /** Max HP given directly instead of the d20 roll. */
+  hpMax?: number | null
 }
 
 /** A fresh entity at full HP. */
@@ -65,13 +68,14 @@ export function createEntity<K extends EntityKind>(
   const now = input.now ?? Date.now()
   const level = input.level ?? 1
   const roll = input.hpRoll ?? 10
+  const hp = { roll, fixedMax: input.hpMax ?? null, fixedLevel: level }
   return {
     id: newId(),
     campaignId,
     kind,
     identity: { ...emptyIdentity(), ...input.identity },
     level,
-    hp: { roll, current: hpMax(roll, level, rules), temp: 0 },
+    hp: { ...hp, current: hpMaxAt(hp, level, rules), temp: 0 },
     stats: input.stats ?? uniformStats(10),
     modifiers: [],
     skills: [],
@@ -93,7 +97,7 @@ export function entityName(entity: Pick<Entity, 'identity'>, fallback = 'Sans no
 }
 
 export function entityHpMax(entity: Pick<Entity, 'hp' | 'level'>, rules: RulesConfig): number {
-  return hpMax(entity.hp.roll, entity.level, rules)
+  return hpMaxAt(entity.hp, entity.level, rules)
 }
 
 /** Every modifier currently applied to a characteristic, with its source. */
@@ -233,11 +237,7 @@ export function instantiateTemplate(
     const entity: EntityOfKind<'enemy'> = {
       ...copy,
       identity: { ...copy.identity, pseudo: name },
-      hp: {
-        roll: template.hp.roll,
-        current: hpMax(template.hp.roll, level, options.rules),
-        temp: 0,
-      },
+      hp: { ...template.hp, current: hpMaxAt(template.hp, level, options.rules), temp: 0 },
       details: { ...template.details, templateId: template.id, copyNumber },
     }
     return options.journalText
@@ -249,6 +249,7 @@ export function instantiateTemplate(
 export function emptySkill(kind: SkillKind): Skill {
   return {
     id: newId(),
+    sourceId: null,
     name: '',
     kind,
     stat: null,
@@ -280,6 +281,11 @@ export function normalizeSkill(
 export function normalizeEntityShape<E extends Entity>(entity: E): E {
   return {
     ...entity,
+    hp: {
+      ...entity.hp,
+      fixedMax: entity.hp.fixedMax ?? null,
+      fixedLevel: entity.hp.fixedLevel ?? entity.level ?? 1,
+    },
     purse: entity.purse ?? 0,
     exhaustion: entity.exhaustion ?? 0,
     luckSpent: entity.luckSpent ?? 0,
@@ -287,11 +293,4 @@ export function normalizeEntityShape<E extends Entity>(entity: E): E {
     conditions: entity.conditions.map(normalizeCondition),
     inventory: entity.inventory.map(normalizeItem),
   }
-}
-
-/** Characters that can own a familiar: players and allies. */
-export function ownerOptions(entities: readonly Entity[]): { id: string; name: string }[] {
-  return entities
-    .filter((e) => e.kind === 'player' || e.kind === 'ally')
-    .map((e) => ({ id: e.id, name: entityName(e) }))
 }

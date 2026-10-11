@@ -22,10 +22,16 @@ export function SkillDialog({
   skill,
   onClose,
   onSave,
+  perCharacter = true,
+  notice,
 }: {
   skill: Skill | null
   onClose: () => void
   onSave: (skill: Skill) => void
+  /** False when editing the library definition: hides per-character state (enabled). */
+  perCharacter?: boolean
+  /** Shown above the form (e.g. "shared by 3 characters"). */
+  notice?: string
 }) {
   const t = useT()
   return (
@@ -35,7 +41,14 @@ export function SkillDialog({
       title={skill?.name ? t.skills.edit : t.skills.add}
       className="max-w-lg"
     >
-      {skill && <SkillForm initial={skill} onCancel={onClose} onSave={onSave} />}
+      {notice && (
+        <p className="mb-4 rounded-md border border-line bg-accent-soft px-3 py-2 text-sm text-ink">
+          {notice}
+        </p>
+      )}
+      {skill && (
+        <SkillForm initial={skill} onCancel={onClose} onSave={onSave} perCharacter={perCharacter} />
+      )}
     </Dialog>
   )
 }
@@ -44,10 +57,12 @@ function SkillForm({
   initial,
   onCancel,
   onSave,
+  perCharacter,
 }: {
   initial: Skill
   onCancel: () => void
   onSave: (skill: Skill) => void
+  perCharacter: boolean
 }) {
   const t = useT()
   const [skill, setSkill] = useState(initial)
@@ -125,12 +140,14 @@ function SkillForm({
               set({ modifiers: [...skill.modifiers, { id: newId(), stat, value, label: '' }] })
             }
           />
-          <CheckboxField
-            label={t.skills.enabled}
-            hint={t.skills.enabledHint}
-            checked={skill.enabled}
-            onChange={(enabled) => set({ enabled })}
-          />
+          {perCharacter && (
+            <CheckboxField
+              label={t.skills.enabled}
+              hint={t.skills.enabledHint}
+              checked={skill.enabled}
+              onChange={(enabled) => set({ enabled })}
+            />
+          )}
         </fieldset>
       )}
 

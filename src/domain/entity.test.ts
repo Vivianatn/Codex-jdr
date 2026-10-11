@@ -19,7 +19,7 @@ describe('createEntity', () => {
   it('starts at full HP with kind-specific details', () => {
     const e = createEntity('player', 'c1', rules, { hpRoll: 14, identity: { pseudo: 'Gorak' } })
     expect(entityHpMax(e, rules)).toBe(25)
-    expect(e.hp).toEqual({ roll: 14, current: 25, temp: 0 })
+    expect(e.hp).toMatchObject({ roll: 14, fixedMax: null, current: 25, temp: 0 })
     expect(e.details).toEqual({ xp: 0 })
     expect(entityName(e)).toBe('Gorak')
   })
@@ -92,7 +92,7 @@ describe('instantiateTemplate', () => {
     })
     expect(copies.map((c) => c.identity.pseudo)).toEqual(['Gobelin 1', 'Gobelin 2', 'Gobelin 3'])
     expect(copies.every((c) => c.campaignId === 'c1' && c.level === 2)).toBe(true)
-    expect(copies[0]?.hp).toEqual({ roll: 4, current: 16, temp: 0 })
+    expect(copies[0]?.hp).toMatchObject({ roll: 4, current: 16, temp: 0 })
     expect(copies[0]?.details).toMatchObject({ templateId: goblin.id, copyNumber: 1, xpReward: 50 })
     expect(new Set(copies.map((c) => c.id)).size).toBe(3)
   })

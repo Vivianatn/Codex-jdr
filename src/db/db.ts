@@ -1,7 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { normalizeEntityShape } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
-import type { EnemyTemplate, Entity, Item } from '@/domain/types'
+import type { EnemyTemplate, Entity, Item, SkillDefinition } from '@/domain/types'
 import { starterConditions } from '@/domain/conditions'
 import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules } from '@/rules'
 import { emptyLibrary, type Campaign } from './types'
@@ -32,6 +32,14 @@ export const SCHEMA = {
     rolls: 'id, campaignId, [campaignId+at]',
     itemLibrary: 'id, name',
   },
+  5: {
+    campaigns: 'id, name, updatedAt, lastOpenedAt',
+    entities: 'id, campaignId, [campaignId+kind]',
+    bestiary: 'id, updatedAt',
+    rolls: 'id, campaignId, [campaignId+at]',
+    itemLibrary: 'id, name',
+    skills: 'id, campaignId',
+  },
 } as const
 
 /**
@@ -47,6 +55,8 @@ export class CodexDB extends Dexie {
   rolls!: EntityTable<RollRecord, 'id'>
   /** Item templates, shared by every campaign. */
   itemLibrary!: EntityTable<Item, 'id'>
+  /** Skill library, per campaign (D-218). */
+  skills!: EntityTable<SkillDefinition, 'id'>
 
   constructor(name: string = DB_NAME) {
     super(name)
@@ -92,6 +102,9 @@ export class CodexDB extends Dexie {
               campaign.library.conditions = starterConditions()
           }),
       )
+    // v5: skill library table. Existing skills are adopted into it when a
+    // campaign is opened (adoptSkills), so no data is rewritten here.
+    this.version(5).stores(SCHEMA[5])
   }
 }
 

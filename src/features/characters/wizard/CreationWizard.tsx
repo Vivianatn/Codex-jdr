@@ -2,13 +2,12 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Check, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
 import { SelectField } from '@/components/ui/fields'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { TextAreaField, TextField } from '@/components/ui/TextField'
 import { toDiscordMarkdown } from '@/domain/discord'
-import { createEntity, defaultDetails, emptyIdentity, entityName, newId } from '@/domain/entity'
+import { createEntity, defaultDetails, emptyIdentity, entityName } from '@/domain/entity'
 import {
   DISPOSITIONS,
   STAT_KEYS,
@@ -17,13 +16,14 @@ import {
   type EntityKind,
   type EntityOfKind,
   type Identity,
-  type Item,
   type Skill,
   type StatKey,
   type Stats,
 } from '@/domain/types'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
+import { ownerOptions } from '@/domain/familiars'
+import { skillFromDefinition, syncSkill } from '@/domain/skills'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import {
@@ -35,18 +35,18 @@ import {
   statFromDice,
   type RulesConfig,
 } from '@/rules'
-import { selectEntitiesOfKinds, useCampaignStore } from '@/stores/campaignStore'
+import { useCampaignStore } from '@/stores/campaignStore'
 import { CopyForDiscordButton } from '../CharacterSheet'
 import { HpBar } from '../HpBar'
+import { BodyPicker } from '../BodyPicker'
 import { PortraitPicker } from '../PortraitPicker'
-import { InventoryEditor } from '../sheet/ListTabs'
 import { SkillList } from '../sheet/SkillsTab'
 import { STAT_STYLES } from '../statStyles'
 import { StatPill } from '../StatPill'
 import { useCharacterActions } from '../useCharacterActions'
 import { parseNumber } from '@/lib/numbers'
 
-const STEPS = ['identity', 'stats', 'hp', 'skills', 'inventory', 'recap'] as const
+const STEPS = ['identity', 'stats', 'hp', 'skills', 'recap'] as const
 type Step = (typeof STEPS)[number]
 
 type InputMode = 'value' | 'dice'
@@ -58,9 +58,11 @@ interface Draft<K extends EntityKind> {
   dice: Record<StatKey, [string, string]>
   inputMode: InputMode
   level: string
+  /** HP from the pre-rolled d20, or a max given directly (character made before Codex). */
+  hpMode: 'roll' | 'fixed'
   hpRoll: string
+  hpMax: string
   skills: Skill[]
-  inventory: Item[]
   details: DetailsByKind[K]
 }
 
@@ -74,9 +76,10 @@ function emptyDraft<K extends EntityKind>(kind: K): Draft<K> {
     dice: each(() => ['', ''] as [string, string]),
     inputMode: 'value',
     level: '1',
+    hpMode: 'roll',
     hpRoll: '',
+    hpMax: '',
     skills: [],
-    inventory: [],
     details: defaultDetails(kind),
   }
 }
@@ -102,16 +105,20 @@ function kindFromParams(section: string, param: string | null): EntityKind {
 export function CreationWizard({ section }: { section: string }) {
   const [params] = useSearchParams()
   const kind = kindFromParams(section, params.get('kind'))
-  return <Wizard key={kind} kind={kind} />
+  return <Wizard key={kind} kind={kind} ownerId={params.get('owner')} />
 }
 
-function Wizard({ kind }: { kind: EntityKind }) {
+function Wizard({ kind, ownerId }: { kind: EntityKind; ownerId: string | null }) {
   const t = useT()
   const campaign = useCampaign()
   const rules = campaign.rules
   const navigate = useNavigate()
   const actions = useCharacterActions()
-  const [draft, setDraft] = useState<Draft<EntityKind>>(() => emptyDraft(kind))
+  const [draft, setDraft] = useState<Draft<EntityKind>>(() => {
+    const d = emptyDraft(kind)
+    // "Créer un familier pour ce personnage" arrives with ?owner=<id>.
+    return kind === 'familiar' && ownerId ? { ...d, details: { ...d.details, ownerId } } : d
+  })
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState(1)
   const set = (patch: Partial<Draft<EntityKind>>) => setDraft((d) => ({ ...d, ...patch }))
@@ -124,6 +131,8 @@ function Wizard({ kind }: { kind: EntityKind }) {
   const missingStats = STAT_KEYS.filter((k) => stats[k] === null).length
   const level = Math.floor(parseNumber(draft.level) ?? 0)
   const roll = parseNumber(draft.hpRoll)
+  const givenMax = parseNumber(draft.hpMax)
+  const fixed = draft.hpMode === 'fixed'
   const skillCheck = checkCreationSkills(draft.skills, kind, rules)
 
   const blocker: Record<Step, string | null> = {
@@ -132,11 +141,14 @@ function Wizard({ kind }: { kind: EntityKind }) {
     hp:
       level < 1
         ? t.wizard.levelInvalid
-        : roll === null || !isValidDie(roll)
-          ? t.wizard.hpRollInvalid
-          : null,
+        : fixed
+          ? givenMax === null || givenMax < 1
+            ? t.wizard.hpMaxInvalid
+            : null
+          : roll === null || !isValidDie(roll)
+            ? t.wizard.hpRollInvalid
+            : null,
     skills: skillCheck.ok ? null : t.wizard.skillsMissing,
-    inventory: null,
     recap: null,
   }
 
@@ -145,16 +157,16 @@ function Wizard({ kind }: { kind: EntityKind }) {
       identity: { ...draft.identity, pseudo: draft.identity.pseudo.trim() },
       level: Math.max(1, level),
       hpRoll: roll ?? 10,
+      hpMax: fixed && givenMax !== null ? Math.max(1, Math.round(givenMax)) : null,
       stats: Object.fromEntries(STAT_KEYS.map((k) => [k, stats[k] ?? 10])) as Stats,
     })
     return {
       ...e,
       skills: draft.skills,
-      inventory: draft.inventory,
       details: draft.details,
     } as typeof e
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `stats` derives from draft
-  }, [draft, kind, campaign.id, rules, level, roll])
+  }, [draft, kind, campaign.id, rules, level, roll, givenMax, fixed])
 
   async function finish() {
     const name = entityName(entity)
@@ -231,27 +243,17 @@ function Wizard({ kind }: { kind: EntityKind }) {
                 <StatsStep draft={draft} set={set} values={stats} rules={rules} />
               )}
               {current === 'hp' && (
-                <HpStep draft={draft} set={set} rules={rules} level={level} roll={roll} />
+                <HpStep
+                  draft={draft}
+                  set={set}
+                  rules={rules}
+                  level={level}
+                  roll={roll}
+                  givenMax={givenMax}
+                />
               )}
               {current === 'skills' && (
                 <SkillsStep draft={draft} set={set} check={skillCheck} rules={rules} />
-              )}
-              {current === 'inventory' && (
-                <div className="space-y-4">
-                  <p className="text-ink-muted">{t.wizard.inventoryIntro}</p>
-                  <InventoryEditor
-                    items={draft.inventory}
-                    onAdd={(item) =>
-                      set({ inventory: [...draft.inventory, { ...item, id: newId() }] })
-                    }
-                    onUpdate={(item) =>
-                      set({ inventory: draft.inventory.map((i) => (i.id === item.id ? item : i)) })
-                    }
-                    onRemove={(item) =>
-                      set({ inventory: draft.inventory.filter((i) => i.id !== item.id) })
-                    }
-                  />
-                </div>
               )}
               {current === 'recap' && <RecapStep entity={entity} rules={rules} />}
             </motion.section>
@@ -301,9 +303,8 @@ type StepProps = {
 
 function IdentityStep({ draft, set }: StepProps) {
   const t = useT()
-  const owners = useCampaignStore(
-    useShallow((s) => selectEntitiesOfKinds(s.entities, ['player', 'ally'])),
-  )
+  const entities = useCampaignStore((s) => s.entities)
+  const owners = useMemo(() => ownerOptions(Object.values(entities)), [entities])
   const id = draft.identity
   const field = (key: keyof Identity) => ({
     value: (id[key] as string) ?? '',
@@ -312,11 +313,18 @@ function IdentityStep({ draft, set }: StepProps) {
   })
   return (
     <div className="flex flex-col gap-8 md:flex-row">
-      <PortraitPicker
-        src={id.portrait}
-        name={id.pseudo || '?'}
-        onChange={(portrait) => set({ identity: { ...id, portrait } })}
-      />
+      <div className="flex flex-row items-start gap-4 md:flex-col md:items-center">
+        <PortraitPicker
+          src={id.portrait}
+          name={id.pseudo || '?'}
+          onChange={(portrait) => set({ identity: { ...id, portrait } })}
+        />
+        <BodyPicker
+          src={id.body}
+          onChange={(body) => set({ identity: { ...id, body } })}
+          className="h-52 w-36"
+        />
+      </div>
       <div className="grid flex-1 gap-4 sm:grid-cols-2">
         <TextField
           label={t.identity.pseudo}
@@ -341,7 +349,7 @@ function IdentityStep({ draft, set }: StepProps) {
             onChange={(v) => set({ details: { ...draft.details, ownerId: v || null } })}
             options={[
               { value: '', label: t.common.none },
-              ...owners.map((o) => ({ value: o.id, label: entityName(o) })),
+              ...owners.map((o) => ({ value: o.id, label: `${o.name} (${t.kinds[o.kind]})` })),
             ]}
           />
         )}
@@ -470,13 +478,33 @@ function HpStep({
   rules,
   level,
   roll,
-}: StepProps & { rules: RulesConfig; level: number; roll: number | null }) {
+  givenMax,
+}: StepProps & {
+  rules: RulesConfig
+  level: number
+  roll: number | null
+  givenMax: number | null
+}) {
   const t = useT()
-  const valid = roll !== null && isValidDie(roll) && level >= 1
-  const total = valid ? hpMax(roll, level, rules) : null
+  const fixed = draft.hpMode === 'fixed'
+  const valid = fixed
+    ? givenMax !== null && givenMax >= 1 && level >= 1
+    : roll !== null && isValidDie(roll) && level >= 1
+  const total = !valid ? null : fixed ? Math.round(givenMax!) : hpMax(roll!, level, rules)
   return (
     <div className="space-y-6">
-      <p className="text-ink-muted">{t.wizard.hpIntro}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-ink-muted">{fixed ? t.wizard.hpFixedIntro : t.wizard.hpIntro}</p>
+        <SegmentedControl<'roll' | 'fixed'>
+          label={t.sheet.hpSource}
+          value={draft.hpMode}
+          onValueChange={(hpMode) => set({ hpMode })}
+          options={[
+            { value: 'roll', label: t.sheet.hpSourceRoll },
+            { value: 'fixed', label: t.sheet.hpSourceFixed },
+          ]}
+        />
+      </div>
       <div className="grid max-w-md grid-cols-2 gap-4">
         <TextField
           label={t.sheet.level}
@@ -484,13 +512,25 @@ function HpStep({
           value={draft.level}
           onChange={(e) => set({ level: e.target.value })}
         />
-        <TextField
-          label={t.sheet.hpRoll}
-          inputMode="numeric"
-          value={draft.hpRoll}
-          onChange={(e) => set({ hpRoll: e.target.value })}
-          autoFocus
-        />
+        {fixed ? (
+          <TextField
+            key="fixed"
+            label={t.sheet.hpGiven}
+            inputMode="numeric"
+            value={draft.hpMax}
+            onChange={(e) => set({ hpMax: e.target.value })}
+            autoFocus
+          />
+        ) : (
+          <TextField
+            key="roll"
+            label={t.sheet.hpRoll}
+            inputMode="numeric"
+            value={draft.hpRoll}
+            onChange={(e) => set({ hpRoll: e.target.value })}
+            autoFocus
+          />
+        )}
       </div>
       <div className="flex items-center gap-6 rounded-lg border border-line bg-surface p-6">
         <div className="tabular font-display text-5xl font-semibold text-hp-text">
@@ -499,9 +539,11 @@ function HpStep({
         <div className="text-sm text-ink-muted">
           <p className="font-medium text-ink">{t.sheet.hpMax}</p>
           <p className="tabular">
-            {valid
-              ? t.sheet.hpFormula(hpFormulaParts(roll, level, rules).join(' + '), total!)
-              : `${rules.hp.base} + 1d20 + ${t.sheet.level}`}
+            {fixed
+              ? t.wizard.hpFixedHint
+              : valid
+                ? t.sheet.hpFormula(hpFormulaParts(roll!, level, rules).join(' + '), total!)
+                : `${rules.hp.base} + 1d20 + ${t.sheet.level}`}
           </p>
         </div>
       </div>
@@ -516,6 +558,7 @@ function SkillsStep({
   rules,
 }: StepProps & { check: ReturnType<typeof checkCreationSkills>; rules: RulesConfig }) {
   const t = useT()
+  const saveSkill = useCampaignStore((s) => s.saveSkill)
   const badge = (label: string, count: number, required: number) => {
     const ok = !check.enforced || count === required
     return (
@@ -544,14 +587,21 @@ function SkillsStep({
       </div>
       <SkillList
         skills={draft.skills}
-        onSave={(skill) =>
-          set({
-            skills: draft.skills.some((s) => s.id === skill.id)
-              ? draft.skills.map((s) => (s.id === skill.id ? skill : s))
-              : [...draft.skills, skill],
-          })
-        }
-        onRemove={(skill) => set({ skills: draft.skills.filter((s) => s.id !== skill.id) })}
+        handlers={{
+          attach: (def) => set({ skills: [...draft.skills, skillFromDefinition(def)] }),
+          // New skills go straight into the campaign library.
+          create: (def) => {
+            saveSkill(def, t.skills.created(def.name))
+            set({ skills: [...draft.skills, skillFromDefinition(def)] })
+          },
+          edit: (def) => {
+            saveSkill(def, t.skills.edited(def.name))
+            set({
+              skills: draft.skills.map((s) => (s.sourceId === def.id ? syncSkill(s, def) : s)),
+            })
+          },
+          detach: (skill) => set({ skills: draft.skills.filter((s) => s.id !== skill.id) }),
+        }}
       />
     </div>
   )

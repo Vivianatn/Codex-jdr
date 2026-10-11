@@ -37,8 +37,16 @@ export interface SkillEffect {
   conditionId: string | null
 }
 
+/**
+ * A skill as attached to a character: a copy of a library definition
+ * (`sourceId`, see SkillDefinition) plus this character's own state
+ * (enabled, uses left, cooldown left). Definition fields are kept in sync
+ * with the library.
+ */
 export interface Skill {
   id: string
+  /** Library definition this skill comes from; null until adopted into the library. */
+  sourceId: string | null
   name: string
   kind: SkillKind
   stat: StatKey | null
@@ -53,6 +61,26 @@ export interface Skill {
   cooldown: number
   cooldownLeft: number
   effect: SkillEffect
+}
+
+/** Fields owned by the library definition (the rest is per character). */
+export const SKILL_DEFINITION_KEYS = [
+  'name',
+  'kind',
+  'stat',
+  'description',
+  'modifiers',
+  'usesMax',
+  'cooldown',
+  'effect',
+] as const satisfies readonly (keyof Skill)[]
+
+/** An independent skill of the campaign library, attachable to any character. */
+export type SkillDefinition = Pick<Skill, (typeof SKILL_DEFINITION_KEYS)[number]> & {
+  id: string
+  campaignId: string
+  createdAt: number
+  updatedAt: number
 }
 
 /** Curated icon keys, mapped to Lucide icons in the UI. */
@@ -127,12 +155,57 @@ export type ItemType = (typeof ITEM_TYPES)[number]
 export const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'] as const
 export type Rarity = (typeof RARITIES)[number]
 
+/** Icon keys for items (mapped to drawings in the UI). */
+export const ITEM_ICONS = [
+  'sword',
+  'swords',
+  'axe',
+  'hammer',
+  'wand',
+  'bow',
+  'shield',
+  'shirt',
+  'helmet',
+  'crown',
+  'gem',
+  'ring',
+  'potion',
+  'pill',
+  'apple',
+  'meat',
+  'wine',
+  'key',
+  'scroll',
+  'book',
+  'map',
+  'compass',
+  'coins',
+  'package',
+  'gift',
+  'feather',
+  'bone',
+  'skull',
+  'flame',
+  'droplet',
+  'leaf',
+  'sparkles',
+  'star',
+  'lamp',
+  'hourglass',
+  'bomb',
+] as const
+export type ItemIcon = (typeof ITEM_ICONS)[number]
+
 export const EQUIP_SLOTS = ['mainHand', 'offHand', 'armor', 'accessory1', 'accessory2'] as const
 export type EquipSlot = (typeof EQUIP_SLOTS)[number]
 
 export interface Item {
   id: string
   name: string
+  /** Icon shown in the bag; null = the type's default. */
+  icon: ItemIcon | null
+  /** Custom picture (data URL), shown instead of the icon. */
+  image: string | null
   quantity: number
   description: string
   type: ItemType
@@ -187,11 +260,16 @@ export interface Identity {
   mindset: string
   /** Square portrait as a data URL (already cropped), or null. */
   portrait: string | null
+  /** Full-body image shown in play and on the inventory (data URL), or null. */
+  body: string | null
 }
 
 export interface HitPoints {
   /** The pre-rolled 1d20 of the level-1 formula `10 + 1d20 + Nv`. Max HP is derived from it. */
   roll: number
+  /** Max HP given directly instead of the d20 (null = use the d20), and its level. */
+  fixedMax: number | null
+  fixedLevel: number
   current: number
   temp: number
 }

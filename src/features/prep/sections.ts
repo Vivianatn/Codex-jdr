@@ -10,6 +10,7 @@ import {
   Scale,
   Skull,
   Users,
+  WandSparkles,
   type LucideIcon,
 } from 'lucide-react'
 import type { Messages } from '@/i18n/locales/fr'
@@ -20,6 +21,7 @@ export const SECTION_ICONS: Record<PrepSection, LucideIcon> = {
   players: Users,
   bestiary: Skull,
   allies: Handshake,
+  skills: WandSparkles,
   items: Gem,
   maps: Map,
   sessions: CalendarDays,

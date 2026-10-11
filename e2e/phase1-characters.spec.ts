@@ -44,7 +44,7 @@ async function createPlayer(page: Page, pseudo: string, audit = false) {
   await next(page)
 
   const add = async (group: string, name: string) => {
-    await page.getByRole('button', { name: `Ajouter : ${group}` }).click()
+    await page.getByRole('button', { name: `Nouvelle compétence : ${group}` }).click()
     await page.getByRole('dialog').getByLabel('Nom').fill(name)
     await page.getByRole('dialog').getByRole('button', { name: 'Enregistrer' }).click()
   }
@@ -56,10 +56,7 @@ async function createPlayer(page: Page, pseudo: string, audit = false) {
   if (audit) await expectNoSeriousA11yViolations(page)
   await next(page)
 
-  await page.getByLabel('Ajouter un objet').fill('Potion de soin')
-  await page.getByLabel('Quantité').last().fill('2')
-  await page.getByRole('button', { name: 'Ajouter', exact: true }).click()
-  await next(page)
+  // No inventory step: a new character always starts with an empty inventory.
   if (audit) await expectNoSeriousA11yViolations(page)
   await page.getByRole('button', { name: 'Créer la fiche' }).click()
   await expect(page.getByRole('heading', { level: 1, name: pseudo })).toBeVisible()
@@ -87,7 +84,8 @@ test('scenario 1: create a player with the wizard and copy the sheet for Discord
   expect(markdown).toContain('- Force : 8')
   expect(markdown).toContain('- Chance : 14')
   expect(markdown).toContain('- [Passif de classe] Peau de pierre')
-  expect(markdown).toContain('- Potion de soin x2')
+  // A new character starts with an empty inventory.
+  expect(markdown).toMatch(/## Inventaire :\r?\n----/)
 
   // The sheet survives a reload (auto-save to IndexedDB).
   await page.reload()
@@ -105,7 +103,6 @@ test('scenario 2 (part): create a Gobelin template and add 5 numbered copies', a
   await page.getByLabel('Jet de PV (1d20)').fill('4')
   await next(page)
   await next(page) // skills are optional for enemies
-  await next(page)
   await page.getByRole('button', { name: 'Créer la fiche' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Gobelin' })).toBeVisible()
 
@@ -141,7 +138,7 @@ test('scenario 7: export, delete and re-import a campaign with its characters', 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('menuitem', { name: 'Exporter' }).click()
   const file = JSON.parse(await readFile(await (await downloadPromise).path(), 'utf8'))
-  expect(file).toMatchObject({ format: 'codex-campaign', version: 4 })
+  expect(file).toMatchObject({ format: 'codex-campaign', version: 5 })
   expect(file.entities).toHaveLength(1)
 
   const dump = () =>
@@ -178,6 +175,8 @@ for (const theme of ['light', 'dark'] as const) {
   test(`character screens have no serious accessibility violations (${theme})`, async ({
     page,
   }) => {
+    // About ten full axe audits in a row.
+    test.setTimeout(120_000)
     if (theme === 'dark') await page.getByRole('button', { name: 'Changer de thème' }).click()
     await createCampaign(page, 'Accessible')
     await createPlayer(page, 'Gorak', true)

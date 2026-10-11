@@ -14,6 +14,7 @@ import {
 import { luckPointsLeft, luckPointsMax, restsAvailable, xpProgress } from '@/domain/progress'
 import { STAT_KEYS, type Entity, type StatKey } from '@/domain/types'
 import { useGameActions } from '@/features/game/useGameActions'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { parseNumber } from '@/lib/numbers'
@@ -103,13 +104,23 @@ export function StatsTab({
             max={999}
             onCommit={editor.level}
           />
-          <NumberInput
-            label={t.sheet.hpRoll}
-            value={entity.hp.roll}
-            min={-50}
-            max={200}
-            onCommit={editor.hpRoll}
-          />
+          {entity.hp.fixedMax === null ? (
+            <NumberInput
+              label={t.sheet.hpRoll}
+              value={entity.hp.roll}
+              min={-50}
+              max={200}
+              onCommit={editor.hpRoll}
+            />
+          ) : (
+            <NumberInput
+              label={t.sheet.hpGiven}
+              value={max}
+              min={1}
+              max={99_999}
+              onCommit={editor.hpFixedMax}
+            />
+          )}
           <NumberInput
             label={t.sheet.hpCurrent}
             value={entity.hp.current}
@@ -125,9 +136,26 @@ export function StatsTab({
             onCommit={editor.hpTemp}
           />
         </div>
-        <p className="tabular mt-3 text-sm text-ink-muted">
-          {t.sheet.hpMax} : {t.sheet.hpFormula(formula, max)}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="tabular text-sm text-ink-muted">
+            {t.sheet.hpMax} :{' '}
+            {entity.hp.fixedMax === null
+              ? t.sheet.hpFormula(formula, max)
+              : t.sheet.hpFixedFormula(entity.hp.fixedMax, entity.hp.fixedLevel, rules.hp.perLevel)}
+          </p>
+          <SegmentedControl<'roll' | 'fixed'>
+            label={t.sheet.hpSource}
+            size="sm"
+            value={entity.hp.fixedMax === null ? 'roll' : 'fixed'}
+            onValueChange={(mode) =>
+              mode === 'roll' ? editor.hpRoll(entity.hp.roll) : editor.hpFixedMax(max)
+            }
+            options={[
+              { value: 'roll', label: t.sheet.hpSourceRoll },
+              { value: 'fixed', label: t.sheet.hpSourceFixed },
+            ]}
+          />
+        </div>
       </section>
 
       <div className="grid gap-4 md:grid-cols-3">

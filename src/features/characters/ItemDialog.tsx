@@ -1,10 +1,13 @@
-import { useState, type FormEvent } from 'react'
+import { ImagePlus } from 'lucide-react'
+import { useRef, useState, type FormEvent } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { CheckboxField, SelectField } from '@/components/ui/fields'
 import { TextAreaField, TextField } from '@/components/ui/TextField'
 import { validateDice } from '@/dice'
 import {
+  ITEM_ICONS,
   ITEM_TYPES,
   RARITIES,
   STAT_KEYS,
@@ -14,7 +17,11 @@ import {
 } from '@/domain/types'
 import { diceErrorMessage } from '@/features/game/diceErrors'
 import { useT } from '@/i18n'
+import { cn } from '@/lib/cn'
+import { fitImage, imageFromFile } from '@/lib/images'
 import { parseNumber } from '@/lib/numbers'
+import { ITEM_ICON_COMPONENTS, RARITY_FRAME } from './itemIcons'
+import { ItemArt } from './ItemTile'
 import { ModifierRow } from './SkillDialog'
 
 /** Full item editor (SPEC §4.11), used by inventories and the item library. */
@@ -108,6 +115,7 @@ function ItemForm({
         error={errors.name}
         autoFocus
       />
+      <ItemArtPicker item={item} onChange={set} />
       <div className="grid gap-4 sm:grid-cols-2">
         <SelectField<ItemType>
           label={t.inventory.type}
@@ -234,5 +242,81 @@ function ItemForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+/** Icon from the set, or a picture imported by the GM. */
+function ItemArtPicker({
+  item,
+  onChange,
+}: {
+  item: Item
+  onChange: (patch: Partial<Item>) => void
+}) {
+  const t = useT()
+  const input = useRef<HTMLInputElement>(null)
+  return (
+    <fieldset className="space-y-2">
+      <legend className="mb-1 text-sm font-medium text-ink">{t.inventory.art}</legend>
+      <div className="flex items-start gap-3">
+        <span
+          className={cn('size-16 shrink-0 rounded-md border-2', RARITY_FRAME[item.rarity].frame)}
+        >
+          <ItemArt item={item} />
+        </span>
+        <div className="flex flex-wrap gap-1">
+          {ITEM_ICONS.map((key) => {
+            const Icon = ITEM_ICON_COMPONENTS[key]
+            const active = !item.image && item.icon === key
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-label={t.inventory.icons[key]}
+                aria-pressed={active}
+                title={t.inventory.icons[key]}
+                onClick={() => onChange({ icon: key, image: null })}
+                className={cn(
+                  'flex size-8 items-center justify-center rounded-sm border transition-colors',
+                  active
+                    ? 'border-accent bg-accent-soft text-accent-text'
+                    : 'border-line text-ink-muted hover:text-ink',
+                )}
+              >
+                <Icon className="size-4" aria-hidden />
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" icon={<ImagePlus />} onClick={() => input.current?.click()}>
+          {t.inventory.image}
+        </Button>
+        {(item.image || item.icon) && (
+          <Button size="sm" variant="ghost" onClick={() => onChange({ image: null, icon: null })}>
+            {t.inventory.defaultArt}
+          </Button>
+        )}
+      </div>
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        onChange={async (e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (!file) return
+          try {
+            onChange({ image: fitImage(await imageFromFile(file), 256, 256) })
+          } catch {
+            toast.error(t.identity.invalidImage)
+          }
+        }}
+      />
+    </fieldset>
   )
 }
