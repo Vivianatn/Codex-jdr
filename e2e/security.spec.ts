@@ -111,6 +111,29 @@ test('the built app runs under its Content Security Policy without a single viol
   await expect(page.getByTestId('account-section')).toBeVisible()
   await page.keyboard.press('Escape')
 
+  // The online mode (WebRTC, D-245) still works under the policy: a loopback data channel.
+  const echoed = await page.evaluate(async () => {
+    const a = new RTCPeerConnection()
+    const b = new RTCPeerConnection()
+    a.onicecandidate = (e) => e.candidate && b.addIceCandidate(e.candidate)
+    b.onicecandidate = (e) => e.candidate && a.addIceCandidate(e.candidate)
+    const channel = a.createDataChannel('codex')
+    const received = new Promise<string>((resolve) => {
+      b.ondatachannel = (e) => (e.channel.onmessage = (m) => resolve(String(m.data)))
+    })
+    await a.setLocalDescription(await a.createOffer())
+    await b.setRemoteDescription(a.localDescription!)
+    await b.setLocalDescription(await b.createAnswer())
+    await a.setRemoteDescription(b.localDescription!)
+    await new Promise<void>((resolve) => (channel.onopen = () => resolve()))
+    channel.send('bonjour')
+    const text = await received
+    a.close()
+    b.close()
+    return text
+  })
+  expect(echoed).toBe('bonjour')
+
   // A fetch to anywhere is refused by the policy itself.
   const fetched = await page.evaluate(() =>
     fetch('https://example.com/').then(

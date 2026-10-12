@@ -100,6 +100,8 @@ export interface MapCanvasProps {
   onCameraChange?: (camera: Camera, size: { width: number; height: number }) => void
   /** Token moved by drag or keyboard; the parent applies fog auto-reveal etc. */
   onTokenMove?: (tokenId: string, cell: Cell) => void
+  /** In view mode, tokens of these characters can still be dragged (a player's own, D-245). */
+  movableEntityIds?: readonly string[]
   /** Characters dropped from the side bar (HTML drag & drop). */
   onDropEntity?: (entityId: string, cell: Cell) => void
   onBlocked?: (message: string) => void
@@ -689,7 +691,7 @@ export function MapCanvas(props: MapCanvasProps) {
           </Layer>
 
           {/* Tokens. */}
-          <Layer listening={mode !== 'view'}>
+          <Layer listening={mode !== 'view' || Boolean(props.movableEntityIds?.length)}>
             {show('tokens') &&
               tokens.map((t) => (
                 <TokenNode
@@ -702,7 +704,10 @@ export function MapCanvas(props: MapCanvasProps) {
                   theme={theme}
                   selected={selectedTokens.includes(t.id) || areaTargets.has(t.id)}
                   active={props.activeEntityId === t.entityId}
-                  draggable={mode !== 'view' && tool === 'select' && Boolean(props.onChange)}
+                  draggable={
+                    (mode !== 'view' && tool === 'select' && Boolean(props.onChange)) ||
+                    (props.movableEntityIds?.includes(t.entityId) ?? false)
+                  }
                   onSelect={(additive) => {
                     const current = useMapViewStore.getState().selection
                     const ids = current.type === 'tokens' ? current.ids : []

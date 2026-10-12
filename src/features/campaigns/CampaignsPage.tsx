@@ -1,8 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { motion } from 'framer-motion'
-import { Plus, Upload } from 'lucide-react'
+import { Plus, Upload, Users } from 'lucide-react'
 import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Navigate, useNavigate } from 'react-router'
 import { LogoMark, Ornament, Wordmark } from '@/components/Brand'
 import { CandleDeskIllustration } from '@/components/illustrations'
 import { Button } from '@/components/ui/Button'
@@ -12,7 +12,10 @@ import { campaignRepository } from '@/db/campaigns'
 import type { Campaign } from '@/db/types'
 import { AppHeader } from '@/features/shell/AppHeader'
 import { PageTransition } from '@/features/shell/PageTransition'
+import { JoinDialog } from '@/features/online/JoinDialog'
 import { useT } from '@/i18n'
+import { useOnlineStore } from '@/online/onlineStore'
+import { guestHome } from '@/online/routes'
 import { useUiStore } from '@/stores/uiStore'
 import { CampaignCard } from './CampaignCard'
 import { CampaignFormDialog } from './CampaignFormDialog'
@@ -33,6 +36,8 @@ export function CampaignsPage() {
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' })
   const fileInput = useRef<HTMLInputElement>(null)
   const close = () => setDialog({ kind: 'none' })
+  const [joining, setJoining] = useState(false)
+  const guest = useOnlineStore((s) => (s.role === 'guest' ? s : null))
 
   const importButton = (
     <Button
@@ -43,11 +48,21 @@ export function CampaignsPage() {
       {t.campaigns.import}
     </Button>
   )
+  // Every account plays both roles: GM of its campaigns, player or co-GM in others' (D-245).
+  const joinButton = (
+    <Button icon={<Users />} onClick={() => setJoining(true)} title={t.online.joinHint}>
+      {t.online.join}
+    </Button>
+  )
   const createButton = (
     <Button variant="primary" icon={<Plus />} onClick={() => setDialog({ kind: 'create' })}>
       {t.campaigns.new}
     </Button>
   )
+
+  // A guest works on the host's campaign only.
+  if (guest?.campaignId && guest.guestRole)
+    return <Navigate to={guestHome(guest.campaignId, guest.guestRole)} replace />
 
   return (
     <div className="flex min-h-full flex-col">
@@ -70,6 +85,7 @@ export function CampaignsPage() {
             </div>
             {campaigns && campaigns.length > 0 && (
               <div className="flex gap-2">
+                {joinButton}
                 {importButton}
                 {createButton}
               </div>
@@ -86,6 +102,7 @@ export function CampaignsPage() {
                 <>
                   {createButton}
                   {importButton}
+                  {joinButton}
                 </>
               }
             />
@@ -124,6 +141,8 @@ export function CampaignsPage() {
           if (file) await actions.importFromFile(file)
         }}
       />
+
+      <JoinDialog open={joining} onOpenChange={setJoining} />
 
       <CampaignFormDialog
         open={dialog.kind === 'create'}

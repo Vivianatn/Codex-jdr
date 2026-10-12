@@ -18,6 +18,21 @@ Demande du MJ : « les quêtes deviennent des sessions qu'on peut utiliser et r�
 - Démarrer, passer la main et terminer **vident l'historique d'annulation** : on ne peut pas annuler à travers ces points de passage (l'historique est local à chaque appareil).
 - Format d'export v8 (sessions et parties incluses) ; une partie en cours n'est jamais importée comme « en cours ».
 
+### D-245 · Deux modes : MJ seul (local) et en ligne, pair-à-pair sans serveur
+
+Demande du MJ : un mode « seulement MJ » local et un mode en ligne où des joueurs rejoignent une session et choisissent leur personnage ; plusieurs éditeurs peuvent préparer ensemble ; un compte a deux rôles (MJ et joueur). Choix du MJ : **pair-à-pair sans serveur**, **co-édition en direct chez le propriétaire**, **les joueurs déplacent leur jeton et lancent leurs dés**.
+
+- **Transport** : WebRTC (canal de données chiffré DTLS). Pas de serveur de signalisation : l'hôte et chaque invité échangent **deux codes** (invitation puis réponse) par le canal qu'ils partagent déjà (Discord…). Le code contient la description de session et l'empreinte DTLS : la connexion n'accepte que l'appareil dont on a collé le code. Les candidats réseau sont collectés avant de produire le code (un seul échange). Serveur STUN public par défaut (`stun.l.google.com`), modifiable ou vide (même réseau seulement) dans les Paramètres ; pas de relais TURN, donc certains réseaux stricts (entreprise, certaines 4G) échoueront : limite assumée du « sans serveur ».
+- **Topologie en étoile, l'hôte fait foi** : la campagne reste dans la base chiffrée du MJ propriétaire. Chaque invité reçoit une **copie temporaire** (base `codex-remote-*`, chiffrée avec une clé jetable, supprimée en partant ; les copies orphelines sont effacées au déverrouillage suivant). Toute l'interface existante fonctionne sur cette copie grâce à `activeDb()`.
+- **Synchronisation** : un « fil des modifications » (middleware Dexie, après validation de la transaction) signale les écritures. L'hôte recalcule, pour chaque invité, ce qu'il a le droit de voir et n'envoie que les différences (empreinte par enregistrement). Un éditeur envoie ses propres écritures ; l'hôte les valide, les applique et accuse réception ; la copie de l'éditeur ignore les mises à jour de ses écritures pas encore confirmées. Conflits : la dernière écriture reçue par l'hôte gagne.
+- **Ce que voit un joueur** : la carte en jeu sans éléments cachés, notes du MJ ni contenu des coffres fermés ; les jetons visibles ; le groupe ; les ennemis visibles réduits à nom, image, PV et états (ni statistiques, ni butin, ni description) ; les jets publics. Jamais le bestiaire, la bibliothèque d'objets, les sessions préparées ni les notes du MJ.
+- **Ce que peut faire un joueur** : choisir un personnage joueur libre, déplacer **son** jeton et lancer **ses** dés (tests et jets libres), sous forme d'**intentions** que l'hôte vérifie (partie en ligne en cours, personnage à lui, case valide, pas de mur) puis joue lui-même : les dés sont tirés par l'hôte. En mode MJ seul, les intentions sont refusées.
+- **Éditeurs** : tout le reste. Pendant une partie, seul l'opérateur (D-244) modifie personnages, cartes, jets et compétences ; l'hôte refuse les autres et renvoie la vérité. Un éditeur peut démarrer la partie (il devient opérateur) ; s'il se déconnecte, la main revient à l'hôte.
+- **Validation par l'hôte** de chaque message : format, taille (5 000 enregistrements au plus), table autorisée, enregistrement appartenant bien à la campagne (y compris si le même identifiant existe dans une autre campagne), images matricielles uniquement.
+- **Un compte, deux rôles** : chaque compte est MJ de ses campagnes et peut « Rejoindre une partie » comme joueur ou co-MJ selon l'invitation reçue. Pendant qu'il est invité, ses propres campagnes restent fermées et chiffrées ; « Quitter la partie » les rend.
+- **Durée de vie** : la session en ligne vit tant que l'hôte reste dans la campagne avec Codex déverrouillé ; recharger la page, quitter la campagne ou verrouiller la ferme pour tous.
+- La CSP (`connect-src 'none'`) ne s'applique pas à WebRTC ; vérifié sur le build de production (test e2e).
+
 ---
 
 ## Comptes, chiffrement et sécurité (2026-10-12)

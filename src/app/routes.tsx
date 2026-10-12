@@ -1,6 +1,7 @@
 import { Navigate, type RouteObject } from 'react-router'
 import { RequirePlayersSession, RequireSession } from '@/features/account/SessionGate'
 import { CampaignsPage } from '@/features/campaigns/CampaignsPage'
+import { PlayerScreen } from '@/features/online/PlayerScreen'
 import { SessionEditor } from '@/features/sessions/SessionEditor'
 import { PlayLayout } from '@/features/play/PlayLayout'
 import { PrepLayout } from '@/features/prep/PrepLayout'
@@ -22,6 +23,8 @@ export const routes: RouteObject[] = [
     errorElement: <RouteError />,
     children: [
       { path: '/', element: <CampaignsPage />, errorElement: <RouteError /> },
+      // A player in someone else's game (D-245).
+      { path: '/c/:campaignId/player', element: <PlayerScreen />, errorElement: <RouteError /> },
       {
         path: '/c/:campaignId',
         element: <CampaignLayout />,

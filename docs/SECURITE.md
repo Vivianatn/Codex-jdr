@@ -1,8 +1,8 @@
 # Sécurité de Codex
 
-_Dernière mise à jour : 12 octobre 2026. Décisions : D-241 (comptes et chiffrement), D-242 (base de données), D-243 (durcissement)._
+_Dernière mise à jour : 12 octobre 2026. Décisions : D-241 (comptes et chiffrement), D-242 (base de données), D-243 (durcissement), D-245 (mode en ligne)._
 
-Codex est une application **locale** : pas de serveur, pas de réseau. La sécurité porte donc sur ce qui reste sur l'appareil et sur ce qui entre dans l'application (fichiers importés).
+Codex est une application **locale** : pas de serveur, et hors mode en ligne aucun réseau. La sécurité porte sur ce qui reste sur l'appareil, sur ce qui entre dans l'application (fichiers importés) et, en mode en ligne, sur ce qu'échangent directement les appareils (section 4).
 
 ## 1. Ce qui est protégé, et contre qui
 
@@ -48,12 +48,24 @@ code de secours ─PBKDF2-SHA-256 (sel distinct)──────────�
 - Le navigateur est prié de ne jamais évincer les données (`navigator.storage.persist()`).
 - Les campagnes enregistrées avant les comptes (base `codex`, non chiffrée) sont reprises et chiffrées dans le premier compte créé, puis la base en clair est supprimée ; en cas d'échec, rien n'est supprimé.
 
-## 4. Vérifications automatiques
+## 4. Mode en ligne (pair-à-pair)
+
+| Menace                                     | Protection                                                                                                                                                                                                                                                                         |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Écoute du trafic                           | WebRTC chiffre tout (DTLS). Aucun serveur ne relaie les données.                                                                                                                                                                                                                   |
+| Quelqu'un d'autre se connecte              | Chaque invitation est à usage unique ; la connexion n'aboutit qu'avec le code de réponse que **le MJ colle lui-même**, qui porte l'empreinte DTLS de l'appareil invité.                                                                                                            |
+| Un joueur qui triche ou modifie son client | L'hôte ne reçoit des joueurs que des **intentions** (déplacer son jeton, lancer ses dés), qu'il vérifie et joue lui-même ; les dés sont tirés chez l'hôte. Un joueur ne reçoit jamais les données cachées (bestiaire, notes, statistiques des ennemis, éléments et jetons cachés). |
+| Un co-MJ malveillant                       | Il n'écrit que dans la campagne partagée (contrôle de propriété de chaque enregistrement), jamais sur la table pendant une partie qu'il ne mène pas, jamais d'image non matricielle. Il reçoit toute la campagne : n'invite comme éditeur que des personnes de confiance.          |
+| Données laissées chez l'invité             | Sa copie est chiffrée avec une clé jetable gardée en mémoire et supprimée en partant ; une copie orpheline (onglet fermé, plantage) est illisible et effacée au déverrouillage suivant.                                                                                            |
+| Adresse IP                                 | Les participants voient l'adresse IP des autres (inhérent au pair-à-pair) ; le serveur STUN la voit aussi, jamais les données. STUN modifiable ou désactivable (réseau local seulement).                                                                                           |
+
+## 5. Vérifications automatiques
 
 - Tests unitaires : primitives (altération d'un octet, mauvaise clé, mauvaises données associées), base chiffrée (contenu brut illisible, index déplacés détectés, requêtes composées, `modify`), comptes (anti-force-brute, récupération, changement de mot de passe, suppression), mots de passe, sauvegardes, assainissement des imports.
+- Mode en ligne : tests unitaires de l'hôte et des invités (refus hors campagne, hors opérateur, personnage d'un autre, projection joueur) et test de bout en bout en vrai WebRTC entre trois navigateurs (`e2e/online.spec.ts`).
 - Tests de bout en bout (`e2e/security.spec.ts`) : lecture brute de tout le stockage du navigateur sans trouver ni campagne, ni personnage, ni mot de passe ; fenêtre joueurs verrouillée avec le MJ ; **build de production sous sa CSP sans aucune violation**, requête réseau effectivement bloquée.
 - `npm audit` : aucune vulnérabilité connue dans les dépendances au 12 octobre 2026.
 
-## 5. Signaler un problème
+## 6. Signaler un problème
 
 Codex n'envoie rien : un problème de sécurité se signale directement au mainteneur du dépôt, sans publier de détail exploitable avant correction.

@@ -368,3 +368,75 @@ export function selectEntitiesOfKinds(entities: EntityMap, kinds: readonly Entit
     .filter((e) => kinds.includes(e.kind))
     .sort((a, b) => a.createdAt - b.createdAt)
 }
+
+// ---------------------------------------------------------------------------
+// Changes received from the network (D-245)
+// ---------------------------------------------------------------------------
+
+/** Records written elsewhere (a peer) that the open campaign must show. */
+export interface ExternalChange {
+  table: string
+  put: Record<string, unknown>[]
+  del: string[]
+}
+
+/**
+ * Brings changes made by a peer into the open campaign. They are not undoable
+ * here, and are recorded as already saved so the auto-save does not echo them.
+ */
+export function applyExternalChanges(changes: readonly ExternalChange[]): void {
+  const s = useCampaignStore.getState()
+  const campaignId = s.campaignId
+  if (!campaignId || s.status !== 'ready') return
+  let { entities, skills, maps, play } = s
+  const own = (r: Record<string, unknown>) => r.campaignId === campaignId
+  for (const change of changes) {
+    if (change.table === 'entities') {
+      entities = { ...entities }
+      lastSaved = { ...lastSaved }
+      for (const raw of change.put.filter(own)) {
+        const entity = normalizeEntityShape(raw as unknown as Entity)
+        entities[entity.id] = entity
+        lastSaved[entity.id] = entity
+      }
+      for (const id of change.del) {
+        delete entities[id]
+        delete lastSaved[id]
+      }
+    } else if (change.table === 'skills') {
+      skills = { ...skills }
+      lastSavedSkills = { ...lastSavedSkills }
+      for (const raw of change.put.filter(own)) {
+        const def = raw as unknown as SkillDefinition
+        skills[def.id] = def
+        lastSavedSkills[def.id] = def
+      }
+      for (const id of change.del) {
+        delete skills[id]
+        delete lastSavedSkills[id]
+      }
+    } else if (change.table === 'maps') {
+      maps = { ...maps }
+      lastSavedMaps = { ...lastSavedMaps }
+      for (const raw of change.put.filter(own)) {
+        const map = normalizeMap(raw as unknown as GameMap)
+        maps[map.id] = map
+        lastSavedMaps[map.id] = map
+      }
+      for (const id of change.del) {
+        delete maps[id]
+        delete lastSavedMaps[id]
+      }
+    } else if (change.table === 'campaigns') {
+      const record = change.put.find((r) => r.id === campaignId)
+      if (record) {
+        play = normalizePlayState(record.play)
+        lastSavedPlay = play
+      }
+    }
+  }
+  if (entities !== s.entities || skills !== s.skills || maps !== s.maps || play !== s.play)
+    campaignHistory
+      .getState()
+      .untracked(() => useCampaignStore.setState({ entities, skills, maps, play }))
+}

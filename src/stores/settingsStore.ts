@@ -12,6 +12,9 @@ export type Surface = 'prep' | 'play' | 'players'
 /** localStorage key — also read by the inline script in index.html to avoid a theme flash. */
 export const SETTINGS_STORAGE_KEY = 'codex.settings'
 
+/** Public STUN server used unless the GM changes it (D-245). */
+export const DEFAULT_STUN = 'stun:stun.l.google.com:19302'
+
 export interface SettingsState {
   theme: ThemePreference
   animations: AnimationLevel
@@ -22,6 +25,8 @@ export interface SettingsState {
   playDark: boolean
   /** Barely visible paper grain behind the preparation screens (DA §6.5). */
   paperGrain: boolean
+  /** STUN server for the online mode (D-245); empty = same network only. */
+  stunServer: string
   /** Interface text size in percent (not the board). */
   textSize: TextSize
   /** Screen currently showing (not saved). */
@@ -32,6 +37,7 @@ export interface SettingsState {
   setDiceAnimation: (on: boolean) => void
   setPlayDark: (on: boolean) => void
   setPaperGrain: (on: boolean) => void
+  setStunServer: (url: string) => void
   setTextSize: (size: TextSize) => void
   setSurface: (surface: Surface) => void
 }
@@ -49,6 +55,7 @@ export const useSettingsStore = create<SettingsState>()(
       diceAnimation: true,
       playDark: true,
       paperGrain: true,
+      stunServer: DEFAULT_STUN,
       textSize: 100,
       surface: 'prep',
       setTheme: (theme) => set({ theme }),
@@ -57,6 +64,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDiceAnimation: (diceAnimation) => set({ diceAnimation }),
       setPlayDark: (playDark) => set({ playDark }),
       setPaperGrain: (paperGrain) => set({ paperGrain }),
+      setStunServer: (stunServer) => set({ stunServer: stunServer.trim() }),
       setTextSize: (textSize) => set({ textSize }),
       setSurface: (surface) => set({ surface }),
     }),
@@ -71,6 +79,7 @@ export const useSettingsStore = create<SettingsState>()(
         diceAnimation,
         playDark,
         paperGrain,
+        stunServer,
         textSize,
       }) => ({
         theme,
@@ -79,6 +88,7 @@ export const useSettingsStore = create<SettingsState>()(
         diceAnimation,
         playDark,
         paperGrain,
+        stunServer,
         textSize,
       }),
     },

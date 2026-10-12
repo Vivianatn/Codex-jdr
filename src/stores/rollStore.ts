@@ -54,3 +54,18 @@ export const useRollStore = create<RollState>()((set, get) => ({
     if (campaignId) await activeDb().rolls.where('campaignId').equals(campaignId).delete()
   },
 }))
+
+/** Rolls written by a peer (D-245): merged into the open campaign's history. */
+export function applyExternalRolls(
+  put: readonly Record<string, unknown>[],
+  del: readonly string[],
+) {
+  const { campaignId, rolls } = useRollStore.getState()
+  if (!campaignId) return
+  const byId = new Map(rolls.map((r) => [r.id, r]))
+  for (const raw of put)
+    if (raw.campaignId === campaignId) byId.set(String(raw.id), raw as unknown as RollRecord)
+  for (const id of del) byId.delete(id)
+  const next = [...byId.values()].sort((a, b) => a.at - b.at).slice(-ROLL_HISTORY_LIMIT)
+  useRollStore.setState({ rolls: next })
+}

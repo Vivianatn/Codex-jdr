@@ -1,14 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowLeft, Hammer, Swords } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
-import { Link, Outlet, useMatch, useNavigate, useParams } from 'react-router'
+import { Link, Navigate, Outlet, useMatch, useNavigate, useParams } from 'react-router'
+import { toast } from 'sonner'
 import { LogoMark } from '@/components/Brand'
 import { IconButton } from '@/components/ui/Button'
 import { buttonClasses } from '@/components/ui/buttonStyles'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { campaignRepository } from '@/db/campaigns'
-import { useT } from '@/i18n'
+import { GuestBadge } from '@/features/online/JoinDialog'
+import { OnlinePanel } from '@/features/online/OnlinePanel'
+import { getMessages, useT } from '@/i18n'
+import { stopHosting } from '@/online/controller'
+import { useOnlineStore } from '@/online/onlineStore'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
 import { DiceButton } from '@/features/dice/DicePanel'
@@ -34,11 +39,23 @@ export function CampaignLayout() {
 
   const ready = useCampaignStore((s) => s.campaignId === campaignId && s.status === 'ready')
 
+  const online = useOnlineStore((s) => s.role)
+  const guestRole = useOnlineStore((s) => s.guestRole)
+
   useEffect(() => {
     if (!campaignId) return
-    void campaignRepository.markOpened(campaignId)
+    // A guest's copy is not "opened" by them: nothing to write back to the host.
+    if (useOnlineStore.getState().role !== 'guest') void campaignRepository.markOpened(campaignId)
     void useCampaignStore.getState().load(campaignId)
     void useRollStore.getState().load(campaignId)
+    return () => {
+      // The online session lives while the GM stays in the shared campaign (D-245).
+      const state = useOnlineStore.getState()
+      if (state.role === 'host' && state.campaignId === campaignId) {
+        stopHosting()
+        toast(getMessages().online.stopped)
+      }
+    }
   }, [campaignId])
 
   // Older records may miss newer rule keys; normalise once per change.
@@ -54,6 +71,8 @@ export function CampaignLayout() {
     [campaign],
   )
 
+  // Players have their own screen; the prep screens are for editors (D-245).
+  if (guestRole === 'player') return <Navigate to={`/c/${campaignId}/player`} replace />
   if (campaign === undefined || (campaign && !ready)) return null
 
   if (campaign === null || !normalized) {
@@ -82,13 +101,14 @@ export function CampaignLayout() {
         <AppHeader
           start={
             <>
-              <BackToCampaigns />
+              {online !== 'guest' && <BackToCampaigns />}
               <span className="truncate type-card-title text-ink">{campaign.name}</span>
             </>
           }
           center={<ModeSwitch campaignId={campaign.id} />}
           end={
             <>
+              {online === 'guest' ? <GuestBadge /> : <OnlinePanel />}
               <UndoRedo />
               <DiceButton />
             </>

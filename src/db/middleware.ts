@@ -179,3 +179,83 @@ export function encryptionMiddleware(
     }),
   }
 }
+
+/** Writes of one table in one committed transaction (D-245). */
+export interface DbChange {
+  table: string
+  /** Records written, as the app wrote them (clear). */
+  put: Record<string, unknown>[]
+  /** Primary keys deleted. */
+  del: string[]
+  /** True when the write came from the network (applied with `markRemote`). */
+  remote: boolean
+}
+
+const REMOTE = Symbol('codex.remote')
+
+/** Flags a transaction as applying changes received from a peer, so they are not sent back. */
+export function markRemote(transaction: unknown): void {
+  ;(transaction as Record<symbol, boolean>)[REMOTE] = true
+}
+
+/**
+ * Change feed (D-245): reports every write once its transaction has committed
+ * (an aborted transaction reports nothing). The online mode uses it to send a
+ * guest's edits to the host and to tell the host when to resynchronise peers.
+ */
+export function changeFeedMiddleware(emit: (changes: DbChange[]) => void): Middleware<DBCore> {
+  const pending = new WeakMap<object, DbChange[]>()
+
+  const collect = (trans: object, change: Omit<DbChange, 'remote'>) => {
+    let list = pending.get(trans)
+    if (!list) {
+      list = []
+      pending.set(trans, list)
+      const target = trans as Partial<EventTarget>
+      target.addEventListener?.('complete', () => {
+        const changes = pending.get(trans) ?? []
+        pending.delete(trans)
+        const remote = Boolean((trans as Record<symbol, boolean>)[REMOTE])
+        if (changes.length) emit(changes.map((c) => ({ ...c, remote })))
+      })
+    }
+    list.push({ ...change, remote: false })
+  }
+
+  return {
+    stack: 'dbcore',
+    name: 'codex-change-feed',
+    // Above the encryption (1.5): sees clear records. Under the integrity guard (1.8).
+    level: 1.7,
+    create: (down) => ({
+      ...down,
+      table: (name) => {
+        const table = down.table(name)
+        return {
+          ...table,
+          mutate: async (req) => {
+            let deleted: string[] = []
+            if (req.type === 'deleteRange') {
+              // Range deletes (clear, prefix) carry no keys: read them first.
+              const res = await table.query({
+                trans: req.trans,
+                values: false,
+                query: { index: table.schema.primaryKey, range: req.range },
+              })
+              deleted = res.result.map(String)
+            } else if (req.type === 'delete') deleted = req.keys.map(String)
+            const result = await table.mutate(req)
+            if (req.type === 'add' || req.type === 'put')
+              collect(req.trans, {
+                table: name,
+                put: req.values as Record<string, unknown>[],
+                del: [],
+              })
+            else if (deleted.length) collect(req.trans, { table: name, put: [], del: deleted })
+            return result
+          },
+        }
+      },
+    }),
+  }
+}

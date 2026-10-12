@@ -4,7 +4,12 @@ import type { RollRecord } from '@/domain/rolls'
 import type { GameMap } from '@/domain/maps'
 import type { SessionPlan, SessionRun } from '@/domain/sessions'
 import type { EnemyTemplate, Entity, Item, LibraryItem, SkillDefinition } from '@/domain/types'
-import { encryptionMiddleware, integrityMiddleware } from './middleware'
+import {
+  changeFeedMiddleware,
+  encryptionMiddleware,
+  integrityMiddleware,
+  type DbChange,
+} from './middleware'
 import type { Asset, Backup } from './types'
 import { starterConditions } from '@/domain/conditions'
 import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules } from '@/rules'
@@ -127,12 +132,15 @@ export class CodexDB extends Dexie {
    * @param options.key data key of the account: every record is then encrypted at rest (D-241).
    * @param options.onCorrupt called for each record that fails authentication (read as missing).
    */
+  private readonly changeListeners = new Set<(changes: DbChange[]) => void>()
+
   constructor(
     name: string = LEGACY_DB_NAME,
     options: { key?: Uint8Array; onCorrupt?: (table: string, id: unknown) => void } = {},
   ) {
     super(name)
     this.use(integrityMiddleware)
+    this.use(changeFeedMiddleware((changes) => this.changeListeners.forEach((l) => l(changes))))
     if (options.key) this.use(encryptionMiddleware(options.key, options.onCorrupt))
     this.version(1).stores(SCHEMA[1])
     // v2 (phase 1): characters, bestiary, per-campaign rules.
@@ -223,6 +231,12 @@ export class CodexDB extends Dexie {
     // v9 (D-244): session plans and runs. New tables only.
     this.version(9).stores(SCHEMA[9])
   }
+
+  /** Committed writes, local or received (D-245). Returns the unsubscribe. */
+  onChanges(listener: (changes: DbChange[]) => void): () => void {
+    this.changeListeners.add(listener)
+    return () => this.changeListeners.delete(listener)
+  }
 }
 
 export class DatabaseLockedError extends Error {
@@ -244,8 +258,12 @@ export function hasActiveDb(): boolean {
   return active !== null
 }
 
-/** Called by the session only (unlock, lock). Closes the previous database. */
-export function setActiveDb(next: CodexDB | null): void {
-  if (active && active !== next) active.close()
+/**
+ * Called by the session only (unlock, lock, joining a game). Closes the
+ * previous database unless `keepPrevious` (the account's, while a guest
+ * works on the copy of someone else's campaign).
+ */
+export function setActiveDb(next: CodexDB | null, { keepPrevious = false } = {}): void {
+  if (active && active !== next && !keepPrevious) active.close()
   active = next
 }

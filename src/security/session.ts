@@ -29,6 +29,8 @@ export const useSessionStore = create<SessionState>()(() => ({
 }))
 
 let currentKey: Uint8Array | null = null
+/** The account's own database, kept open while a guest works on a remote copy. */
+let accountDb: CodexDB | null = null
 
 const onLockListeners = new Set<() => void>()
 
@@ -56,6 +58,8 @@ export async function startSession(
   const db = new CodexDB(accountDbName(account.id), { key, onCorrupt: reportCorrupt })
   await db.open()
   setActiveDb(db)
+  accountDb = db
+  void deleteStaleCopies()
   if (currentKey && currentKey !== key) wipe(currentKey)
   currentKey = key
   // Ask the browser not to evict the data under storage pressure.
@@ -80,9 +84,38 @@ export async function lockSession(): Promise<void> {
   } finally {
     useRollStore.setState({ campaignId: null, rolls: [] })
     setActiveDb(null)
+    accountDb?.close()
+    accountDb = null
     wipe(currentKey)
     currentKey = null
     if (import.meta.env.DEV) delete (window as unknown as { __codexDb?: CodexDB }).__codexDb
     useSessionStore.setState({ status: 'locked', account: null, delegated: false })
+  }
+}
+
+/** Prefix of the temporary databases holding a joined campaign (D-245). */
+export const REMOTE_DB_PREFIX = 'codex-remote-'
+
+/** Guest: works on the copy of the host's campaign; the account database stays open. */
+export function enterRemoteDb(copy: CodexDB): void {
+  setActiveDb(copy, { keepPrevious: true })
+  if (import.meta.env.DEV) (window as unknown as { __codexDb?: CodexDB }).__codexDb = copy
+}
+
+/** Guest leaving: back to the account database (the copy is closed). */
+export function leaveRemoteDb(): void {
+  if (!accountDb) return
+  setActiveDb(accountDb)
+  if (import.meta.env.DEV) (window as unknown as { __codexDb?: CodexDB }).__codexDb = accountDb
+}
+
+/** Copies left behind by a crash or a closed tab are deleted at the next unlock. */
+async function deleteStaleCopies(): Promise<void> {
+  try {
+    const all = (await indexedDB.databases?.()) ?? []
+    for (const { name } of all)
+      if (name?.startsWith(REMOTE_DB_PREFIX)) indexedDB.deleteDatabase(name)
+  } catch {
+    // Listing databases is not available everywhere: the copies then stay until erased.
   }
 }

@@ -20,9 +20,20 @@ Si tu utilises Codex pour ta table, **tu es responsable des données que tu y sa
 | Cartes et images importées (portraits, fonds de carte)                          | IndexedDB                             | Plateau et fiches               |
 | Réglages d'affichage (thème, taille du texte, animations, dernier écran ouvert) | `localStorage` du navigateur          | Retrouver tes préférences       |
 
-Codex n'utilise **aucun cookie, aucune mesure d'audience, aucun traceur, aucune police ou ressource chargée depuis Internet**.
+Codex n'utilise **aucun cookie, aucune mesure d'audience, aucun traceur, aucune police ou ressource chargée depuis Internet**. Hors mode en ligne, il ne se connecte à rien.
 
 La fenêtre « Vue joueurs » communique avec l'écran du MJ par un canal local au navigateur (`BroadcastChannel`) ; rien ne sort de l'appareil.
+
+### Mode en ligne
+
+Quand tu ouvres une campagne en ligne ou rejoins celle de quelqu'un, les appareils communiquent **directement entre eux**, chiffrés, sans serveur de Codex :
+
+- le MJ envoie aux éditeurs toute la campagne partagée, et aux joueurs seulement ce qu'ils peuvent voir à la table ;
+- chacun voit le nom de compte des autres participants ;
+- les appareils échangent leurs **adresses IP** pour se connecter ; un serveur STUN public (par défaut celui de Google, modifiable ou désactivable dans les Paramètres) les voit aussi, jamais les données ;
+- la copie reçue par un invité est temporaire, chiffrée, et supprimée quand il quitte la partie.
+
+Le MJ qui partage sa campagne reste responsable de ce qu'il partage : n'invite que des personnes que tu connais.
 
 ## 3. Données sur de vraies personnes
 

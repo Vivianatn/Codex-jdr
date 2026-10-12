@@ -1,6 +1,6 @@
 {
   "format": "codex-campaign",
-  "version": 7,
+  "version": 8,
   "exportedAt": "2026-10-12T10:21:30.251Z",
   "campaign": {
     "id": "afb78d6f-e867-4595-a003-9395c952a281",
@@ -22,20 +22,12 @@
       "checks": {
         "resolution": "rollUnder",
         "criticalSuccess": {
-          "major": [
-            1
-          ],
-          "minor": [
-            2
-          ]
+          "major": [1],
+          "minor": [2]
         },
         "criticalFailure": {
-          "major": [
-            20
-          ],
-          "minor": [
-            19
-          ]
+          "major": [20],
+          "minor": [19]
         },
         "luckWidening": {
           "enabled": false,
@@ -46,9 +38,7 @@
         "initialActive": 2,
         "initialPassive": 1,
         "extraSkillEveryLevels": 10,
-        "enforceOnCreation": [
-          "player"
-        ]
+        "enforceOnCreation": ["player"]
       },
       "grid": {
         "cellMeters": 1,
@@ -291,7 +281,8 @@
       "display": {
         "mode": "map",
         "imageAssetId": null
-      }
+      },
+      "live": null
     }
   },
   "entities": [
@@ -1464,5 +1455,46 @@
       "updatedAt": 1791800490239
     }
   ],
-  "assets": []
+  "assets": [],
+  "sessions": [
+    {
+      "id": "session-crypte-ombreval",
+      "campaignId": "afb78d6f-e867-4595-a003-9395c952a281",
+      "title": "La Crypte d’Ombreval",
+      "summary": "Le groupe descend dans la crypte sous la chapelle pour retrouver le frère de Brann, enlevé par les goules de Mortecendre.",
+      "objectives": [
+        {
+          "id": "obj-1",
+          "text": "Retrouver le frère de Brann"
+        },
+        {
+          "id": "obj-2",
+          "text": "Ouvrir le coffre scellé"
+        },
+        {
+          "id": "obj-3",
+          "text": "Vaincre Mortecendre ou briser l’autel"
+        }
+      ],
+      "rewards": {
+        "xp": 300,
+        "money": 2000,
+        "items": "Amulette d’os, clé de l’ossuaire"
+      },
+      "notes": "Mortecendre se relève une fois à 0 PV tant que l’autel est intact. La dalle piégée (7,7) inflige 2d6.",
+      "mapId": "5f97b9c0-951f-4512-9721-1f5c15ddea82",
+      "encounters": [
+        {
+          "id": "enc-1",
+          "templateId": "aeee1f00-e98c-4b93-9e21-da7155b209b0",
+          "count": 2
+        }
+      ],
+      "timesPlayed": 0,
+      "lastPlayedAt": null,
+      "createdAt": 1791816641040,
+      "updatedAt": 1791816641040
+    }
+  ],
+  "sessionRuns": []
 }
