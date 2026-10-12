@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { emptyLibrary, type Campaign } from '@/db/types'
 import { conditionFromTemplate } from '@/domain/conditions'
 import { defaultRules } from '@/rules'
@@ -38,8 +38,8 @@ const entity = (id: string) => useCampaignStore.getState().entities[id]!
 
 async function setup(...entities: Entity[]) {
   await useCampaignStore.getState().unload()
-  await db.entities.clear()
-  await db.entities.bulkAdd(entities)
+  await activeDb().entities.clear()
+  await activeDb().entities.bulkAdd(entities)
   await useCampaignStore.getState().load('c1')
   useRollStore.setState({ campaignId: 'c1', rolls: [] })
 }

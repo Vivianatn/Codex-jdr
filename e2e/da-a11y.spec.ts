@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createCampaign, importCharacter } from './support/app'
+import { createAccount, createCampaign, importCharacter } from './support/app'
 
 /**
  * Art direction (docs/CODEX-DA.md §12, step 12): the redesigned screens pass
@@ -17,6 +17,10 @@ for (const theme of ['light', 'dark'] as const) {
     await disableAppAnimations(page)
     await page.setViewportSize({ width: 1400, height: 900 })
     await page.goto('/')
+    // Lock screen (D-241), then the empty campaigns screen.
+    await expect(page.getByRole('heading', { name: 'Bienvenue dans Codex' })).toBeVisible()
+    await expectNoSeriousA11yViolations(page)
+    await createAccount(page)
     await expect(page.getByRole('img', { name: /chandelle éteinte/ })).toBeVisible()
     await expectNoSeriousA11yViolations(page)
 

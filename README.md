@@ -38,6 +38,7 @@ Première exécution des tests e2e : `npx playwright install chromium`.
 - [Journal des décisions](docs/DECISIONS.md)
 - [Direction artistique](docs/CODEX-DA.md)
 - [Notice de confidentialité (RGPD)](docs/CONFIDENTIALITE.md)
+- [Sécurité : comptes, chiffrement, modèle de menace](docs/SECURITE.md)
 
 ## Crédits
 

@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createCampaign, importCharacter, STATS } from './support/app'
+import { STATS, createAccount, createCampaign, importCharacter } from './support/app'
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await disableAppAnimations(page)
   await page.goto('/')
+  await createAccount(page)
 })
 
 test('one library skill shared by two characters: editing it updates both', async ({ page }) => {

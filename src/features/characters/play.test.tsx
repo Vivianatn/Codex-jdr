@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { campaignRepository } from '@/db/campaigns'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { createEntity, normalizeSkill } from '@/domain/entity'
 import { newItem } from '@/domain/items'
 import type { Entity } from '@/domain/types'
@@ -21,10 +21,10 @@ beforeEach(async () => {
   useUiStore.setState({ diceOpen: false, playSheetId: null })
   campaignHistory.getState().clear()
   await Promise.all([
-    db.campaigns.clear(),
-    db.entities.clear(),
-    db.rolls.clear(),
-    db.itemLibrary.clear(),
+    activeDb().campaigns.clear(),
+    activeDb().entities.clear(),
+    activeDb().rolls.clear(),
+    activeDb().itemLibrary.clear(),
   ])
 })
 
@@ -36,7 +36,7 @@ async function openSheet(e: Entity, tab?: string) {
     conditions: [...starterConditions(), { ...TEST_CONDITIONS.stunned, id: 'stunned-1-turn' }],
     macros: [],
   })
-  await db.entities.add({ ...e, campaignId: c.id })
+  await activeDb().entities.add({ ...e, campaignId: c.id })
   const app = renderApp(`/c/${c.id}/prep/players/e/${e.id}`)
   await screen.findByRole('heading', { level: 1, name: e.identity.pseudo })
   if (tab) await app.user.click(screen.getByRole('tab', { name: tab }))
@@ -198,7 +198,7 @@ describe('active skills', () => {
       identity: { pseudo: 'Gobelin 1' },
       hpRoll: 4,
     })
-    await db.entities.bulkAdd([{ ...g, campaignId: c.id }, goblin])
+    await activeDb().entities.bulkAdd([{ ...g, campaignId: c.id }, goblin])
     const { user } = renderApp(`/c/${c.id}/prep/players/e/${g.id}`)
     await screen.findByRole('heading', { level: 1, name: 'Gorak' })
     await user.click(screen.getByRole('tab', { name: 'Compétences' }))

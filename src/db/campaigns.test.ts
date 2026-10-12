@@ -19,7 +19,10 @@ beforeEach(async () => {
   db = new CodexDB(`codex-test-${crypto.randomUUID()}`)
   await db.open()
   clock = 1_000
-  repo = createCampaignRepository(db, () => clock++)
+  repo = createCampaignRepository(
+    () => db,
+    () => clock++,
+  )
 })
 
 afterEach(async () => {
@@ -147,9 +150,10 @@ describe('personal data (GDPR, D-240)', () => {
 
 describe('schema', () => {
   it('opens at the current version with the expected tables', async () => {
-    expect(db.verno).toBe(7)
+    expect(db.verno).toBe(8)
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'assets',
+      'backups',
       'bestiary',
       'campaigns',
       'entities',

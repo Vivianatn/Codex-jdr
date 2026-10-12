@@ -1,0 +1,413 @@
+import { useLiveQuery } from 'dexie-react-hooks'
+import { LockKeyhole, ShieldCheck } from 'lucide-react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { toast } from 'sonner'
+import { LogoMark, Ornament, Wordmark } from '@/components/Brand'
+import { Button } from '@/components/ui/Button'
+import { SelectField } from '@/components/ui/fields'
+import { TextField } from '@/components/ui/TextField'
+import { accountDbName, CodexDB } from '@/db/db'
+import { useIntlLocale, useT } from '@/i18n'
+import {
+  accounts,
+  legacyCampaignCount,
+  migrateLegacyData,
+  type AccountSummary,
+} from '@/security/accounts'
+import { MIN_PASSWORD_LENGTH } from '@/security/passwords'
+import { startSession, useSessionStore } from '@/security/session'
+import { accountErrorMessage } from './accountErrors'
+import { PasswordField } from './PasswordField'
+import { RecoveryCodePanel } from './RecoveryCodePanel'
+
+type Mode =
+  | { kind: 'login' }
+  | { kind: 'create' }
+  | { kind: 'recover' }
+  | { kind: 'code'; code: string; account: AccountSummary; key: Uint8Array }
+
+/** Login, account creation and password recovery (D-241). Full page, before anything else. */
+export function LockScreen() {
+  const t = useT()
+  const list = useLiveQuery(() => accounts.list(), [])
+  const [mode, setMode] = useState<Mode | null>(null)
+  const current: Mode = mode ?? (list && list.length === 0 ? { kind: 'create' } : { kind: 'login' })
+
+  const enter = async (account: AccountSummary, key: Uint8Array) => {
+    useSessionStore.setState({ status: 'unlocking' })
+    try {
+      await startSession(account, key)
+    } catch (error) {
+      console.error(error)
+      useSessionStore.setState({ status: 'locked' })
+      toast.error(t.account.errors.generic)
+    }
+  }
+
+  if (list === undefined) return <Frame>{null}</Frame>
+
+  if (current.kind === 'code')
+    return (
+      <Frame>
+        <RecoveryCodePanel
+          code={current.code}
+          username={current.account.username}
+          onDone={() => void enter(current.account, current.key)}
+        />
+      </Frame>
+    )
+
+  if (current.kind === 'create')
+    return (
+      <Frame
+        title={list.length ? t.account.createAnother : t.account.welcomeTitle}
+        subtitle={t.account.welcomeSubtitle}
+      >
+        <CreateForm
+          onCreated={(code, account, key) => setMode({ kind: 'code', code, account, key })}
+        />
+        {list.length > 0 && (
+          <Button variant="ghost" className="w-full" onClick={() => setMode({ kind: 'login' })}>
+            {t.account.backToLogin}
+          </Button>
+        )}
+      </Frame>
+    )
+
+  if (current.kind === 'recover')
+    return (
+      <Frame title={t.account.recoverTitle} subtitle={t.account.recoverSubtitle}>
+        <RecoverForm
+          accounts={list}
+          onRecovered={(code, account, key) => setMode({ kind: 'code', code, account, key })}
+        />
+        <Button variant="ghost" className="w-full" onClick={() => setMode({ kind: 'login' })}>
+          {t.account.backToLogin}
+        </Button>
+      </Frame>
+    )
+
+  return (
+    <Frame title={t.account.lockTitle} subtitle={t.account.lockSubtitle}>
+      <LoginForm accounts={list} onUnlocked={enter} />
+      <div className="flex flex-wrap justify-between gap-2">
+        <Button variant="ghost" size="sm" onClick={() => setMode({ kind: 'recover' })}>
+          {t.account.forgot}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setMode({ kind: 'create' })}>
+          {t.account.createAnother}
+        </Button>
+      </div>
+    </Frame>
+  )
+}
+
+function Frame({
+  title,
+  subtitle,
+  children,
+}: {
+  title?: string
+  subtitle?: string
+  children: ReactNode
+}) {
+  const t = useT()
+  return (
+    <main
+      id="main"
+      className="flex min-h-full flex-col items-center justify-center px-4 py-10"
+      data-testid="lock-screen"
+    >
+      <div className="mb-6 flex items-center gap-2.5">
+        <LogoMark />
+        <Wordmark />
+      </div>
+      <div className="w-full max-w-[440px] space-y-5 rounded-[20px] border border-line bg-surface-raised p-6 shadow-overlay sm:p-8">
+        {title && (
+          <div>
+            <h1 className="type-screen-title text-[1.75rem] text-ink">{title}</h1>
+            {subtitle && <p className="mt-2 text-sm text-ink-muted">{subtitle}</p>}
+            <Ornament className="mt-4" />
+          </div>
+        )}
+        {children}
+      </div>
+      <p className="mt-6 flex max-w-[440px] items-start gap-2 text-xs text-ink-muted">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <span>{t.privacy.summary}</span>
+      </p>
+    </main>
+  )
+}
+
+/** Shared state of the three forms: busy flag and error message. */
+function useSubmit() {
+  const t = useT()
+  const locale = useIntlLocale()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const run = (task: () => Promise<void>) => async (event: FormEvent) => {
+    event.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      await task()
+    } catch (e) {
+      setError(accountErrorMessage(t, e, locale))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return { busy, error, setError, run }
+}
+
+function AccountPicker({
+  accounts: list,
+  value,
+  onChange,
+}: {
+  accounts: AccountSummary[]
+  value: string
+  onChange: (id: string) => void
+}) {
+  const t = useT()
+  if (list.length === 1)
+    return (
+      <p className="text-sm text-ink">
+        <span className="text-ink-muted">{t.account.account} : </span>
+        <strong className="font-semibold">{list[0]!.username}</strong>
+      </p>
+    )
+  return (
+    <SelectField
+      label={t.account.account}
+      value={value}
+      onChange={onChange}
+      options={list.map((a) => ({ value: a.id, label: a.username }))}
+    />
+  )
+}
+
+function LoginForm({
+  accounts: list,
+  onUnlocked,
+}: {
+  accounts: AccountSummary[]
+  onUnlocked: (account: AccountSummary, key: Uint8Array) => Promise<void>
+}) {
+  const t = useT()
+  const [accountId, setAccountId] = useState(list[0]?.id ?? '')
+  const [password, setPassword] = useState('')
+  const { busy, error, run } = useSubmit()
+  const username = list.find((a) => a.id === accountId)?.username ?? ''
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={run(async () => {
+        const { account, key } = await accounts.unlock(accountId, password)
+        setPassword('')
+        await onUnlocked(account, key)
+      })}
+    >
+      <AccountPicker accounts={list} value={accountId} onChange={setAccountId} />
+      {/* Lets password managers pair the password with the account. */}
+      <input type="text" hidden readOnly autoComplete="username" value={username} />
+      <PasswordField
+        label={t.account.password}
+        autoComplete="current-password"
+        autoFocus
+        required
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        error={error}
+      />
+      <Button
+        type="submit"
+        variant="primary"
+        className="w-full"
+        icon={<LockKeyhole />}
+        disabled={busy || !password}
+      >
+        {busy ? t.account.unlocking : t.account.unlock}
+      </Button>
+    </form>
+  )
+}
+
+/** New password + confirmation, with the length rule and passphrase advice. */
+function NewPasswordFields({
+  password,
+  confirm,
+  onPassword,
+  onConfirm,
+  label,
+}: {
+  password: string
+  confirm: string
+  onPassword: (v: string) => void
+  onConfirm: (v: string) => void
+  label: string
+}) {
+  const t = useT()
+  return (
+    <>
+      <PasswordField
+        label={label}
+        hint={t.account.passwordHint(MIN_PASSWORD_LENGTH)}
+        autoComplete="new-password"
+        required
+        minLength={MIN_PASSWORD_LENGTH}
+        value={password}
+        onChange={(e) => onPassword(e.target.value)}
+      />
+      <p className="text-xs text-ink-muted">{t.account.passwordAdvice}</p>
+      <PasswordField
+        label={t.account.confirmPassword}
+        autoComplete="new-password"
+        required
+        value={confirm}
+        onChange={(e) => onConfirm(e.target.value)}
+      />
+    </>
+  )
+}
+
+function CreateForm({
+  onCreated,
+}: {
+  onCreated: (code: string, account: AccountSummary, key: Uint8Array) => void
+}) {
+  const t = useT()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [legacy, setLegacy] = useState(0)
+  const { busy, error, setError, run } = useSubmit()
+
+  useEffect(() => {
+    legacyCampaignCount().then(setLegacy, () => setLegacy(0))
+  }, [])
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={run(async () => {
+        if (password !== confirm) {
+          setError(t.account.errors.passwordMismatch)
+          return
+        }
+        const { account, key, recoveryCode } = await accounts.create({ username, password })
+        if (legacy > 0) {
+          const db = new CodexDB(accountDbName(account.id), { key })
+          try {
+            await migrateLegacyData(db)
+          } catch (e) {
+            console.error(e)
+            toast.error(t.account.legacyFailed)
+          } finally {
+            db.close()
+          }
+        }
+        onCreated(recoveryCode, account, key)
+      })}
+    >
+      <TextField
+        label={t.account.username}
+        hint={t.account.usernameHint}
+        autoComplete="username"
+        autoFocus
+        required
+        maxLength={40}
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+      />
+      <NewPasswordFields
+        label={t.account.password}
+        password={password}
+        confirm={confirm}
+        onPassword={setPassword}
+        onConfirm={setConfirm}
+      />
+      {legacy > 0 && (
+        <p className="rounded-xl bg-gold-soft px-3 py-2 text-sm text-ink">
+          {t.account.legacyNotice(legacy)}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-sm font-medium text-hp-text">
+          {error}
+        </p>
+      )}
+      <Button
+        type="submit"
+        variant="primary"
+        className="w-full"
+        disabled={busy || !username.trim() || !password || !confirm}
+      >
+        {busy ? t.account.creating : t.account.create}
+      </Button>
+    </form>
+  )
+}
+
+function RecoverForm({
+  accounts: list,
+  onRecovered,
+}: {
+  accounts: AccountSummary[]
+  onRecovered: (code: string, account: AccountSummary, key: Uint8Array) => void
+}) {
+  const t = useT()
+  const [accountId, setAccountId] = useState(list[0]?.id ?? '')
+  const [code, setCode] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const { busy, error, setError, run } = useSubmit()
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={run(async () => {
+        if (password !== confirm) {
+          setError(t.account.errors.passwordMismatch)
+          return
+        }
+        const { account, key, recoveryCode } = await accounts.recover(accountId, code, password)
+        onRecovered(recoveryCode, account, key)
+      })}
+    >
+      <AccountPicker accounts={list} value={accountId} onChange={setAccountId} />
+      <TextField
+        label={t.account.recoveryCode}
+        autoComplete="off"
+        spellCheck={false}
+        required
+        inputClassName="font-mono uppercase tracking-wider"
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+      />
+      <NewPasswordFields
+        label={t.account.newPassword}
+        password={password}
+        confirm={confirm}
+        onPassword={setPassword}
+        onConfirm={setConfirm}
+      />
+      {error && (
+        <p role="alert" className="text-sm font-medium text-hp-text">
+          {error}
+        </p>
+      )}
+      <Button
+        type="submit"
+        variant="primary"
+        className="w-full"
+        disabled={busy || !code || !password || !confirm}
+      >
+        {busy ? t.account.creating : t.account.recover}
+      </Button>
+    </form>
+  )
+}

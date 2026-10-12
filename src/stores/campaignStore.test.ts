@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { createEntity } from '@/domain/entity'
 import { defaultRules } from '@/rules'
 import { campaignHistory, flushAutosave, useCampaignStore } from './campaignStore'
@@ -9,7 +9,7 @@ const store = () => useCampaignStore.getState()
 
 beforeEach(async () => {
   await store().unload()
-  await db.entities.clear()
+  await activeDb().entities.clear()
 })
 
 afterEach(async () => {
@@ -18,7 +18,7 @@ afterEach(async () => {
 
 describe('campaign store', () => {
   it('loads only the entities of the campaign', async () => {
-    await db.entities.bulkAdd([
+    await activeDb().entities.bulkAdd([
       createEntity('player', 'c1', rules, { identity: { pseudo: 'A' } }),
       createEntity('player', 'c2', rules, { identity: { pseudo: 'B' } }),
     ])
@@ -33,15 +33,15 @@ describe('campaign store', () => {
     const e = createEntity('player', 'c1', rules, { identity: { pseudo: 'Gorak' } })
     store().addEntities([e], 'Création')
     await flushAutosave()
-    expect(await db.entities.get(e.id)).toMatchObject({ identity: { pseudo: 'Gorak' } })
+    expect(await activeDb().entities.get(e.id)).toMatchObject({ identity: { pseudo: 'Gorak' } })
 
     store().updateEntity(e.id, (x) => ({ ...x, level: 3 }), 'Niveau')
     await flushAutosave()
-    expect((await db.entities.get(e.id))?.level).toBe(3)
+    expect((await activeDb().entities.get(e.id))?.level).toBe(3)
 
     store().removeEntity(e.id, 'Suppression')
     await flushAutosave()
-    expect(await db.entities.get(e.id)).toBeUndefined()
+    expect(await activeDb().entities.get(e.id)).toBeUndefined()
   })
 
   it('undo restores the previous entity and saves it', async () => {
@@ -54,12 +54,12 @@ describe('campaign store', () => {
     campaignHistory.getState().undo()
     expect(store().entities[e.id]?.level).toBe(1)
     await flushAutosave()
-    expect((await db.entities.get(e.id))?.level).toBe(1)
+    expect((await activeDb().entities.get(e.id))?.level).toBe(1)
 
     campaignHistory.getState().undo()
     expect(store().entities[e.id]).toBeUndefined()
     await flushAutosave()
-    expect(await db.entities.get(e.id)).toBeUndefined()
+    expect(await activeDb().entities.get(e.id)).toBeUndefined()
   })
 
   it('ignores recipes that return the same entity', async () => {
@@ -75,7 +75,7 @@ describe('campaign store', () => {
     const e = createEntity('player', 'c1', rules)
     store().addEntities([e], 'Création')
     await store().load('c2')
-    expect(await db.entities.get(e.id)).toBeDefined()
+    expect(await activeDb().entities.get(e.id)).toBeDefined()
     expect(store().entities).toEqual({})
   })
 })

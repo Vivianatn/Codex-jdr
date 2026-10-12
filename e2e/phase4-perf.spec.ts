@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { disableAppAnimations } from './support/a11y'
-import { createCampaign, importCharacter } from './support/app'
+import { createCampaign, importCharacter, createAccount, reloadAndUnlock } from './support/app'
 
 /**
  * SPEC §11 performance budget: 200 tokens, zoom and pan stay smooth.
@@ -15,6 +15,7 @@ test('200 tokens: zoom and pan stay fluid @perf', async ({ page }) => {
   await disableAppAnimations(page)
   await page.setViewportSize({ width: 1400, height: 900 })
   await page.goto('/')
+  await createAccount(page)
   await createCampaign(page, 'Perf')
   await importCharacter(page, 'Joueurs', { name: 'Modèle', hp: 20 })
   await page.getByRole('link', { name: 'Cartes', exact: true }).click()
@@ -28,48 +29,32 @@ test('200 tokens: zoom and pan stay fluid @perf', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Grande plaine' })).toBeVisible()
   await page.waitForTimeout(500) // autosave
 
-  // Seed 200 characters and their tokens straight into IndexedDB, then reload.
-  await page.evaluate(
-    (count) =>
-      new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open('codex')
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => {
-          const idb = req.result
-          const read = idb.transaction(['entities', 'maps']).objectStore('entities').getAll()
-          read.onsuccess = () => {
-            const model = read.result[0]
-            const tx = idb.transaction(['entities', 'maps'], 'readwrite')
-            const mapsStore = tx.objectStore('maps')
-            const getMap = mapsStore.getAll()
-            getMap.onsuccess = () => {
-              const map = getMap.result[0]
-              map.tokens = []
-              for (let i = 0; i < count; i++) {
-                const id = crypto.randomUUID()
-                tx.objectStore('entities').put({
-                  ...model,
-                  id,
-                  identity: { ...model.identity, pseudo: `Jeton ${i + 1}` },
-                })
-                map.tokens.push({
-                  id: crypto.randomUUID(),
-                  entityId: id,
-                  col: i % 20,
-                  row: Math.floor(i / 20) * 2,
-                  size: 1,
-                  hidden: false,
-                })
-              }
-              mapsStore.put(map)
-            }
-            tx.oncomplete = () => resolve()
-          }
-        }
-      }),
-    TOKENS,
-  )
-  await page.reload()
+  // Seed 200 characters and their tokens through the app's database layer, then reload.
+  await page.evaluate(async (count) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DEV hook, untyped on purpose
+    const db = (window as unknown as { __codexDb: any }).__codexDb
+    const [model] = await db.entities.toArray()
+    const [map] = await db.maps.toArray()
+    map.tokens = []
+    const entities: unknown[] = []
+    for (let i = 0; i < count; i++) {
+      const id = crypto.randomUUID()
+      entities.push({ ...model, id, identity: { ...model.identity, pseudo: `Jeton ${i + 1}` } })
+      map.tokens.push({
+        id: crypto.randomUUID(),
+        entityId: id,
+        col: i % 20,
+        row: Math.floor(i / 20) * 2,
+        size: 1,
+        hidden: false,
+      })
+    }
+    await db.transaction('rw', db.entities, db.maps, async () => {
+      await db.entities.bulkPut(entities)
+      await db.maps.put(map)
+    })
+  }, TOKENS)
+  await reloadAndUnlock(page)
   await expect(page.getByTestId('map-canvas')).toBeVisible()
   const box = (await page.getByTestId('map-canvas').boundingBox())!
   const cx = box.x + box.width / 2

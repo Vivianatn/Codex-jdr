@@ -4,6 +4,40 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Comptes, chiffrement et sécurité (2026-10-12)
+
+Demande du MJ : « un système de compte et chiffre toutes les données », garder la base existante en la renforçant, « très forte protection ». Détail technique et modèle de menace : [SECURITE.md](SECURITE.md).
+
+### D-241 · Comptes locaux et chiffrement de toutes les données
+
+- **Comptes locaux, sans serveur** : un compte = un nom, un mot de passe et sa propre base chiffrée sur l'appareil. Un serveur aurait contredit le principe local-first et ajouté un traitement de données (RGPD) sans bénéfice pour une table de jeu.
+- **Clé de données par compte** (256 bits), enveloppée par une clé dérivée du mot de passe (PBKDF2-SHA-256, 600 000 itérations, OWASP 2023) et, séparément, par un **code de secours** de 160 bits montré une seule fois. Sans l'un ni l'autre, les données sont perdues : c'est le prix d'un vrai chiffrement, dit clairement à la création.
+- **Chiffrement par enregistrement** (XChaCha20-Poly1305, `@noble/ciphers`) dans un intergiciel Dexie : tout le code existant (dépôts, requêtes en direct, `modify`) fonctionne sans changement. Chiffrement synchrone obligatoire : une opération WebCrypto asynchrone ferme la transaction IndexedDB. Argon2id écarté : en JavaScript pur il serait plus lent que PBKDF2 natif à sécurité égale dans le navigateur.
+- **Mots de passe** : 15 caractères minimum (NIST SP 800-63B rév. 4 pour un facteur unique), pas de règles de composition, refus des suites de touches, mots courants et du nom du compte ; conseil de phrase de passe. Ralentissement après 5 échecs (30 s doublés, 15 min au plus). Mot de passe actuel redemandé pour le changer, renouveler le code ou supprimer le compte.
+- **Session en mémoire seulement** ; recharger la page redemande le mot de passe (garder la clé dans `sessionStorage` l'aurait écrite sur disque via la restauration de session du navigateur). Verrouillage automatique par défaut à 15 min, réglable (5, 15, 30, 60 min, jamais) ; bouton « Verrouiller » dans l'en-tête.
+- **Fenêtre joueurs** : elle reçoit la session de la fenêtre du MJ par `BroadcastChannel` (même origine, jamais hors du navigateur) et se verrouille avec elle ; aucun mot de passe tapé devant les joueurs.
+- **Reprise des campagnes existantes** : la base `codex` non chiffrée est copiée dans le premier compte créé, puis supprimée.
+- Accès à la base : `activeDb()` (`src/db/db.ts`) au lieu d'un singleton ; les dépôts prennent un accesseur `() => CodexDB`.
+- Les réglages d'affichage restent en clair dans `localStorage` (lus avant la connexion pour éviter le flash de thème ; rien de personnel).
+
+### D-242 · Base de données renforcée (schéma v8)
+
+- **Index réduits** à ceux que le code interroge : les champs d'index restent lisibles dans une base chiffrée, donc plus aucun nom (campagne, objet) n'est indexé.
+- **Intergiciel d'intégrité** : refuse les enregistrements sans identifiant ou sans campagne quand la table l'exige (D-224).
+- **Authentification liée au contexte** : la table et les valeurs d'index font partie des données associées ; déplacer une fiche dans une autre campagne en modifiant le fichier est détecté. Un enregistrement non authentique est signalé (toast) et lu comme absent.
+- **Sauvegardes** : table `backups`, chiffrée comme le reste ; une automatique par jour à l'ouverture (si au moins une campagne), manuelles, trois conservées ; restauration précédée d'une sauvegarde de l'état actuel. Elles protègent des erreurs, pas de la perte de l'appareil (rôle des exports).
+- **Sauvegarde automatique fiabilisée** : une écriture échouée (disque plein…) n'était pas réessayée et les modifications passaient pour enregistrées ; désormais l'état « dernier enregistré » est rétabli, un toast prévient et un nouvel essai a lieu toutes les 5 s.
+- `navigator.storage.persist()` à la connexion.
+
+### D-243 · Durcissement
+
+- **CSP** injectée au build (`vite.config.ts`) : `default-src 'none'`, scripts du paquet et script de thème par empreinte, `connect-src 'none'` (aucune exfiltration possible), pas d'`eval`, `object-src`/`base-uri`/`form-action` fermés, `referrer` coupé. `style-src 'unsafe-inline'` reste nécessaire (Sonner, Radix injectent des `<style>`). Absente du serveur de dev (rechargement à chaud). Pas de source maps en production.
+- **Imports** : `JSON.parse` sans clés `__proto__`/`constructor`/`prototype`, images limitées aux data URL PNG/JPEG/WebP/GIF/AVIF (SVG refusé), 256 Mo au plus. Les images ajoutées dans l'app étaient déjà ré-encodées par un canvas.
+- **Tests e2e de sécurité** sur le build de production servi à part (port 4174).
+- **Écarté** : Trusted Types (gain faible sans `innerHTML` dans le code, risque de casser des bibliothèques), chiffrement des exports (ils servent à la portabilité RGPD, à reconsidérer si le MJ le demande).
+
+---
+
 ## Polices plus humaines et RGPD (2026-10-12)
 
 ### D-239 · Polices humanistes à la place de Cinzel, Fraunces et Inter
@@ -27,7 +61,7 @@ Codex n'a ni serveur, ni compte, ni cookie, ni mesure d'audience, ni appel rése
 - **Effacement (art. 17)** : « Tout effacer » vide toutes les tables IndexedDB et toutes les clés `codex.*` du localStorage, après une confirmation (seule modale autorisée : suppression), puis recharge l'application sur l'écran Campagnes. La suppression d'une campagne effaçait déjà tout ce qui lui appartient (D-224).
 - **Minimisation** : rien n'est collecté en dehors de ce que le MJ saisit ; les réglages d'affichage ne contiennent aucune donnée personnelle.
 
-Non fait : chiffrement de la base locale (protégée par la session du système d'exploitation ; un chiffrement exigerait un mot de passe à chaque ouverture, à décider avec le MJ).
+Chiffrement de la base : fait ensuite, à la demande du MJ (D-241).
 
 ---
 

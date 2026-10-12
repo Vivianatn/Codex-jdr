@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 
 const cache = new Map<string, HTMLImageElement>()
 
@@ -27,7 +27,7 @@ export function useImage(src: string | null | undefined): HTMLImageElement | nul
 /** Picture stored in the asset table. */
 export function useAssetImage(assetId: string | null | undefined): HTMLImageElement | null {
   const data = useLiveQuery(
-    async () => (assetId ? ((await db.assets.get(assetId))?.data ?? null) : null),
+    async () => (assetId ? ((await activeDb().assets.get(assetId))?.data ?? null) : null),
     [assetId],
   )
   return useImage(data)

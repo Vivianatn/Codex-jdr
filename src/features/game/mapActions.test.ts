@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { emptyLibrary, type Campaign } from '@/db/types'
 import { createEntity } from '@/domain/entity'
 import { isRevealed, newElement, newMap, type GameMap } from '@/domain/maps'
@@ -52,9 +52,9 @@ function character(kind: 'player' | 'enemy', name: string) {
 
 async function setup(entities: Entity[], map: GameMap, faces: number[] = [10]) {
   await store().unload()
-  await db.entities.clear()
-  await db.maps.clear()
-  await db.entities.bulkAdd(entities)
+  await activeDb().entities.clear()
+  await activeDb().maps.clear()
+  await activeDb().entities.bulkAdd(entities)
   await store().load('c1')
   useRollStore.setState({ campaignId: 'c1', rolls: [] })
   store().addMap(map, 'map')

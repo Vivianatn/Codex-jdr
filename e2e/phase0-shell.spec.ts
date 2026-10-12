@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
+import { createAccount, dumpTable, reloadAndUnlock, unlock } from './support/app'
 
 async function createCampaign(page: Page, name: string) {
   await page.getByRole('button', { name: 'Nouvelle campagne' }).first().click()
@@ -13,6 +14,7 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await disableAppAnimations(page)
   await page.goto('/')
+  await createAccount(page)
 })
 
 test('creates a campaign, switches modes and survives a reload', async ({ page }) => {
@@ -29,7 +31,7 @@ test('creates a campaign, switches modes and survives a reload', async ({ page }
   await modes.getByRole('radio', { name: 'Préparation' }).click()
   await expect(page.getByRole('heading', { name: 'Bestiaire', exact: true })).toBeVisible()
 
-  await page.reload()
+  await reloadAndUnlock(page)
   await expect(page.getByRole('heading', { name: 'Bestiaire', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Retour aux campagnes' }).click()
@@ -68,17 +70,7 @@ test('exports a campaign, deletes it and re-imports it identically', async ({ pa
   })
   await expect(page.getByRole('link', { name: /Aller-retour/ })).toBeVisible()
 
-  const reimported = await page.evaluate(
-    () =>
-      new Promise((resolve, reject) => {
-        const req = indexedDB.open('codex')
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => {
-          const get = req.result.transaction('campaigns').objectStore('campaigns').getAll()
-          get.onsuccess = () => resolve(get.result)
-        }
-      }),
-  )
+  const reimported = await dumpTable(page, 'campaigns')
   expect(reimported).toEqual([file.campaign])
 })
 
@@ -146,6 +138,8 @@ test('GDPR: exports every campaign in one archive, then erases everything', asyn
 
   await privacy.getByRole('button', { name: 'Tout effacer' }).click()
   await page.getByTestId('erase-all-confirm').click()
+  await expect(page.getByTestId('lock-screen')).toBeVisible()
+  await unlock(page)
   await expect(page.getByText('Aucune campagne pour l’instant')).toBeVisible()
   // Preferences are gone too: back to the default light theme.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')

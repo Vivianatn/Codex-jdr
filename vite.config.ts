@@ -1,10 +1,50 @@
+import { createHash } from 'node:crypto'
 import { fileURLToPath, URL } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import type { Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 
+/**
+ * Content Security Policy of the built app (D-243). Codex never talks to the
+ * network: no connection at all, scripts only from the bundle (plus the theme
+ * boot script, allowed by its hash), pictures only from the app or data: URLs.
+ * Not applied by the dev server, whose hot reload needs inline code and a socket.
+ */
+function contentSecurityPolicy(): Plugin {
+  return {
+    name: 'codex-csp',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        const hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
+          ([, code]) => `'sha256-${createHash('sha256').update(code!).digest('base64')}'`,
+        )
+        const policy = [
+          "default-src 'none'",
+          `script-src 'self' ${hashes.join(' ')}`,
+          // Sonner and Radix inject <style> elements.
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: blob:",
+          "font-src 'self' data:",
+          "connect-src 'none'",
+          "manifest-src 'self'",
+          "base-uri 'none'",
+          "form-action 'none'",
+          "object-src 'none'",
+        ].join('; ')
+        return html.replace(
+          '<meta charset="UTF-8" />',
+          `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />\n    <meta name="referrer" content="no-referrer" />`,
+        )
+      },
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), contentSecurityPolicy()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -13,6 +53,8 @@ export default defineConfig({
   build: {
     // Single-bundle local app (~280 kB gzip in phase 2). Route-level code splitting: phase 6 (D-011).
     chunkSizeWarningLimit: 1000,
+    // No source maps in production: the bundle is all there is to read.
+    sourcemap: false,
   },
   test: {
     environment: 'jsdom',
@@ -20,8 +62,8 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     css: false,
     restoreMocks: true,
-    // Full-app component tests type into many fields.
-    testTimeout: 20_000,
+    // Full-app component tests type into many fields; the whole suite runs them in parallel.
+    testTimeout: 40_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { campaignRepository } from '@/db/campaigns'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { createEntity } from '@/domain/entity'
 import { configuredRules } from '@/test/fixtures'
 import { renderApp } from '@/test/renderApp'
@@ -15,7 +15,7 @@ beforeEach(async () => {
   await store().unload()
   useUiStore.setState({ quickId: null, playSheetId: null })
   campaignHistory.getState().clear()
-  await Promise.all([db.campaigns.clear(), db.entities.clear()])
+  await Promise.all([activeDb().campaigns.clear(), activeDb().entities.clear()])
 })
 
 async function playScreen() {
@@ -23,7 +23,7 @@ async function playScreen() {
   const lyra = createEntity('player', c.id, rules, { identity: { pseudo: 'Lyra' }, hpRoll: 10 })
   const gorak = createEntity('player', c.id, rules, { identity: { pseudo: 'Gorak' }, hpRoll: 10 })
   const gob = createEntity('enemy', c.id, rules, { identity: { pseudo: 'Gobelin 1' }, hpRoll: 4 })
-  await db.entities.bulkAdd([lyra, gorak, gob])
+  await activeDb().entities.bulkAdd([lyra, gorak, gob])
   const app = renderApp(`/c/${c.id}/play`)
   await screen.findByRole('region', { name: 'Tours de jeu' })
   return { ...app, lyra, gorak, gob }

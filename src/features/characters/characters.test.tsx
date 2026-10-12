@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { bestiaryRepository } from '@/db/bestiary'
 import { campaignRepository } from '@/db/campaigns'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { createEntity } from '@/domain/entity'
 import { STAT_KEYS } from '@/domain/types'
 import { defaultRules } from '@/rules'
@@ -22,7 +22,11 @@ const STAT_LABELS = [
 
 beforeEach(async () => {
   await useCampaignStore.getState().unload()
-  await Promise.all([db.campaigns.clear(), db.entities.clear(), db.bestiary.clear()])
+  await Promise.all([
+    activeDb().campaigns.clear(),
+    activeDb().entities.clear(),
+    activeDb().bestiary.clear(),
+  ])
 })
 
 async function newCampaign() {
@@ -105,7 +109,7 @@ describe('creation wizard', () => {
     expect(router.state.location.pathname).toBe(`/c/${c.id}/prep/players/e/${gorak?.id}`)
 
     await flushAutosave()
-    expect(await db.entities.get(gorak!.id)).toBeDefined()
+    expect(await activeDb().entities.get(gorak!.id)).toBeDefined()
   })
 
   it('accepts the two d20 of each characteristic and rounds up', async () => {
@@ -140,7 +144,7 @@ describe('character sheet', () => {
   it('levels up (+1 max HP per level), journals it, and Ctrl+Z undoes it', async () => {
     const c = await newCampaign()
     const gorak = createEntity('player', c.id, rules, { identity: { pseudo: 'Gorak' }, hpRoll: 14 })
-    await db.entities.add(gorak)
+    await activeDb().entities.add(gorak)
     const { user } = renderApp(`/c/${c.id}/prep/players/e/${gorak.id}`)
     await screen.findByRole('heading', { level: 1, name: 'Gorak' })
 
@@ -162,7 +166,7 @@ describe('character sheet', () => {
   it('reminds the GM to add a skill at level 10, without limiting skills', async () => {
     const c = await newCampaign()
     const e = createEntity('player', c.id, rules, { identity: { pseudo: 'Gorak' }, level: 9 })
-    await db.entities.add(e)
+    await activeDb().entities.add(e)
     const { user } = renderApp(`/c/${c.id}/prep/players/e/${e.id}`)
     await screen.findByRole('heading', { level: 1, name: 'Gorak' })
 
@@ -197,7 +201,7 @@ describe('character sheet', () => {
   it('adds a stat modifier and shows the effective value', async () => {
     const c = await newCampaign()
     const e = createEntity('ally', c.id, rules, { identity: { pseudo: 'Bran' } })
-    await db.entities.add(e)
+    await activeDb().entities.add(e)
     const { user } = renderApp(`/c/${c.id}/prep/allies/e/${e.id}`)
     await screen.findByRole('heading', { level: 1, name: 'Bran' })
     await user.click(screen.getByRole('tab', { name: 'Statistiques' }))
@@ -281,7 +285,7 @@ describe('campaign rules', () => {
       hpRoll: 14,
       level: 5,
     })
-    await db.entities.add(e)
+    await activeDb().entities.add(e)
     const { user, router } = renderApp(`/c/${c.id}/prep/rules`)
     const perLevel = await screen.findByLabelText('PV max gagnés par niveau')
     await user.clear(perLevel)

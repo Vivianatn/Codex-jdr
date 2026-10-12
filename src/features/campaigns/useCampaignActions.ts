@@ -3,6 +3,7 @@ import { campaignRepository, CampaignImportError, splitImportFile } from '@/db/c
 import type { Campaign } from '@/db/types'
 import { useT } from '@/i18n'
 import type { Messages } from '@/i18n/locales/fr'
+import { MAX_IMPORT_BYTES } from '@/db/sanitize'
 import { downloadJson, slugify } from '@/lib/files'
 import { flushAutosave, useCampaignStore } from '@/stores/campaignStore'
 
@@ -19,6 +20,8 @@ export function importErrorMessage(t: Messages, error: unknown): string {
         : t.importErrors.unsupportedVersion(error.version)
     case 'invalidCampaign':
       return t.importErrors.invalidCampaign
+    case 'tooLarge':
+      return t.importErrors.tooLarge
   }
 }
 
@@ -66,6 +69,7 @@ export function useCampaignActions() {
     async importFromFile(file: File): Promise<Campaign | null> {
       let last: Campaign | null = null
       try {
+        if (file.size > MAX_IMPORT_BYTES) throw new CampaignImportError('tooLarge')
         const parts = splitImportFile(await file.text())
         for (const part of parts) {
           const { campaign, renamed } = await campaignRepository.importCampaign(

@@ -1,12 +1,12 @@
 # Notice de confidentialité de Codex
 
-_Dernière mise à jour : 12 octobre 2026._
+_Dernière mise à jour : 12 octobre 2026 (comptes et chiffrement)._
 
 Codex est un compagnon de maître de jeu qui fonctionne **entièrement hors ligne**. Cette notice explique quelles données il conserve, où, et comment tu gardes la main dessus, conformément au Règlement général sur la protection des données (RGPD, règlement UE 2016/679).
 
 ## 1. Qui traite les données ?
 
-Codex n'a ni serveur, ni compte utilisateur. Son éditeur **ne reçoit, ne voit et ne stocke aucune donnée**. Tout reste sur l'appareil où Codex est ouvert.
+Codex n'a ni serveur, ni compte en ligne : ton compte n'existe que sur ton appareil. Son éditeur **ne reçoit, ne voit et ne stocke aucune donnée**. Tout reste sur l'appareil où Codex est ouvert.
 
 Si tu utilises Codex pour ta table, **tu es responsable des données que tu y saisis**, en particulier celles qui concernent d'autres personnes (tes joueurs).
 
@@ -14,6 +14,7 @@ Si tu utilises Codex pour ta table, **tu es responsable des données que tu y sa
 
 | Donnée                                                                          | Où                                    | Pourquoi                        |
 | ------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------- |
+| Nom du compte (prénom ou pseudo), données de connexion chiffrées                | Base locale du navigateur (IndexedDB) | Te connecter                    |
 | Campagnes, personnages, compétences, objets, bestiaire, notes                   | Base locale du navigateur (IndexedDB) | Faire fonctionner l'application |
 | Historique des jets de dés                                                      | IndexedDB                             | Journal de partie               |
 | Cartes et images importées (portraits, fonds de carte)                          | IndexedDB                             | Plateau et fiches               |
@@ -41,11 +42,13 @@ Tout se fait dans **Paramètres › Données et confidentialité** :
 
 - **Accès et portabilité** : « Tout exporter » télécharge une archive JSON lisible contenant toutes les campagnes. Elle se réimporte depuis l'écran Campagnes, sur cet appareil ou un autre.
 - **Rectification** : toutes les données se modifient directement dans l'application.
-- **Effacement** : supprimer une campagne efface tout ce qui lui appartient ; « Tout effacer » supprime définitivement toutes les campagnes et tous les réglages de l'appareil.
+- **Effacement** : supprimer une campagne efface tout ce qui lui appartient ; « Tout effacer » supprime définitivement les campagnes et sauvegardes du compte ; « Supprimer le compte » (Paramètres › Compte) efface le compte et sa base entière.
 
 ## 6. Sécurité
 
-Les données sont protégées par la session de ton système d'exploitation et par le cloisonnement du navigateur. Elles ne sont pas chiffrées par Codex : verrouille ta session et range les fichiers exportés en lieu sûr, car ils quittent la protection de l'application.
+Tes données sont **chiffrées** sur l'appareil avec une clé que seul ton mot de passe (ou ton code de secours) permet d'ouvrir ; Codex se verrouille après une période d'inactivité. Le détail est dans [SECURITE.md](SECURITE.md).
+
+Les fichiers exportés, eux, ne sont pas chiffrés : ils quittent la protection de l'application, range-les en lieu sûr. Sans mot de passe ni code de secours, personne — pas même l'éditeur de Codex — ne peut récupérer les données.
 
 ## 7. Réclamation
 

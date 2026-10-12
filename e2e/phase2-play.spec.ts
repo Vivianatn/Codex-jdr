@@ -1,11 +1,19 @@
 import { expect, test, type Page } from '@playwright/test'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createCampaign, dumpTable, importCharacter, STATS } from './support/app'
+import {
+  STATS,
+  createAccount,
+  createCampaign,
+  dumpTable,
+  importCharacter,
+  reloadAndUnlock,
+} from './support/app'
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await disableAppAnimations(page)
   await page.goto('/')
+  await createAccount(page)
 })
 
 const hpField = (page: Page, name: string) => page.getByLabel(`Modifier les PV de ${name}`)
@@ -140,7 +148,7 @@ test('dice tray: notation, advantage, secret roll and history', async ({ page })
   await tray.getByRole('button', { name: 'Lancer', exact: true }).click()
   await expect(tray.getByRole('alert')).toContainText('L’expression s’arrête trop tôt.')
   // History survives a reload.
-  await page.reload()
+  await reloadAndUnlock(page)
   await page.getByRole('button', { name: 'Dés et historique des jets' }).click()
   await expect(page.getByRole('list', { name: 'Historique' }).getByRole('listitem')).toHaveCount(2)
 })

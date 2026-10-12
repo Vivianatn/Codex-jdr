@@ -40,17 +40,62 @@ export async function importCharacter(
   await expect(page.getByRole('heading', { level: 1, name: sheet.name })).toBeVisible()
 }
 
-/** Reads every row of an IndexedDB table of the app. */
+/** Password of the account every scenario creates (a valid passphrase, D-241). */
+export const E2E_PASSWORD = 'lanterne verte sous le pont de grès'
+
+/** First launch: creates the account and goes through the recovery code step. */
+export async function createAccount(page: Page, username = 'MJ') {
+  await expect(page.getByRole('heading', { name: 'Bienvenue dans Codex' })).toBeVisible()
+  await page.getByLabel(/Nom du compte/).fill(username)
+  await page.getByLabel(/^Mot de passe/).fill(E2E_PASSWORD)
+  await page.getByLabel('Confirme le mot de passe').fill(E2E_PASSWORD)
+  await page.getByRole('button', { name: 'Créer le compte' }).click()
+  await expect(page.getByTestId('recovery-code')).toBeVisible({ timeout: 15_000 })
+  await page.getByLabel(/J’ai rangé ce code/).check()
+  await page.getByRole('button', { name: 'Continuer' }).click()
+  await expect(page.getByTestId('lock-screen')).toBeHidden()
+}
+
+/** After a reload: the key was only in memory, the password is asked again. */
+export async function unlock(page: Page) {
+  await page.getByLabel(/^Mot de passe/).fill(E2E_PASSWORD)
+  await page.getByRole('button', { name: 'Déverrouiller' }).click()
+  await expect(page.getByTestId('lock-screen')).toBeHidden({ timeout: 15_000 })
+}
+
+/** Reloads the page and unlocks again. */
+export async function reloadAndUnlock(page: Page) {
+  await page.reload()
+  await unlock(page)
+}
+
+/**
+ * Reads every row of a table, decrypted, through the DEV hook of the session
+ * (the IndexedDB files themselves are encrypted).
+ */
 export function dumpTable(page: Page, table: string) {
   return page.evaluate(
     (name) =>
-      new Promise<unknown[]>((resolve) => {
-        const req = indexedDB.open('codex')
-        req.onsuccess = () => {
-          const get = req.result.transaction(name).objectStore(name).getAll()
-          get.onsuccess = () => resolve(get.result)
-        }
-      }),
+      (
+        window as unknown as { __codexDb: { table(n: string): { toArray(): Promise<unknown[]> } } }
+      ).__codexDb
+        .table(name)
+        .toArray(),
     table,
+  )
+}
+
+/** Writes rows (decrypted form) through the DEV hook, like the app would. */
+export function putRows(page: Page, table: string, rows: unknown[]) {
+  return page.evaluate(
+    ([name, values]) =>
+      (
+        window as unknown as {
+          __codexDb: { table(n: string): { bulkPut(v: unknown[]): Promise<unknown> } }
+        }
+      ).__codexDb
+        .table(name as string)
+        .bulkPut(values as unknown[]),
+    [table, rows] as const,
   )
 }

@@ -3,12 +3,19 @@ import { normalizeEntityShape } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
 import type { GameMap } from '@/domain/maps'
 import type { EnemyTemplate, Entity, Item, LibraryItem, SkillDefinition } from '@/domain/types'
-import type { Asset } from './types'
+import { encryptionMiddleware, integrityMiddleware } from './middleware'
+import type { Asset, Backup } from './types'
 import { starterConditions } from '@/domain/conditions'
 import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules } from '@/rules'
 import { emptyLibrary, type Campaign } from './types'
 
-export const DB_NAME = 'codex'
+/** Database of the single-user versions (before accounts, D-241): migrated into the first account. */
+export const LEGACY_DB_NAME = 'codex'
+
+/** Each account has its own encrypted database. */
+export function accountDbName(accountId: string): string {
+  return `codex-account-${accountId}`
+}
 
 /** Index layout of each schema version. Never edit a past version: add a new one. */
 export const SCHEMA = {
@@ -60,6 +67,19 @@ export const SCHEMA = {
     maps: 'id, campaignId',
     assets: 'id, campaignId',
   },
+  // v8 (D-242): only the indexes the code queries, since index fields stay in clear
+  // in encrypted databases (no campaign or item names). Backups table.
+  8: {
+    campaigns: 'id',
+    entities: 'id, campaignId',
+    bestiary: 'id, campaignId',
+    rolls: 'id, campaignId, [campaignId+at]',
+    itemLibrary: 'id, campaignId',
+    skills: 'id, campaignId',
+    maps: 'id, campaignId',
+    assets: 'id, campaignId',
+    backups: 'id, createdAt',
+  },
 } as const
 
 /**
@@ -69,11 +89,11 @@ export const SCHEMA = {
 export class CodexDB extends Dexie {
   campaigns!: EntityTable<Campaign, 'id'>
   entities!: EntityTable<Entity, 'id'>
-  /** Enemy templates, shared by every campaign. */
+  /** Enemy templates of each campaign (D-224). */
   bestiary!: EntityTable<EnemyTemplate, 'id'>
   /** Dice history, per campaign. */
   rolls!: EntityTable<RollRecord, 'id'>
-  /** Item templates, shared by every campaign. */
+  /** Item templates of each campaign (D-224). */
   itemLibrary!: EntityTable<LibraryItem, 'id'>
   /** Skill library, per campaign (D-218). */
   skills!: EntityTable<SkillDefinition, 'id'>
@@ -81,9 +101,20 @@ export class CodexDB extends Dexie {
   maps!: EntityTable<GameMap, 'id'>
   /** Big pictures (map backgrounds, mood images), kept out of frequently saved records. */
   assets!: EntityTable<Asset, 'id'>
+  /** Encrypted snapshots of every campaign (D-242). */
+  backups!: EntityTable<Backup, 'id'>
 
-  constructor(name: string = DB_NAME) {
+  /**
+   * @param options.key data key of the account: every record is then encrypted at rest (D-241).
+   * @param options.onCorrupt called for each record that fails authentication (read as missing).
+   */
+  constructor(
+    name: string = LEGACY_DB_NAME,
+    options: { key?: Uint8Array; onCorrupt?: (table: string, id: unknown) => void } = {},
+  ) {
     super(name)
+    this.use(integrityMiddleware)
+    if (options.key) this.use(encryptionMiddleware(options.key, options.onCorrupt))
     this.version(1).stores(SCHEMA[1])
     // v2 (phase 1): characters, bestiary, per-campaign rules.
     this.version(2)
@@ -168,7 +199,32 @@ export class CodexDB extends Dexie {
       })
     // v7 (D-228): battle maps and image assets.
     this.version(7).stores(SCHEMA[7])
+    // v8 (D-242): unused indexes dropped, backups table. Index changes only.
+    this.version(8).stores(SCHEMA[8])
   }
 }
 
-export const db = new CodexDB()
+export class DatabaseLockedError extends Error {
+  constructor() {
+    super('No account is unlocked')
+    this.name = 'DatabaseLockedError'
+  }
+}
+
+let active: CodexDB | null = null
+
+/** Database of the unlocked account. Throws while Codex is locked. */
+export function activeDb(): CodexDB {
+  if (!active) throw new DatabaseLockedError()
+  return active
+}
+
+export function hasActiveDb(): boolean {
+  return active !== null
+}
+
+/** Called by the session only (unlock, lock). Closes the previous database. */
+export function setActiveDb(next: CodexDB | null): void {
+  if (active && active !== next) active.close()
+  active = next
+}

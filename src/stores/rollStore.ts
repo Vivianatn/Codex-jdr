@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { ROLL_HISTORY_LIMIT, type RollRecord } from '@/domain/rolls'
 
 export type NewRoll = Omit<RollRecord, 'id' | 'campaignId' | 'at'>
@@ -22,8 +22,8 @@ export const useRollStore = create<RollState>()((set, get) => ({
   load: async (campaignId) => {
     if (get().campaignId === campaignId) return
     set({ campaignId, rolls: [] })
-    const rolls = await db.rolls
-      .where('[campaignId+at]')
+    const rolls = await activeDb()
+      .rolls.where('[campaignId+at]')
       .between([campaignId, 0], [campaignId, Infinity])
       .toArray()
     if (get().campaignId === campaignId) set({ rolls })
@@ -37,6 +37,7 @@ export const useRollStore = create<RollState>()((set, get) => ({
     const dropped = overflow > 0 ? rolls.slice(0, overflow).map((r) => r.id) : []
     set({ rolls: overflow > 0 ? rolls.slice(overflow) : rolls })
     if (campaignId) {
+      const db = activeDb()
       void db
         .transaction('rw', db.rolls, async () => {
           await db.rolls.add(record)
@@ -50,6 +51,6 @@ export const useRollStore = create<RollState>()((set, get) => ({
   clear: async () => {
     const { campaignId } = get()
     set({ rolls: [] })
-    if (campaignId) await db.rolls.where('campaignId').equals(campaignId).delete()
+    if (campaignId) await activeDb().rolls.where('campaignId').equals(campaignId).delete()
   },
 }))

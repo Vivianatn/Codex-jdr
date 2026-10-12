@@ -32,7 +32,7 @@ describe('schema migrations', () => {
 
     const db = new CodexDB(name)
     await db.open()
-    expect(db.verno).toBe(7)
+    expect(db.verno).toBe(8)
     expect((await db.campaigns.get('c1'))?.rules).toEqual(defaultRules())
     expect((await db.campaigns.get('c1'))?.library).toEqual({
       conditions: starterConditions(),

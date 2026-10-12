@@ -4,7 +4,7 @@ import { Maximize, Video, VideoOff } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router'
 import { useSurface } from '@/app/useSurface'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { CandleOrnament, Ornament } from '@/components/Brand'
 import { entityName, normalizeEntityShape } from '@/domain/entity'
 import { normalizeMap } from '@/domain/maps'
@@ -40,16 +40,16 @@ export function PlayerView() {
   const [gm, setGm] = useState<GmCamera | null>(null)
   const viewport = useMapViewStore((s) => s.viewport)
 
-  const campaign = useLiveQuery(() => db.campaigns.get(campaignId), [campaignId])
+  const campaign = useLiveQuery(() => activeDb().campaigns.get(campaignId), [campaignId])
   const play = useMemo(() => normalizePlayState(campaign?.play), [campaign?.play])
   const rules = useMemo(() => withDefaultRules(campaign?.rules), [campaign?.rules])
   const rawMap = useLiveQuery(
-    async () => (play.mapId ? ((await db.maps.get(play.mapId)) ?? null) : null),
+    async () => (play.mapId ? ((await activeDb().maps.get(play.mapId)) ?? null) : null),
     [play.mapId],
   )
   const map = useMemo(() => (rawMap ? normalizeMap(rawMap) : null), [rawMap])
   const entityList = useLiveQuery(
-    () => db.entities.where('campaignId').equals(campaignId).toArray(),
+    () => activeDb().entities.where('campaignId').equals(campaignId).toArray(),
     [campaignId],
   )
   const entities = useMemo(() => {
@@ -60,7 +60,7 @@ export function PlayerView() {
   const imageData = useLiveQuery(
     async () =>
       play.display.imageAssetId
-        ? ((await db.assets.get(play.display.imageAssetId))?.data ?? null)
+        ? ((await activeDb().assets.get(play.display.imageAssetId))?.data ?? null)
         : null,
     [play.display.imageAssetId],
   )

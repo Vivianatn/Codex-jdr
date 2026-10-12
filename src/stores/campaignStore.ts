@@ -1,5 +1,7 @@
+import { toast } from 'sonner'
 import { create } from 'zustand'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
+import { getMessages } from '@/i18n'
 import { normalizeEntityShape } from '@/domain/entity'
 import { adoptSkills, syncEntitySkills, type SkillLibrary } from '@/domain/skills'
 import {
@@ -83,10 +85,10 @@ export const useCampaignStore = create<CampaignDataState>()(
           }),
         )
         const [list, defs, record, mapList] = await Promise.all([
-          db.entities.where('campaignId').equals(campaignId).toArray(),
-          db.skills.where('campaignId').equals(campaignId).toArray(),
-          db.campaigns.get(campaignId),
-          db.maps.where('campaignId').equals(campaignId).toArray(),
+          activeDb().entities.where('campaignId').equals(campaignId).toArray(),
+          activeDb().skills.where('campaignId').equals(campaignId).toArray(),
+          activeDb().campaigns.get(campaignId),
+          activeDb().maps.where('campaignId').equals(campaignId).toArray(),
         ])
         if (get().campaignId !== campaignId) return // another campaign was opened meanwhile
         const stored = Object.fromEntries(defs.map((d) => [d.id, d]))
@@ -291,25 +293,40 @@ async function save(): Promise<void> {
     !removedMaps.length
   )
     return
+  const before = { lastSaved, lastSavedSkills, lastSavedPlay, lastSavedMaps }
   lastSavedPlay = play
   lastSavedMaps = maps
   lastSaved = entities
   lastSavedSkills = skills
-  await db.transaction('rw', [db.entities, db.skills, db.campaigns, db.maps], async () => {
-    if (changedMaps.length) await db.maps.bulkPut(changedMaps)
-    if (removedMaps.length) await db.maps.bulkDelete(removedMaps)
-    if (playChanged) await db.campaigns.update(campaignId, { play })
-    if (changed.length) await db.entities.bulkPut(changed)
-    if (removed.length) await db.entities.bulkDelete(removed)
-    if (changedSkills.length) await db.skills.bulkPut(changedSkills)
-    if (removedSkills.length) await db.skills.bulkDelete(removedSkills)
-  })
+  const db = activeDb()
+  try {
+    await db.transaction('rw', [db.entities, db.skills, db.campaigns, db.maps], async () => {
+      if (changedMaps.length) await db.maps.bulkPut(changedMaps)
+      if (removedMaps.length) await db.maps.bulkDelete(removedMaps)
+      if (playChanged) await db.campaigns.update(campaignId, { play })
+      if (changed.length) await db.entities.bulkPut(changed)
+      if (removed.length) await db.entities.bulkDelete(removed)
+      if (changedSkills.length) await db.skills.bulkPut(changedSkills)
+      if (removedSkills.length) await db.skills.bulkDelete(removedSkills)
+    })
+  } catch (error) {
+    // Nothing was written (one transaction): the next save retries the same changes.
+    ;({ lastSaved, lastSavedSkills, lastSavedPlay, lastSavedMaps } = before)
+    throw error
+  }
+}
+
+function reportSaveError(error: unknown) {
+  console.error('Autosave failed', error)
+  toast.error(getMessages().errors.saveFailed, { id: 'codex-save-failed' })
+  // Keep trying (disk full, storage blocked…) until the write goes through.
+  if (!timer) timer = setTimeout(() => (pending = pending.then(save).catch(reportSaveError)), 5000)
 }
 
 function schedule() {
   if (timer) clearTimeout(timer)
   timer = setTimeout(() => {
-    pending = pending.then(save).catch((error) => console.error('Autosave failed', error))
+    pending = pending.then(save).catch(reportSaveError)
   }, AUTOSAVE_DELAY)
 }
 
@@ -318,7 +335,7 @@ export async function flushAutosave(): Promise<void> {
   if (timer) {
     clearTimeout(timer)
     timer = null
-    pending = pending.then(save).catch((error) => console.error('Autosave failed', error))
+    pending = pending.then(save).catch(reportSaveError)
   }
   await pending
 }

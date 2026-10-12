@@ -1,13 +1,13 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { campaignRepository } from '@/db/campaigns'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { renderApp } from '@/test/renderApp'
 
 beforeEach(async () => {
-  await db.campaigns.clear()
+  await activeDb().campaigns.clear()
   useUiStore.setState({ lastPrepSection: {} })
   useSettingsStore.setState({ theme: 'light' })
 })

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { db } from '@/db/db'
+import { activeDb } from '@/db/db'
 import { defaultRules, hpMaxAt } from '@/rules'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
 import { createEntity, entityHpMax, normalizeSkill } from './entity'
@@ -47,16 +47,16 @@ describe('skill library (D-218)', () => {
 describe('campaign store: skills are shared and undoable', () => {
   beforeEach(async () => {
     await useCampaignStore.getState().unload()
-    await db.entities.clear()
-    await db.skills.clear()
+    await activeDb().entities.clear()
+    await activeDb().skills.clear()
   })
 
   it('editing a library skill updates every holder in one undo step', async () => {
     const def = { ...newSkillDefinition('passive', 'c1'), name: 'Colosse' }
     const a = attachSkill(createEntity('player', 'c1', rules), def)
     const b = attachSkill(createEntity('enemy', 'c1', rules), def)
-    await db.skills.add(def)
-    await db.entities.bulkAdd([a, b])
+    await activeDb().skills.add(def)
+    await activeDb().entities.bulkAdd([a, b])
     await useCampaignStore.getState().load('c1')
 
     useCampaignStore.getState().saveSkill({ ...def, name: 'Titan' }, 'edit')
@@ -71,7 +71,7 @@ describe('campaign store: skills are shared and undoable', () => {
   it('old characters are adopted into the library when the campaign opens', async () => {
     const old = createEntity('player', 'c1', rules)
     old.skills = [normalizeSkill({ id: 'x', name: 'Charge', kind: 'active' })]
-    await db.entities.add(old)
+    await activeDb().entities.add(old)
     await useCampaignStore.getState().load('c1')
     const { skills, entities } = useCampaignStore.getState()
     const [def] = Object.values(skills)
@@ -82,8 +82,8 @@ describe('campaign store: skills are shared and undoable', () => {
   it('deleting a library skill removes it from every holder', async () => {
     const def = { ...newSkillDefinition('active', 'c1'), name: 'Coup' }
     const a = attachSkill(createEntity('player', 'c1', rules), def)
-    await db.skills.add(def)
-    await db.entities.add(a)
+    await activeDb().skills.add(def)
+    await activeDb().entities.add(a)
     await useCampaignStore.getState().load('c1')
     useCampaignStore.getState().removeSkill(def.id, 'delete')
     expect(useCampaignStore.getState().entities[a.id]!.skills).toEqual([])
@@ -114,10 +114,10 @@ describe('familiars', () => {
 
   it('removing a master frees its familiars, and undo restores the link', async () => {
     await useCampaignStore.getState().unload()
-    await db.entities.clear()
+    await activeDb().entities.clear()
     const ogre = createEntity('enemy', 'c1', rules)
     const wolf = withOwner(createEntity('familiar', 'c1', rules), ogre.id)
-    await db.entities.bulkAdd([ogre, wolf])
+    await activeDb().entities.bulkAdd([ogre, wolf])
     await useCampaignStore.getState().load('c1')
     useCampaignStore.getState().removeEntity(ogre.id, 'remove')
     const ownerOf = () => {

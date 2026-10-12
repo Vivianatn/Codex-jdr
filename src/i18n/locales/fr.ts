@@ -1303,6 +1303,7 @@ export const fr = {
     unsupportedVersion: (version: number) =>
       `Ce fichier vient d’une version de Codex plus récente (format ${version}). Mets Codex à jour pour l’importer.`,
     invalidCampaign: 'Les données de la campagne sont incomplètes ou corrompues.',
+    tooLarge: 'Ce fichier est trop volumineux pour être importé (256 Mo au plus).',
   },
   dashboard: {
     title: 'Tableau de bord',
@@ -1396,19 +1397,19 @@ export const fr = {
   privacy: {
     title: 'Données et confidentialité',
     summary:
-      'Codex fonctionne entièrement hors ligne : tes campagnes, fiches, cartes et images restent sur cet appareil. Rien n’est envoyé sur Internet, il n’y a ni compte, ni cookie, ni mesure d’audience.',
+      'Codex fonctionne entièrement hors ligne : tes campagnes, fiches, cartes et images restent sur cet appareil, chiffrées avec ton mot de passe. Rien n’est envoyé sur Internet : ni serveur, ni cookie, ni mesure d’audience.',
     noticeToggle: 'Lire la notice de confidentialité',
     notice: [
       'Responsable des données : toi. Codex n’a pas de serveur et son éditeur ne reçoit aucune donnée.',
-      'Données conservées : ce que tu saisis (campagnes, personnages, notes, jets, cartes, images) dans la base locale du navigateur (IndexedDB), et tes réglages d’affichage (localStorage).',
+      'Données conservées : ton nom de compte, et ce que tu saisis (campagnes, personnages, notes, jets, cartes, images), chiffré dans la base locale du navigateur (IndexedDB). Les réglages d’affichage restent en clair (localStorage) : ils ne contiennent rien de personnel.',
       'Si tu y notes des informations sur de vraies personnes (prénoms, pseudos Discord, portraits), informe-les et n’en garde que le nécessaire.',
       'Durée : les données restent tant que tu ne les supprimes pas. Supprimer une campagne efface tout ce qui lui appartient.',
-      'Tes droits : accès et portabilité avec « Tout exporter » (fichier JSON lisible), effacement avec « Tout effacer ».',
-      'Les fichiers exportés quittent la protection de Codex : range-les en lieu sûr.',
+      'Tes droits : accès et portabilité avec « Tout exporter » (fichier JSON lisible), effacement avec « Tout effacer » ou « Supprimer le compte ».',
+      'Les fichiers exportés ne sont pas chiffrés : ils quittent la protection de Codex, range-les en lieu sûr.',
     ],
     exportAll: 'Tout exporter',
     exportAllHint:
-      'Toutes les campagnes de cet appareil dans un seul fichier, réimportable depuis l’écran Campagnes.',
+      'Toutes les campagnes de ton compte dans un seul fichier, réimportable depuis l’écran Campagnes.',
     exported: (n: number) =>
       n === 0
         ? 'Archive exportée (aucune campagne).'
@@ -1416,17 +1417,116 @@ export const fr = {
     archiveImported: (n: number) => `Archive importée : ${n} campagne${n > 1 ? 's' : ''}.`,
     eraseAll: 'Tout effacer',
     eraseAllHint:
-      'Supprime définitivement toutes les campagnes et tous les réglages de cet appareil.',
+      'Supprime définitivement les campagnes et sauvegardes de ton compte, et les réglages de cet appareil.',
     eraseDialogTitle: 'Tout effacer ?',
     eraseDialogBody:
-      'Toutes les campagnes, fiches, cartes, images, jets et réglages de cet appareil seront supprimés définitivement. Exporte d’abord une archive si tu veux les garder.',
+      'Toutes les campagnes, fiches, cartes, images, jets et sauvegardes de ton compte seront supprimés définitivement. Exporte d’abord une archive si tu veux les garder.',
     eraseConfirm: 'Effacer définitivement',
+  },
+  account: {
+    lockTitle: 'Codex est verrouillé',
+    lockSubtitle:
+      'Tes campagnes sont chiffrées sur cet appareil. Déverrouille-les avec ton mot de passe.',
+    welcomeTitle: 'Bienvenue dans Codex',
+    welcomeSubtitle:
+      'Crée ton compte. Il reste sur cet appareil : aucun serveur, et toutes tes données sont chiffrées avec ton mot de passe.',
+    account: 'Compte',
+    username: 'Nom du compte',
+    usernameHint: 'ton prénom ou un pseudo',
+    password: 'Mot de passe',
+    passwordHint: (min: number) => `${min} caractères minimum`,
+    passwordAdvice:
+      'Une phrase de passe est la plus sûre et la plus facile à retenir : quatre ou cinq mots sans rapport, par exemple « lanterne verte sous le pont de grès ».',
+    confirmPassword: 'Confirme le mot de passe',
+    currentPassword: 'Mot de passe actuel',
+    newPassword: 'Nouveau mot de passe',
+    showPassword: 'Afficher le mot de passe',
+    hidePassword: 'Masquer le mot de passe',
+    unlock: 'Déverrouiller',
+    unlocking: 'Déverrouillage…',
+    create: 'Créer le compte',
+    creating: 'Chiffrement en cours…',
+    createAnother: 'Créer un autre compte',
+    backToLogin: 'Retour à la connexion',
+    forgot: 'Mot de passe oublié ?',
+    recoverTitle: 'Retrouver l’accès',
+    recoverSubtitle:
+      'Saisis le code de secours remis à la création du compte, puis choisis un nouveau mot de passe.',
+    recoveryCode: 'Code de secours',
+    recover: 'Changer le mot de passe',
+    legacyNotice: (n: number) =>
+      n > 1
+        ? `Les ${n} campagnes déjà présentes sur cet appareil seront chiffrées et rattachées à ce compte.`
+        : 'La campagne déjà présente sur cet appareil sera chiffrée et rattachée à ce compte.',
+    legacyFailed:
+      'Les campagnes existantes n’ont pas pu être reprises dans le compte. Elles sont intactes sur cet appareil.',
+    codeTitle: 'Ton code de secours',
+    codeBody:
+      'C’est le seul moyen de retrouver tes données si tu oublies ton mot de passe. Personne ne peut le faire à ta place : sans mot de passe ni code, les données sont perdues. Il ne sera plus affiché.',
+    codeCopy: 'Copier',
+    codeCopied: 'Code copié.',
+    codeDownload: 'Télécharger',
+    codeFileText: (username: string, code: string, date: string) =>
+      `Codex — code de secours du compte « ${username} »\nCréé le ${date}\n\n${code}\n\nRange ce fichier hors de l’ordinateur (papier, coffre, gestionnaire de mots de passe).\n`,
+    codeSaved: 'J’ai rangé ce code en lieu sûr, hors de cet appareil.',
+    codeContinue: 'Continuer',
+    lock: 'Verrouiller',
+    signedInAs: (name: string) => `Connecté en tant que ${name}`,
+    autoLock: 'Verrouillage automatique',
+    autoLockHint: 'Après ce délai sans activité, Codex enregistre tout et se verrouille.',
+    autoLockChoice: (minutes: number) => (minutes === 0 ? 'Jamais' : `${minutes} min`),
+    changePassword: 'Changer le mot de passe',
+    passwordChanged: 'Mot de passe changé.',
+    renewCode: 'Nouveau code de secours',
+    renewCodeHint: 'L’ancien code cessera de fonctionner.',
+    deleteAccount: 'Supprimer le compte',
+    deleteAccountHint:
+      'Supprime le compte et toutes ses campagnes de cet appareil, définitivement.',
+    deleteAccountBody:
+      'Le compte et toutes ses données seront supprimés définitivement. Exporte d’abord une archive si tu veux les garder. Confirme avec ton mot de passe.',
+    deleted: 'Compte supprimé.',
+    confirm: 'Confirmer',
+    corruptRecord:
+      'Un enregistrement illisible ou modifié hors de Codex a été ignoré. Restaure une sauvegarde si quelque chose manque.',
+    viewWaiting: 'En attente de la fenêtre du MJ',
+    viewWaitingHint: 'Déverrouille Codex dans la fenêtre du MJ : cette vue s’ouvrira toute seule.',
+    errors: {
+      notFound: 'Ce compte n’existe plus sur cet appareil.',
+      usernameTaken: 'Ce nom de compte existe déjà sur cet appareil.',
+      usernameInvalid: 'Choisis un nom de compte (40 caractères au plus).',
+      passwordTooShort: 'Le mot de passe doit faire au moins 15 caractères.',
+      passwordTooLong: 'Le mot de passe est trop long (256 caractères au plus).',
+      passwordTooSimple:
+        'Mot de passe trop prévisible (suite de touches, mot courant, caractères répétés). Essaie une phrase de passe.',
+      passwordContainsUsername: 'Le mot de passe ne doit pas contenir le nom du compte.',
+      passwordMismatch: 'Les deux mots de passe ne sont pas identiques.',
+      wrongPassword: 'Mot de passe incorrect.',
+      wrongRecoveryCode: 'Code de secours incorrect.',
+      throttled: (time: string) => `Trop d’essais. Réessaie à ${time}.`,
+      generic: 'Opération impossible. Réessaie.',
+    },
+  },
+  backups: {
+    title: 'Sauvegardes',
+    hint: 'Codex garde, chiffrées, les trois dernières copies de tes campagnes : une par jour à l’ouverture, et celles que tu fais toi-même.',
+    create: 'Sauvegarder maintenant',
+    created: 'Sauvegarde créée.',
+    empty: 'Aucune sauvegarde pour l’instant.',
+    reason: { auto: 'automatique', manual: 'manuelle', beforeRestore: 'avant restauration' },
+    summary: (n: number) => `${n} campagne${n > 1 ? 's' : ''}`,
+    restore: 'Restaurer',
+    restoreTitle: 'Restaurer cette sauvegarde ?',
+    restoreBody:
+      'Tes campagnes actuelles seront remplacées par celles de la sauvegarde. Une copie de l’état actuel est faite juste avant, pour pouvoir revenir en arrière.',
+    restored: 'Sauvegarde restaurée.',
   },
   time: {
     justNow: 'à l’instant',
   },
   errors: {
     generic: 'Une erreur est survenue.',
+    saveFailed:
+      'Enregistrement impossible (espace disque plein ?). Tes modifications sont gardées en mémoire et Codex réessaie.',
   },
 }
 

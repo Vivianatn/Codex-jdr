@@ -84,3 +84,14 @@ export interface ArchiveExport {
   exportedAt: string
   campaigns: CampaignExport[]
 }
+
+export type BackupReason = 'auto' | 'manual' | 'beforeRestore'
+
+/** Snapshot of every campaign of an account, kept in its (encrypted) database (D-242). */
+export interface Backup {
+  id: string
+  createdAt: number
+  reason: BackupReason
+  campaignCount: number
+  archive: ArchiveExport
+}

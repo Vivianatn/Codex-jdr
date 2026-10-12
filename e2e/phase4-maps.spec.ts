@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createCampaign, dumpTable, importCharacter } from './support/app'
+import { createAccount, createCampaign, dumpTable, importCharacter } from './support/app'
 
 interface Point {
   x: number
@@ -12,6 +12,7 @@ test.beforeEach(async ({ page }) => {
   await disableAppAnimations(page)
   await page.setViewportSize({ width: 1400, height: 900 })
   await page.goto('/')
+  await createAccount(page)
 })
 
 /** Screen position of a map point (map pixels), through the DEV debug hook. */

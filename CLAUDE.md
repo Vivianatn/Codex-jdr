@@ -20,15 +20,15 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 
 ## Commands
 
-| Command                              | Purpose                                               |
-| ------------------------------------ | ----------------------------------------------------- |
-| `npm run dev`                        | Dev server (http://localhost:5173)                    |
-| `npm run build`                      | Typecheck + production build                          |
-| `npm run typecheck` / `npm run lint` | `tsc -b` / ESLint (zero warnings allowed)             |
-| `npm run test:unit`                  | Vitest, once (also runs in the pre-commit hook)       |
-| `npm run test:e2e`                   | Playwright + axe (starts its own dev server on :4173) |
-| `npm run test:perf`                  | 200-token map FPS measurement (run alone)             |
-| `npm run screens`                    | Screenshots of the main screens, both themes          |
+| Command                              | Purpose                                                                    |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| `npm run dev`                        | Dev server (http://localhost:5173)                                         |
+| `npm run build`                      | Typecheck + production build                                               |
+| `npm run typecheck` / `npm run lint` | `tsc -b` / ESLint (zero warnings allowed)                                  |
+| `npm run test:unit`                  | Vitest, once (also runs in the pre-commit hook)                            |
+| `npm run test:e2e`                   | Playwright + axe (dev server on :4173, production build with CSP on :4174) |
+| `npm run test:perf`                  | 200-token map FPS measurement (run alone)                                  |
+| `npm run screens`                    | Screenshots of the main screens, both themes                               |
 
 ## Architecture
 
@@ -44,7 +44,8 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 - `src/app/` — providers (`AppProviders`), routes (hash router, Tauri-friendly), preference effects.
 - `src/features/<domain>/` — screens and domain components (campaigns, shell, prep, play, settings).
 - `src/components/ui/` — generic accessible primitives on top of Radix (Button, Dialog, SegmentedControl…).
-- `src/db/` — Dexie schema, v7 (+ `maps`, `assets`; v6 added `skills`, bestiary & items per campaign): campaigns (+ library), entities, per-campaign bestiary and item library, rolls (`db.ts`, never edit an existing `version()` block, add a new one + migration test) and repositories.
+- `src/db/` — Dexie schema, v8 (only queried indexes, `backups`; v7 added `maps`, `assets`): campaigns (+ library), entities, per-campaign bestiary and item library, rolls (`db.ts`, never edit an existing `version()` block, add a new one + migration test) and repositories. **One encrypted database per account (D-241/242): always reach it through `activeDb()`** (throws while locked); repositories take a `() => CodexDB` accessor. `middleware.ts` = integrity guard + record encryption under every table; index fields stay in clear, so never index a name or free text. `backups.ts` = daily encrypted snapshots; `sanitize.ts` = import hardening (D-243).
+- `src/security/` — local accounts (`accounts.ts`: password/recovery key wrapping, throttling, legacy migration), crypto primitives (`crypto.ts`: XChaCha20-Poly1305 via `@noble/ciphers`, PBKDF2 via WebCrypto), password rules, session (`session.ts`: key in memory only, `lockSession()` wipes it) and the players' window hand-off (`sessionChannel.ts`). Threat model: [docs/SECURITE.md](docs/SECURITE.md). UI in `src/features/account/` (`LockScreen`, `SessionGate`, settings sections). Unit tests run unlocked on a plain DB (`src/test/setup.ts`); e2e scenarios call `createAccount()` / `reloadAndUnlock()` and read data through the DEV hook `window.__codexDb` (`dumpTable`, `putRows`).
 - `src/stores/` — Zustand stores. `history.ts` is the undo/redo middleware (`createHistory` + `withHistory`) every game-action store must use. `campaignStore.ts` holds the open campaign's characters in memory (source of truth) and auto-saves them to Dexie; call `flushAutosave()` before reading Dexie directly.
 - `src/styles/tokens.css` — design tokens of the DA (`--codex-*`, light and dark), mapped to Tailwind utilities in `index.css` (`bg-surface`, `text-ink-muted`, `bg-stat-strength-soft`, `border-rarity-legendary`…). Coloured text always uses a `*-text` token, pill backgrounds a `*-soft` token. Type styles and `codex-glass` live in `index.css`. The board's colours are literals in `src/features/maps/boardTheme.ts` (canvas cannot read CSS variables); board icons are Lucide paths in `boardIcons.ts`; empty-state drawings in `src/components/illustrations.tsx`; ornaments in `src/components/Brand.tsx`.
 - Theme: `useResolvedTheme()` (preparation theme, play screen forced dark by default, players' window always dark — D-235). Screens declare themselves with `useSurface('play' | 'players')`.

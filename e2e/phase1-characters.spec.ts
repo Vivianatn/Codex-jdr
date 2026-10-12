@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
+import { createAccount, dumpTable, reloadAndUnlock } from './support/app'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
 
 const STATS = [
@@ -66,6 +67,7 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await disableAppAnimations(page)
   await page.goto('/')
+  await createAccount(page)
 })
 
 test('scenario 1: create a player with the wizard and copy the sheet for Discord', async ({
@@ -88,7 +90,7 @@ test('scenario 1: create a player with the wizard and copy the sheet for Discord
   expect(markdown).toMatch(/## Inventaire :\r?\n----/)
 
   // The sheet survives a reload (auto-save to IndexedDB).
-  await page.reload()
+  await reloadAndUnlock(page)
   await expect(page.getByRole('heading', { level: 1, name: 'Gorak' })).toBeVisible()
 })
 
@@ -141,19 +143,10 @@ test('scenario 7: export, delete and re-import a campaign with its characters', 
   expect(file).toMatchObject({ format: 'codex-campaign', version: 7 })
   expect(file.entities).toHaveLength(1)
 
-  const dump = () =>
-    page.evaluate(
-      () =>
-        new Promise((resolve) => {
-          const req = indexedDB.open('codex')
-          req.onsuccess = () => {
-            const tx = req.result.transaction(['campaigns', 'entities'])
-            const c = tx.objectStore('campaigns').getAll()
-            const e = tx.objectStore('entities').getAll()
-            tx.oncomplete = () => resolve({ campaigns: c.result, entities: e.result })
-          }
-        }),
-    )
+  const dump = async () => ({
+    campaigns: await dumpTable(page, 'campaigns'),
+    entities: await dumpTable(page, 'entities'),
+  })
   const before = await dump()
 
   await page.getByRole('button', { name: /Plus d’actions — Sauvegarde/ }).click()

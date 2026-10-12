@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { disableAppAnimations } from './support/a11y'
-import { createCampaign, importCharacter } from './support/app'
+import { createCampaign, importCharacter, createAccount, reloadAndUnlock } from './support/app'
 
 /**
  * Screenshots of the main screens in both themes, to review the art
@@ -24,39 +24,25 @@ async function clickMap(page: Page, p: Point) {
   await page.mouse.click(s.x, s.y)
 }
 
-/** Copies the first player into an enemy and an ally, straight into IndexedDB. */
+/** Copies the first player into an enemy and an ally, through the app's database layer. */
 function seedFoes(page: Page) {
-  return page.evaluate(
-    () =>
-      new Promise<void>((resolve) => {
-        const req = indexedDB.open('codex')
-        req.onsuccess = () => {
-          const idb = req.result
-          const read = idb.transaction('entities').objectStore('entities').getAll()
-          read.onsuccess = () => {
-            const model = read.result[0]
-            const tx = idb.transaction('entities', 'readwrite')
-            const put = (kind: string, pseudo: string, details: object, hp: number) =>
-              tx.objectStore('entities').put({
-                ...model,
-                id: crypto.randomUUID(),
-                kind,
-                details,
-                identity: { ...model.identity, pseudo, portrait: null, body: null },
-                hp: { ...model.hp, current: hp },
-              })
-            put(
-              'enemy',
-              'Goule affamée',
-              { templateId: null, copyNumber: 1, xpReward: 0, loot: '' },
-              6,
-            )
-            put('ally', 'Brann', { ownerId: null, role: '' }, 20)
-            tx.oncomplete = () => resolve()
-          }
-        }
-      }),
-  )
+  return page.evaluate(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DEV hook, untyped on purpose
+    const db = (window as unknown as { __codexDb: any }).__codexDb
+    const [model] = await db.entities.toArray()
+    const copy = (kind: string, pseudo: string, details: object, hp: number) => ({
+      ...model,
+      id: crypto.randomUUID(),
+      kind,
+      details,
+      identity: { ...model.identity, pseudo, portrait: null, body: null },
+      hp: { ...model.hp, current: hp },
+    })
+    await db.entities.bulkPut([
+      copy('enemy', 'Goule affamée', { templateId: null, copyNumber: 1, xpReward: 0, loot: '' }, 6),
+      copy('ally', 'Brann', { ownerId: null, role: '' }, 20),
+    ])
+  })
 }
 
 const shot = (page: Page, theme: string, name: string) =>
@@ -91,6 +77,8 @@ for (const theme of ['light', 'dark'] as const) {
     await disableAppAnimations(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/')
+    await shot(page, theme, '00-welcome')
+    await createAccount(page)
     await shot(page, theme, '01-campaigns-empty')
 
     await createCampaign(page, 'La Crypte d’Ombreval')
@@ -160,7 +148,7 @@ for (const theme of ['light', 'dark'] as const) {
     await shot(page, theme, '09-map-editor')
     await page.waitForTimeout(400)
     await seedFoes(page)
-    await page.reload()
+    await reloadAndUnlock(page)
     await expect(page.getByRole('heading', { level: 1, name: 'Ombreval' })).toBeVisible()
 
     // Play: a group, the tokens, a mini sheet.

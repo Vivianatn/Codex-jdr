@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createCampaign, importCharacter } from './support/app'
+import { createAccount, createCampaign, importCharacter, reloadAndUnlock } from './support/app'
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await disableAppAnimations(page)
   await page.setViewportSize({ width: 1400, height: 900 })
   await page.goto('/')
+  await createAccount(page)
 })
 
 test('turns by groups, the GM turn, and quick manipulation during play', async ({ page }) => {
@@ -60,6 +61,6 @@ test('turns by groups, the GM turn, and quick manipulation during play', async (
   await expectNoSeriousA11yViolations(page)
 
   // Groups and turn survive a reload.
-  await page.reload()
+  await reloadAndUnlock(page)
   await expect(page.getByRole('region', { name: 'Tours de jeu' })).toContainText('Round 2')
 })

@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react'
+import { LockKeyhole } from 'lucide-react'
+import { IconButton } from '@/components/ui/Button'
 import { SettingsButton, ThemeToggle } from '@/features/settings/SettingsDialog'
+import { useT } from '@/i18n'
+import { lockSession } from '@/security/session'
 import { cn } from '@/lib/cn'
 
 export function AppHeader({
@@ -24,9 +28,22 @@ export function AppHeader({
       {center && <div className="flex shrink-0 justify-center">{center}</div>}
       <div className="flex flex-1 items-center justify-end gap-1">
         {end}
+        <LockButton />
         <ThemeToggle />
         <SettingsButton />
       </div>
     </header>
+  )
+}
+
+function LockButton() {
+  const t = useT()
+  return (
+    <IconButton
+      label={t.account.lock}
+      icon={<LockKeyhole />}
+      onClick={() => void lockSession()}
+      data-testid="lock-button"
+    />
   )
 }
