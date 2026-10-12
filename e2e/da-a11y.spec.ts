@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createAccount, createCampaign, importCharacter } from './support/app'
+import { createAccount, createCampaign, importCharacter, startGame } from './support/app'
 
 /**
  * Art direction (docs/CODEX-DA.md §12, step 12): the redesigned screens pass
@@ -44,6 +44,7 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoSeriousA11yViolations(page)
 
     await page.getByRole('button', { name: 'Jouer cette carte' }).click()
+    await startGame(page)
     // The play screen is dark whatever the preparation theme (D-235).
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await page

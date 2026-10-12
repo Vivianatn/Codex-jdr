@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createAccount, createCampaign, dumpTable, importCharacter } from './support/app'
+import { createAccount, createCampaign, dumpTable, importCharacter, startGame } from './support/app'
 
 interface Point {
   x: number
@@ -144,6 +144,7 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
 
   // --- Play the map --------------------------------------------------------
   await page.getByRole('button', { name: 'Jouer cette carte' }).click()
+  await startGame(page)
   await expect(page.getByRole('combobox', { name: 'Carte en jeu' })).toHaveValue(/.+/)
   await page.getByLabel('Nouveau groupe').fill('Groupe')
   await page.getByRole('button', { name: 'Créer le groupe' }).click()

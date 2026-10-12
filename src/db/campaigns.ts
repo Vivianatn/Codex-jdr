@@ -2,6 +2,12 @@ import { newId } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
 import { normalizeItem } from '@/domain/items'
 import { normalizeMap, type GameMap } from '@/domain/maps'
+import {
+  normalizeSessionPlan,
+  normalizeSessionRun,
+  type SessionPlan,
+  type SessionRun,
+} from '@/domain/sessions'
 import type {
   ConditionTemplate,
   EnemyTemplate,
@@ -51,6 +57,20 @@ export function createCampaignRepository(
   db: () => CodexDB = activeDb,
   now: () => number = Date.now,
 ) {
+  /** Every table holding data of a campaign (D-224). */
+  const ownedTables = () => [
+    db().campaigns,
+    db().entities,
+    db().rolls,
+    db().skills,
+    db().bestiary,
+    db().itemLibrary,
+    db().maps,
+    db().assets,
+    db().sessions,
+    db().sessionRuns,
+  ]
+
   return {
     async create(input: { name: string; description?: string }): Promise<Campaign> {
       const name = input.name.trim()
@@ -110,29 +130,18 @@ export function createCampaignRepository(
 
     /** Deletes the campaign and everything it owns. */
     async remove(id: string): Promise<void> {
-      await db().transaction(
-        'rw',
-        [
-          db().campaigns,
-          db().entities,
-          db().rolls,
-          db().skills,
-          db().bestiary,
-          db().itemLibrary,
-          db().maps,
-          db().assets,
-        ],
-        async () => {
-          await db().entities.where('campaignId').equals(id).delete()
-          await db().bestiary.where('campaignId').equals(id).delete()
-          await db().itemLibrary.where('campaignId').equals(id).delete()
-          await db().maps.where('campaignId').equals(id).delete()
-          await db().assets.where('campaignId').equals(id).delete()
-          await db().skills.where('campaignId').equals(id).delete()
-          await db().rolls.where('campaignId').equals(id).delete()
-          await db().campaigns.delete(id)
-        },
-      )
+      await db().transaction('rw', ownedTables(), async () => {
+        await db().entities.where('campaignId').equals(id).delete()
+        await db().bestiary.where('campaignId').equals(id).delete()
+        await db().itemLibrary.where('campaignId').equals(id).delete()
+        await db().maps.where('campaignId').equals(id).delete()
+        await db().assets.where('campaignId').equals(id).delete()
+        await db().skills.where('campaignId').equals(id).delete()
+        await db().rolls.where('campaignId').equals(id).delete()
+        await db().sessions.where('campaignId').equals(id).delete()
+        await db().sessionRuns.where('campaignId').equals(id).delete()
+        await db().campaigns.delete(id)
+      })
     },
 
     async exportCampaign(id: string): Promise<CampaignExport> {
@@ -145,6 +154,8 @@ export function createCampaignRepository(
       const items = await db().itemLibrary.where('campaignId').equals(id).toArray()
       const maps = await db().maps.where('campaignId').equals(id).toArray()
       const assets = await db().assets.where('campaignId').equals(id).toArray()
+      const sessions = await db().sessions.where('campaignId').equals(id).toArray()
+      const sessionRuns = await db().sessionRuns.where('campaignId').equals(id).toArray()
       return {
         format: CAMPAIGN_EXPORT_FORMAT,
         version: CAMPAIGN_EXPORT_VERSION,
@@ -157,6 +168,8 @@ export function createCampaignRepository(
         items,
         maps,
         assets,
+        sessions: sessions.sort((a, b) => a.createdAt - b.createdAt),
+        sessionRuns: sessionRuns.sort((a, b) => a.startedAt - b.startedAt),
       }
     },
 
@@ -184,137 +197,146 @@ export function createCampaignRepository(
     /** Accepts raw file text or an already-parsed object. */
     async importCampaign(input: string | unknown, copySuffix = '(copie)'): Promise<ImportResult> {
       const data = parseExport(input)
-      return db().transaction(
-        'rw',
-        [
-          db().campaigns,
-          db().entities,
-          db().rolls,
-          db().skills,
-          db().bestiary,
-          db().itemLibrary,
-          db().maps,
-          db().assets,
-        ],
-        async () => {
-          const existing = await db().campaigns.get(data.campaign.id)
-          const campaign: Campaign = existing
-            ? {
-                ...data.campaign,
-                id: newId(),
-                name: `${data.campaign.name} ${copySuffix}`,
-                updatedAt: now(),
-              }
-            : data.campaign
+      return db().transaction('rw', ownedTables(), async () => {
+        const existing = await db().campaigns.get(data.campaign.id)
+        const campaign: Campaign = existing
+          ? {
+              ...data.campaign,
+              id: newId(),
+              name: `${data.campaign.name} ${copySuffix}`,
+              updatedAt: now(),
+            }
+          : data.campaign
 
-          // Fresh ids if the campaign is a copy or if any id is already taken.
-          const taken = await db().entities.bulkGet(data.entities.map((e) => e.id))
-          const remap = existing || taken.some(Boolean)
-          const ids = new Map(data.entities.map((e) => [e.id, remap ? newId() : e.id]))
-          const templateIds = new Map(data.bestiary.map((t) => [t.id, remap ? newId() : t.id]))
-          const entities = data.entities.map((e): Entity => {
-            const moved = { ...e, id: ids.get(e.id)!, campaignId: campaign.id } as Entity
-            if (moved.kind === 'enemy' && moved.details.templateId)
-              moved.details = {
-                ...moved.details,
-                templateId: templateIds.get(moved.details.templateId) ?? moved.details.templateId,
-              }
-            if (moved.kind === 'familiar' && moved.details.ownerId)
-              moved.details = { ...moved.details, ownerId: ids.get(moved.details.ownerId) ?? null }
-            return moved
-          })
+        // Fresh ids if the campaign is a copy or if any id is already taken.
+        const taken = await db().entities.bulkGet(data.entities.map((e) => e.id))
+        const remap = existing || taken.some(Boolean)
+        const ids = new Map(data.entities.map((e) => [e.id, remap ? newId() : e.id]))
+        const templateIds = new Map(data.bestiary.map((t) => [t.id, remap ? newId() : t.id]))
+        const entities = data.entities.map((e): Entity => {
+          const moved = { ...e, id: ids.get(e.id)!, campaignId: campaign.id } as Entity
+          if (moved.kind === 'enemy' && moved.details.templateId)
+            moved.details = {
+              ...moved.details,
+              templateId: templateIds.get(moved.details.templateId) ?? moved.details.templateId,
+            }
+          if (moved.kind === 'familiar' && moved.details.ownerId)
+            moved.details = { ...moved.details, ownerId: ids.get(moved.details.ownerId) ?? null }
+          return moved
+        })
 
-          const rolls = data.rolls.map((r) => ({
+        const rolls = data.rolls.map((r) => ({
+          ...r,
+          id: remap ? newId() : r.id,
+          campaignId: campaign.id,
+          entityId: r.entityId ? (ids.get(r.entityId) ?? null) : null,
+        }))
+        const skillIds = new Map(data.skills.map((d) => [d.id, remap ? newId() : d.id]))
+        const skills = data.skills.map((d) => ({
+          ...d,
+          id: skillIds.get(d.id)!,
+          campaignId: campaign.id,
+        }))
+        for (const e of entities)
+          e.skills = e.skills.map((s) => ({
+            ...s,
+            sourceId: s.sourceId ? (skillIds.get(s.sourceId) ?? s.sourceId) : null,
+          }))
+        // Groups follow the characters' new ids (D-226).
+        if (campaign.play)
+          campaign.play = {
+            ...campaign.play,
+            groups: campaign.play.groups.map((g) => ({
+              ...g,
+              memberIds: g.memberIds.map((m) => ids.get(m) ?? m),
+            })),
+            turn: { status: 'stopped' },
+            live: null,
+          }
+        await db().campaigns.add(campaign)
+        await db().skills.bulkPut(skills)
+        await db().entities.bulkAdd(entities)
+        await db().rolls.bulkPut(rolls)
+        await db().bestiary.bulkPut(
+          data.bestiary.map((t) => ({
+            ...t,
+            id: templateIds.get(t.id)!,
+            campaignId: campaign.id,
+          })),
+        )
+        // Maps keep pointing at the right characters, maps and pictures.
+        const mapIds = new Map(data.maps.map((m) => [m.id, remap ? newId() : m.id]))
+        const assetIds = new Map(data.assets.map((a) => [a.id, remap ? newId() : a.id]))
+        await db().assets.bulkPut(
+          data.assets.map((a) => ({ ...a, id: assetIds.get(a.id)!, campaignId: campaign.id })),
+        )
+        await db().maps.bulkPut(
+          data.maps.map((m) => ({
+            ...m,
+            id: mapIds.get(m.id)!,
+            campaignId: campaign.id,
+            background: {
+              ...m.background,
+              assetId: m.background.assetId ? (assetIds.get(m.background.assetId) ?? null) : null,
+            },
+            tokens: m.tokens
+              .filter((t) => ids.has(t.entityId))
+              .map((t) => ({ ...t, entityId: ids.get(t.entityId)! })),
+            elements: m.elements.map((el) => ({
+              ...el,
+              ...(el.link
+                ? { link: { mapId: el.link.mapId ? (mapIds.get(el.link.mapId) ?? null) : null } }
+                : {}),
+              ...(el.npc
+                ? {
+                    npc: {
+                      entityId: el.npc.entityId ? (ids.get(el.npc.entityId) ?? null) : null,
+                    },
+                  }
+                : {}),
+            })),
+          })),
+        )
+        if (campaign.play) {
+          const play = campaign.play
+          campaign.play = {
+            ...play,
+            mapId: play.mapId ? (mapIds.get(play.mapId) ?? null) : null,
+            display: {
+              ...play.display,
+              imageAssetId: play.display?.imageAssetId
+                ? (assetIds.get(play.display.imageAssetId) ?? null)
+                : null,
+            },
+          }
+          await db().campaigns.put(campaign)
+        }
+        await db().itemLibrary.bulkPut(
+          data.items.map((i) => ({ ...i, id: remap ? newId() : i.id, campaignId: campaign.id })),
+        )
+        // Sessions keep pointing at their map, their bestiary templates and their plan.
+        const planIds = new Map(data.sessions.map((p) => [p.id, remap ? newId() : p.id]))
+        await db().sessions.bulkPut(
+          data.sessions.map((p) => ({
+            ...p,
+            id: planIds.get(p.id)!,
+            campaignId: campaign.id,
+            mapId: p.mapId ? (mapIds.get(p.mapId) ?? null) : null,
+            encounters: p.encounters
+              .filter((e) => templateIds.has(e.templateId))
+              .map((e) => ({ ...e, templateId: templateIds.get(e.templateId)! })),
+          })),
+        )
+        await db().sessionRuns.bulkPut(
+          data.sessionRuns.map((r) => ({
             ...r,
             id: remap ? newId() : r.id,
             campaignId: campaign.id,
-            entityId: r.entityId ? (ids.get(r.entityId) ?? null) : null,
-          }))
-          const skillIds = new Map(data.skills.map((d) => [d.id, remap ? newId() : d.id]))
-          const skills = data.skills.map((d) => ({
-            ...d,
-            id: skillIds.get(d.id)!,
-            campaignId: campaign.id,
-          }))
-          for (const e of entities)
-            e.skills = e.skills.map((s) => ({
-              ...s,
-              sourceId: s.sourceId ? (skillIds.get(s.sourceId) ?? s.sourceId) : null,
-            }))
-          // Groups follow the characters' new ids (D-226).
-          if (campaign.play)
-            campaign.play = {
-              ...campaign.play,
-              groups: campaign.play.groups.map((g) => ({
-                ...g,
-                memberIds: g.memberIds.map((m) => ids.get(m) ?? m),
-              })),
-              turn: { status: 'stopped' },
-            }
-          await db().campaigns.add(campaign)
-          await db().skills.bulkPut(skills)
-          await db().entities.bulkAdd(entities)
-          await db().rolls.bulkPut(rolls)
-          await db().bestiary.bulkPut(
-            data.bestiary.map((t) => ({
-              ...t,
-              id: templateIds.get(t.id)!,
-              campaignId: campaign.id,
-            })),
-          )
-          // Maps keep pointing at the right characters, maps and pictures.
-          const mapIds = new Map(data.maps.map((m) => [m.id, remap ? newId() : m.id]))
-          const assetIds = new Map(data.assets.map((a) => [a.id, remap ? newId() : a.id]))
-          await db().assets.bulkPut(
-            data.assets.map((a) => ({ ...a, id: assetIds.get(a.id)!, campaignId: campaign.id })),
-          )
-          await db().maps.bulkPut(
-            data.maps.map((m) => ({
-              ...m,
-              id: mapIds.get(m.id)!,
-              campaignId: campaign.id,
-              background: {
-                ...m.background,
-                assetId: m.background.assetId ? (assetIds.get(m.background.assetId) ?? null) : null,
-              },
-              tokens: m.tokens
-                .filter((t) => ids.has(t.entityId))
-                .map((t) => ({ ...t, entityId: ids.get(t.entityId)! })),
-              elements: m.elements.map((el) => ({
-                ...el,
-                ...(el.link
-                  ? { link: { mapId: el.link.mapId ? (mapIds.get(el.link.mapId) ?? null) : null } }
-                  : {}),
-                ...(el.npc
-                  ? {
-                      npc: {
-                        entityId: el.npc.entityId ? (ids.get(el.npc.entityId) ?? null) : null,
-                      },
-                    }
-                  : {}),
-              })),
-            })),
-          )
-          if (campaign.play) {
-            const play = campaign.play
-            campaign.play = {
-              ...play,
-              mapId: play.mapId ? (mapIds.get(play.mapId) ?? null) : null,
-              display: {
-                ...play.display,
-                imageAssetId: play.display?.imageAssetId
-                  ? (assetIds.get(play.display.imageAssetId) ?? null)
-                  : null,
-              },
-            }
-            await db().campaigns.put(campaign)
-          }
-          await db().itemLibrary.bulkPut(
-            data.items.map((i) => ({ ...i, id: remap ? newId() : i.id, campaignId: campaign.id })),
-          )
-          return { campaign, renamed: Boolean(existing) }
-        },
-      )
+            planId: r.planId ? (planIds.get(r.planId) ?? null) : null,
+          })),
+        )
+        return { campaign, renamed: Boolean(existing) }
+      })
     },
   }
 }
@@ -459,5 +481,11 @@ export function parseExport(input: string | unknown): CampaignExport {
     assets: (Array.isArray(data.assets) ? data.assets : []).filter(
       (a): a is Asset => isRecord(a) && typeof a.id === 'string' && isSafeImageDataUrl(a.data),
     ),
+    sessions: (Array.isArray(data.sessions) ? data.sessions : [])
+      .map((p) => normalizeSessionPlan(p, campaign.id))
+      .filter((p): p is SessionPlan => p !== null),
+    sessionRuns: (Array.isArray(data.sessionRuns) ? data.sessionRuns : [])
+      .map((r) => normalizeSessionRun(r, campaign.id))
+      .filter((r): r is SessionRun => r !== null),
   }
 }

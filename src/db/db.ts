@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import { normalizeEntityShape } from '@/domain/entity'
 import type { RollRecord } from '@/domain/rolls'
 import type { GameMap } from '@/domain/maps'
+import type { SessionPlan, SessionRun } from '@/domain/sessions'
 import type { EnemyTemplate, Entity, Item, LibraryItem, SkillDefinition } from '@/domain/types'
 import { encryptionMiddleware, integrityMiddleware } from './middleware'
 import type { Asset, Backup } from './types'
@@ -80,6 +81,20 @@ export const SCHEMA = {
     assets: 'id, campaignId',
     backups: 'id, createdAt',
   },
+  // v9 (D-244): reusable session plans (the former quests) and the games played.
+  9: {
+    campaigns: 'id',
+    entities: 'id, campaignId',
+    bestiary: 'id, campaignId',
+    rolls: 'id, campaignId, [campaignId+at]',
+    itemLibrary: 'id, campaignId',
+    skills: 'id, campaignId',
+    maps: 'id, campaignId',
+    assets: 'id, campaignId',
+    backups: 'id, createdAt',
+    sessions: 'id, campaignId',
+    sessionRuns: 'id, campaignId',
+  },
 } as const
 
 /**
@@ -103,6 +118,10 @@ export class CodexDB extends Dexie {
   assets!: EntityTable<Asset, 'id'>
   /** Encrypted snapshots of every campaign (D-242). */
   backups!: EntityTable<Backup, 'id'>
+  /** Reusable session plans (D-244). */
+  sessions!: EntityTable<SessionPlan, 'id'>
+  /** Games played, one per start of play (D-244). */
+  sessionRuns!: EntityTable<SessionRun, 'id'>
 
   /**
    * @param options.key data key of the account: every record is then encrypted at rest (D-241).
@@ -201,6 +220,8 @@ export class CodexDB extends Dexie {
     this.version(7).stores(SCHEMA[7])
     // v8 (D-242): unused indexes dropped, backups table. Index changes only.
     this.version(8).stores(SCHEMA[8])
+    // v9 (D-244): session plans and runs. New tables only.
+    this.version(9).stores(SCHEMA[9])
   }
 }
 

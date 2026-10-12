@@ -7,6 +7,7 @@ import {
   dumpTable,
   importCharacter,
   reloadAndUnlock,
+  startGame,
 } from './support/app'
 
 test.beforeEach(async ({ page }) => {
@@ -180,6 +181,7 @@ for (const theme of ['light', 'dark'] as const) {
       .getByRole('radiogroup', { name: 'Mode' })
       .getByRole('radio', { name: 'En jeu' })
       .click()
+    await startGame(page)
     // Quick panel, then the full sheet over the map.
     await page.getByRole('button', { name: 'Manipuler Gorak' }).click()
     await expect(

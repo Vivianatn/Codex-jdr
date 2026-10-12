@@ -57,6 +57,8 @@ describe('campaign shell', () => {
     const modes = screen.getByRole('radiogroup', { name: 'Mode' })
 
     await user.click(within(modes).getByRole('radio', { name: 'En jeu' }))
+    // No game yet: it starts by hand (D-244).
+    await user.click(await screen.findByRole('button', { name: 'Démarrer la partie' }))
     expect(await screen.findByRole('main', { name: 'Plateau de jeu' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(`/c/${campaign.id}/play`)
 

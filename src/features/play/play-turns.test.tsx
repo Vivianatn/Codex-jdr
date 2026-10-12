@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { campaignRepository } from '@/db/campaigns'
 import { activeDb } from '@/db/db'
 import { createEntity } from '@/domain/entity'
-import { configuredRules } from '@/test/fixtures'
+import { configuredRules, startLocalGame } from '@/test/fixtures'
 import { renderApp } from '@/test/renderApp'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -24,6 +24,7 @@ async function playScreen() {
   const gorak = createEntity('player', c.id, rules, { identity: { pseudo: 'Gorak' }, hpRoll: 10 })
   const gob = createEntity('enemy', c.id, rules, { identity: { pseudo: 'Gobelin 1' }, hpRoll: 4 })
   await activeDb().entities.bulkAdd([lyra, gorak, gob])
+  await startLocalGame(c.id)
   const app = renderApp(`/c/${c.id}/play`)
   await screen.findByRole('region', { name: 'Tours de jeu' })
   return { ...app, lyra, gorak, gob }

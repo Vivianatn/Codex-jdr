@@ -4,6 +4,22 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Sessions, partie démarrée à la main, mode en ligne (2026-10-12)
+
+### D-244 · Les quêtes deviennent des sessions ; la partie se démarre à la main
+
+Demande du MJ : « les quêtes deviennent des sessions qu'on peut utiliser et réutiliser », « le mode jeu démarré manuellement par un éditeur », « en jeu il n'y en a qu'un qui opère ».
+
+- **Session préparée** (table `sessions`, schéma v9) : titre, résumé, objectifs, récompenses (XP, monnaie, objets), notes du MJ, carte à mettre sur le plateau, rencontres (modèles du bestiaire × nombre). Elle n'est jamais modifiée par le jeu : on la rejoue autant qu'on veut.
+- **Partie jouée** (table `sessionRuns`) : une par démarrage — date, durée, mode, opérateurs successifs, participants, objectifs atteints, notes de la partie. L'onglet « Jouées » de la section Sessions en est l'historique. Les objectifs cochés appartiennent à la partie, pas à la session.
+- La section « Quêtes » disparaît (absorbée) ; « Sessions » remplace l'écran vide prévu par la spec (journal de session : à compléter plus tard avec les jets).
+- **Démarrage manuel** : l'écran En jeu affiche « Aucune partie en cours » tant que personne n'a démarré ; on choisit une session (ou une partie libre) et le mode (MJ seul / en ligne). Démarrer met la carte de la session sur le plateau, crée les ennemis des rencontres (numérotés) dans un groupe, et fait de celui qui démarre **l'opérateur**.
+- **Un seul opérateur** (`play.live.operator`) : les autres éditeurs voient la table en lecture seule (`inert`, bandeau « X mène la partie »). L'opérateur peut passer la main à un éditeur connecté et termine la partie.
+- Démarrer, passer la main et terminer **vident l'historique d'annulation** : on ne peut pas annuler à travers ces points de passage (l'historique est local à chaque appareil).
+- Format d'export v8 (sessions et parties incluses) ; une partie en cours n'est jamais importée comme « en cours ».
+
+---
+
 ## Comptes, chiffrement et sécurité (2026-10-12)
 
 Demande du MJ : « un système de compte et chiffre toutes les données », garder la base existante en la renforçant, « très forte protection ». Détail technique et modèle de menace : [SECURITE.md](SECURITE.md).

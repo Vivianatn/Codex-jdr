@@ -11,7 +11,6 @@ export const PREP_SECTIONS = [
   'conditions',
   'maps',
   'sessions',
-  'quests',
   'notes',
   'rules',
 ] as const

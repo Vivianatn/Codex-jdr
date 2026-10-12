@@ -1,3 +1,5 @@
+import type { PlayMode } from './sessions'
+
 /**
  * Turns by groups (D-226), replacing the combat tracker of the original spec.
  *
@@ -26,12 +28,35 @@ export interface PlayerDisplay {
   imageAssetId: string | null
 }
 
+/** Someone taking part in the game: the host device ('host') or a peer (D-245). */
+export interface Participant {
+  id: string
+  name: string
+}
+
+/** Participant id of the device that owns the campaign. */
+export const HOST_ID = 'host'
+
+/**
+ * A game in progress (D-244). Play is started by hand by an editor; while it
+ * runs, only the operator acts on the table — other editors watch.
+ */
+export interface LiveGame {
+  runId: string
+  planId: string | null
+  mode: PlayMode
+  startedAt: number
+  operator: Participant
+}
+
 export interface PlayState {
   groups: PlayGroup[]
   turn: TurnState
   /** Map in play (D-228), or null. */
   mapId: string | null
   display: PlayerDisplay
+  /** Game in progress, or null between sessions (the play screen then offers to start one). */
+  live: LiveGame | null
 }
 
 export function emptyPlayState(): PlayState {
@@ -40,7 +65,32 @@ export function emptyPlayState(): PlayState {
     turn: { status: 'stopped' },
     mapId: null,
     display: { mode: 'map', imageAssetId: null },
+    live: null,
   }
+}
+
+function normalizeLive(raw: unknown): LiveGame | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const live = raw as Partial<LiveGame>
+  const operator = live.operator
+  if (
+    typeof live.runId !== 'string' ||
+    typeof operator?.id !== 'string' ||
+    typeof operator.name !== 'string'
+  )
+    return null
+  return {
+    runId: live.runId,
+    planId: typeof live.planId === 'string' ? live.planId : null,
+    mode: live.mode === 'online' ? 'online' : 'local',
+    startedAt: typeof live.startedAt === 'number' ? live.startedAt : 0,
+    operator: { id: operator.id, name: operator.name },
+  }
+}
+
+/** True when `participantId` may act on the table right now. */
+export function isOperator(state: PlayState, participantId: string): boolean {
+  return state.live?.operator.id === participantId
 }
 
 /** Fills missing fields of a saved play state (or none). */
@@ -63,6 +113,7 @@ export function normalizePlayState(raw: unknown): PlayState {
     turn: turn as TurnState,
     mapId: typeof value.mapId === 'string' ? value.mapId : null,
     display,
+    live: normalizeLive(value.live),
   }
 }
 

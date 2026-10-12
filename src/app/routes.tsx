@@ -1,6 +1,7 @@
 import { Navigate, type RouteObject } from 'react-router'
 import { RequirePlayersSession, RequireSession } from '@/features/account/SessionGate'
 import { CampaignsPage } from '@/features/campaigns/CampaignsPage'
+import { SessionEditor } from '@/features/sessions/SessionEditor'
 import { PlayLayout } from '@/features/play/PlayLayout'
 import { PrepLayout } from '@/features/prep/PrepLayout'
 import { PrepSectionPage } from '@/features/prep/PrepSectionPage'
@@ -37,6 +38,7 @@ export const routes: RouteObject[] = [
               { path: 'e/:entityId', element: <EntitySheetPage /> },
               { path: 't/:templateId', element: <TemplateSheetPage /> },
               { path: 'm/:mapId', element: <MapEditorRoute /> },
+              { path: 's/:sessionId', element: <SessionEditor /> },
             ],
           },
           { path: 'play', element: <PlayLayout /> },

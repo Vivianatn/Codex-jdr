@@ -22,6 +22,8 @@ const CAMPAIGN_OWNED = new Set([
   'skills',
   'maps',
   'assets',
+  'sessions',
+  'sessionRuns',
 ])
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

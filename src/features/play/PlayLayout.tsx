@@ -1,7 +1,12 @@
+import { Eye } from 'lucide-react'
 import { lazy, Suspense } from 'react'
 import { useSurface } from '@/app/useSurface'
 import { PageTransition } from '@/features/shell/PageTransition'
+import { SessionMenu } from '@/features/sessions/SessionMenu'
+import { StartPlayPanel } from '@/features/sessions/StartPlayPanel'
 import { useT } from '@/i18n'
+import { useOnlineStore } from '@/online/onlineStore'
+import { useCampaignStore } from '@/stores/campaignStore'
 import { GroupsPanel } from './GroupsPanel'
 import { PlaySheetDrawer } from './PlaySheetDrawer'
 import { QuickPanel } from './QuickPanel'
@@ -17,9 +22,45 @@ const PlayMap = lazy(() => import('@/features/maps/PlayMap').then((m) => ({ defa
 export function PlayLayout() {
   const t = useT()
   useSurface('play')
+  const live = useCampaignStore((s) => s.play.live)
+  const selfId = useOnlineStore((s) => s.selfId)
 
+  // Play starts by hand (D-244).
+  if (!live)
+    return (
+      <PageTransition className="flex-col">
+        <StartPlayPanel />
+      </PageTransition>
+    )
+
+  // Only the operator acts; other editors watch the same table (D-244).
+  const operating = live.operator.id === selfId
   return (
     <PageTransition className="flex-col">
+      {!operating && (
+        <div
+          role="status"
+          className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-accent-soft px-4 py-2 text-sm text-accent-text"
+          data-testid="spectator-bar"
+        >
+          <span className="flex items-center gap-2">
+            <Eye className="size-4" aria-hidden />
+            {t.sessions.spectating(live.operator.name)}
+          </span>
+          <SessionMenu />
+        </div>
+      )}
+      <div className="flex min-h-0 flex-1 flex-col" {...(operating ? {} : { inert: '' })}>
+        <PlayTable />
+      </div>
+    </PageTransition>
+  )
+}
+
+function PlayTable() {
+  const t = useT()
+  return (
+    <>
       <TurnBanner />
       <main
         id="main"
@@ -40,7 +81,7 @@ export function PlayLayout() {
       </main>
       <PlaySheetDrawer />
       <QuickPanel />
-    </PageTransition>
+    </>
   )
 }
 

@@ -99,3 +99,9 @@ export function putRows(page: Page, table: string, rows: unknown[]) {
     [table, rows] as const,
   )
 }
+
+/** The play screen starts empty: games start by hand (D-244). Starts a free local game. */
+export async function startGame(page: Page) {
+  await page.getByTestId('start-play').getByRole('button', { name: 'Démarrer la partie' }).click()
+  await expect(page.getByRole('main', { name: 'Plateau de jeu' })).toBeVisible()
+}

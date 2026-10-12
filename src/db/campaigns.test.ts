@@ -8,6 +8,7 @@ import {
 import { createEntity } from '@/domain/entity'
 import { newItem } from '@/domain/items'
 import { newElement, newMap } from '@/domain/maps'
+import { newSessionPlan } from '@/domain/sessions'
 import { defaultRules } from '@/rules'
 import { CodexDB } from './db'
 
@@ -150,7 +151,7 @@ describe('personal data (GDPR, D-240)', () => {
 
 describe('schema', () => {
   it('opens at the current version with the expected tables', async () => {
-    expect(db.verno).toBe(8)
+    expect(db.verno).toBe(9)
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'assets',
       'backups',
@@ -160,6 +161,8 @@ describe('schema', () => {
       'itemLibrary',
       'maps',
       'rolls',
+      'sessionRuns',
+      'sessions',
       'skills',
     ])
   })
@@ -333,6 +336,7 @@ describe('everything belongs to its campaign (D-224)', () => {
         turn: { status: 'stopped' },
         mapId: hall.id,
         display: { mode: 'map', imageAssetId: null },
+        live: null,
       },
     })
 
@@ -357,5 +361,64 @@ describe('everything belongs to its campaign (D-224)', () => {
     expect(await db.maps.where('campaignId').equals(c.id).count()).toBe(0)
     expect(await db.assets.where('campaignId').equals(c.id).count()).toBe(0)
     expect(await db.maps.where('campaignId').equals(campaign.id).count()).toBe(2)
+  })
+})
+
+describe('sessions travel with their campaign (D-244)', () => {
+  it('a copy keeps plans pointing at its own map and templates, runs at their plan, no live game', async () => {
+    const c = await repo.create({ name: 'Avec sessions' })
+    const template = createEntity('enemy', c.id, defaultRules())
+    await db.bestiary.add(template)
+    const map = newMap(c.id, { name: 'Crypte' })
+    await db.maps.add(map)
+    const plan = {
+      ...newSessionPlan(c.id, 'La crypte'),
+      mapId: map.id,
+      encounters: [{ id: 'e1', templateId: template.id, count: 2 }],
+    }
+    await db.sessions.add(plan)
+    await db.sessionRuns.add({
+      id: 'run1',
+      campaignId: c.id,
+      planId: plan.id,
+      title: 'La crypte',
+      mode: 'local',
+      startedAt: 1,
+      endedAt: 2,
+      operators: ['MJ'],
+      participants: ['MJ'],
+      objectivesDone: [],
+      notes: '',
+    })
+    await db.campaigns.update(c.id, {
+      play: {
+        groups: [],
+        turn: { status: 'stopped' },
+        mapId: null,
+        display: { mode: 'map', imageAssetId: null },
+        live: {
+          runId: 'run1',
+          planId: plan.id,
+          mode: 'local',
+          startedAt: 1,
+          operator: { id: 'host', name: 'MJ' },
+        },
+      },
+    })
+
+    const { campaign: copy } = await repo.importCampaign(await repo.exportCampaign(c.id))
+    const [copiedPlan] = await db.sessions.where('campaignId').equals(copy.id).toArray()
+    const [copiedMap] = await db.maps.where('campaignId').equals(copy.id).toArray()
+    const [copiedTemplate] = await db.bestiary.where('campaignId').equals(copy.id).toArray()
+    const [copiedRun] = await db.sessionRuns.where('campaignId').equals(copy.id).toArray()
+    expect(copiedPlan!.id).not.toBe(plan.id)
+    expect(copiedPlan!.mapId).toBe(copiedMap!.id)
+    expect(copiedPlan!.encounters[0]!.templateId).toBe(copiedTemplate!.id)
+    expect(copiedRun!.planId).toBe(copiedPlan!.id)
+    expect((await db.campaigns.get(copy.id))?.play?.live).toBeNull()
+
+    await repo.remove(c.id)
+    expect(await db.sessions.where('campaignId').equals(c.id).count()).toBe(0)
+    expect(await db.sessionRuns.where('campaignId').equals(c.id).count()).toBe(0)
   })
 })

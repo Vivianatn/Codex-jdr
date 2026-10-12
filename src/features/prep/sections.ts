@@ -1,6 +1,5 @@
 import {
   CalendarDays,
-  Flag,
   Gem,
   Handshake,
   LayoutDashboard,
@@ -25,7 +24,6 @@ export const SECTION_ICONS: Record<PrepSection, LucideIcon> = {
   items: Gem,
   maps: Map,
   sessions: CalendarDays,
-  quests: Flag,
   notes: NotebookPen,
   conditions: Sparkles,
   rules: Scale,

@@ -9,6 +9,7 @@ import { canStart, type PlayGroup, type TurnState } from '@/domain/turns'
 import type { Entity } from '@/domain/types'
 import { Portrait } from '@/features/characters/Portrait'
 import { useGameActions } from '@/features/game/useGameActions'
+import { SessionMenu } from '@/features/sessions/SessionMenu'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
@@ -100,6 +101,7 @@ export function TurnBanner() {
       )}
 
       <div className="flex shrink-0 items-center gap-2">
+        <SessionMenu />
         {turn.status === 'stopped' ? (
           <Button
             variant="primary"

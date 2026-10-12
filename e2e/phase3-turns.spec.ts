@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createAccount, createCampaign, importCharacter, reloadAndUnlock } from './support/app'
+import {
+  createAccount,
+  createCampaign,
+  importCharacter,
+  reloadAndUnlock,
+  startGame,
+} from './support/app'
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -19,6 +25,7 @@ test('turns by groups, the GM turn, and quick manipulation during play', async (
     .getByRole('radiogroup', { name: 'Mode' })
     .getByRole('radio', { name: 'En jeu' })
     .click()
+  await startGame(page)
 
   const group = async (name: string, members: string[]) => {
     await page.getByLabel('Nouveau groupe').fill(name)

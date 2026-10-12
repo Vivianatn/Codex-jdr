@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 import { disableAppAnimations } from './support/a11y'
-import { createCampaign, importCharacter, createAccount, reloadAndUnlock } from './support/app'
+import {
+  createAccount,
+  createCampaign,
+  importCharacter,
+  reloadAndUnlock,
+  startGame,
+} from './support/app'
 
 /**
  * Screenshots of the main screens in both themes, to review the art
@@ -153,6 +159,7 @@ for (const theme of ['light', 'dark'] as const) {
 
     // Play: a group, the tokens, a mini sheet.
     await page.getByRole('button', { name: 'Jouer cette carte' }).click()
+    await startGame(page)
     await page.getByLabel('Nouveau groupe').fill('Le groupe')
     await page.getByRole('button', { name: 'Créer le groupe' }).click()
     const card = page.getByRole('region', { name: 'Le groupe' })

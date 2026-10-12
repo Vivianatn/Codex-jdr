@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createAccount, dumpTable, reloadAndUnlock, unlock } from './support/app'
+import { createAccount, dumpTable, reloadAndUnlock, startGame, unlock } from './support/app'
 
 async function createCampaign(page: Page, name: string) {
   await page.getByRole('button', { name: 'Nouvelle campagne' }).first().click()
@@ -26,6 +26,7 @@ test('creates a campaign, switches modes and survives a reload', async ({ page }
   await expect(page.getByRole('heading', { name: 'Bestiaire', exact: true })).toBeVisible()
 
   await modes.getByRole('radio', { name: 'En jeu' }).click()
+  await startGame(page)
   await expect(page.getByRole('main', { name: 'Plateau de jeu' })).toBeVisible()
 
   await modes.getByRole('radio', { name: 'Préparation' }).click()
@@ -56,7 +57,7 @@ test('exports a campaign, deletes it and re-imports it identically', async ({ pa
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/^codex-aller-retour-\d{4}-\d{2}-\d{2}\.json$/)
   const file = JSON.parse(await readFile(await download.path(), 'utf8'))
-  expect(file).toMatchObject({ format: 'codex-campaign', version: 7 })
+  expect(file).toMatchObject({ format: 'codex-campaign', version: 8 })
 
   await page.getByRole('button', { name: /Plus d’actions — Aller-retour/ }).click()
   await page.getByRole('menuitem', { name: 'Supprimer' }).click()
@@ -99,6 +100,7 @@ for (const theme of ['light', 'dark'] as const) {
       .getByRole('radiogroup', { name: 'Mode' })
       .getByRole('radio', { name: 'En jeu' })
       .click()
+    await startGame(page)
     await expect(page.getByRole('main', { name: 'Plateau de jeu' })).toBeVisible()
     await expectNoSeriousA11yViolations(page) // play mode
 

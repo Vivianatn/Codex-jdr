@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
-import { createAccount, dumpTable, reloadAndUnlock } from './support/app'
+import { createAccount, dumpTable, reloadAndUnlock, startGame } from './support/app'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
 
 const STATS = [
@@ -122,6 +122,7 @@ test('scenario 2 (part): create a Gobelin template and add 5 numbered copies', a
 
   // In play mode, the enemies are listed (not yet in a group) in the side bar.
   await page.getByRole('radio', { name: 'En jeu' }).click()
+  await startGame(page)
   await expect(
     page
       .getByRole('complementary', { name: 'Accès rapide' })
@@ -140,7 +141,7 @@ test('scenario 7: export, delete and re-import a campaign with its characters', 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('menuitem', { name: 'Exporter' }).click()
   const file = JSON.parse(await readFile(await (await downloadPromise).path(), 'utf8'))
-  expect(file).toMatchObject({ format: 'codex-campaign', version: 7 })
+  expect(file).toMatchObject({ format: 'codex-campaign', version: 8 })
   expect(file.entities).toHaveLength(1)
 
   const dump = async () => ({

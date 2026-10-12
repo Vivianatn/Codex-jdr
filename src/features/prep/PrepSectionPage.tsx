@@ -6,6 +6,7 @@ import { ConditionsPage } from '@/features/library/ConditionsPage'
 import { ItemsPage } from '@/features/library/ItemsPage'
 import { SkillsPage } from '@/features/library/SkillsPage'
 import { MapsPage } from '@/features/maps/MapsPage'
+import { SessionsPage } from '@/features/sessions/SessionsPage'
 import { RulesPage } from '@/features/rules/RulesPage'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
@@ -15,7 +16,6 @@ import { SECTION_ICONS, sectionLabel } from './sections'
 import {
   InkwellIllustration,
   LanternIllustration,
-  MapRollIllustration,
   MedallionsIllustration,
 } from '@/components/illustrations'
 
@@ -30,6 +30,7 @@ type PlaceholderSection = Exclude<
   | 'conditions'
   | 'skills'
   | 'maps'
+  | 'sessions'
 >
 
 /** Routes each prep section to its page. Sections not built yet show an informative empty state. */
@@ -89,6 +90,8 @@ export function PrepSectionPage() {
       return <ConditionsPage />
     case 'maps':
       return <MapsPage />
+    case 'sessions':
+      return <SessionsPage />
     default:
       return <Placeholder section={section} />
   }
@@ -104,13 +107,7 @@ function Placeholder({ section }: { section: PlaceholderSection }) {
       <div className="h-8" aria-hidden />
       <EmptyState
         icon={<Icon />}
-        illustration={
-          section === 'quests' ? (
-            <MapRollIllustration label={t.illustrations.mapRoll} />
-          ) : (
-            <InkwellIllustration label={t.illustrations.inkwell} />
-          )
-        }
+        illustration={<InkwellIllustration label={t.illustrations.inkwell} />}
         eyebrow={sectionLabel(t, section)}
         title={copy.emptyTitle}
         body={copy.emptyBody}

@@ -1,6 +1,7 @@
 import { starterConditions } from '@/domain/conditions'
 import type { RollRecord } from '@/domain/rolls'
 import type { GameMap } from '@/domain/maps'
+import type { SessionPlan, SessionRun } from '@/domain/sessions'
 import type { PlayState } from '@/domain/turns'
 import type {
   ConditionTemplate,
@@ -54,7 +55,7 @@ export interface Asset {
 }
 
 /** Current version of the campaign export file. Bump it when the shape changes. */
-export const CAMPAIGN_EXPORT_VERSION = 7
+export const CAMPAIGN_EXPORT_VERSION = 8
 export const CAMPAIGN_EXPORT_FORMAT = 'codex-campaign'
 
 export interface CampaignExport {
@@ -72,6 +73,9 @@ export interface CampaignExport {
   /** Battle maps and their pictures (v7+). */
   maps: GameMap[]
   assets: Asset[]
+  /** Session plans and the games played (v8+, D-244). */
+  sessions: SessionPlan[]
+  sessionRuns: SessionRun[]
 }
 
 /** Every campaign of this device in one file (GDPR data portability, D-240). */

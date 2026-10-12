@@ -1,3 +1,5 @@
+import { activeDb } from '@/db/db'
+import { emptyPlayState, HOST_ID } from '@/domain/turns'
 import type { ConditionTemplate } from '@/domain/types'
 import { defaultRules, type RulesConfig } from '@/rules'
 
@@ -68,4 +70,22 @@ export const TEST_CONDITIONS: Record<'poisoned' | 'burning' | 'stunned', Conditi
     duration: 1,
     modifiers: [{ id: 'm-stun', stat: 'dexterity', value: -2, label: 'Étourdi' }],
   },
+}
+
+/** Puts a campaign in a game started by this device (D-244), as if « Démarrer la partie » was clicked. */
+export async function startLocalGame(campaignId: string): Promise<void> {
+  const db = activeDb()
+  const campaign = await db.campaigns.get(campaignId)
+  await db.campaigns.update(campaignId, {
+    play: {
+      ...(campaign?.play ?? emptyPlayState()),
+      live: {
+        runId: 'test-run',
+        planId: null,
+        mode: 'local',
+        startedAt: 0,
+        operator: { id: HOST_ID, name: 'MJ' },
+      },
+    },
+  })
 }
