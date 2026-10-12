@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { createHashRouter, RouterProvider } from 'react-router'
 import { Toaster } from 'sonner'
 import { AnalyticsNotice } from '@/features/settings/AnalyticsNotice'
+import { useGameSounds } from '@/features/sound/useGameSounds'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { routes } from './routes'
 import { useMediaQuery } from './useMediaQuery'
@@ -49,11 +50,18 @@ export function AppProviders({ children }: { children: ReactNode }) {
   )
 }
 
+/** Sounds of the table (D-251), for the whole app. */
+function GameSounds() {
+  useGameSounds()
+  return null
+}
+
 export function App() {
   return (
     <AppProviders>
       <RouterProvider router={router} />
       <AnalyticsNotice />
+      <GameSounds />
     </AppProviders>
   )
 }

@@ -16,6 +16,19 @@ Demande du MJ : « gamifier » Codex et faire en sorte qu'il ne ressemble pas à
 - **Icônes** : glyphes game-icons.net (CC BY 3.0) pour tout ce qui appartient au jeu (sections, objets, états, dés, épées, couronne du MJ…), extraits par `scripts/game-icons.ts` (67 glyphes, seuls ceux utilisés vont dans le paquet) et affichés par `GameIcon` / `gameIcon()`. Les actions d'interface (fermer, annuler, ajouter) gardent des icônes au trait sobres. Crédits dans Paramètres › Crédits.
 - Logo et favicon : un écu de cuir serti d'or, codex crème et losange rouge.
 
+### D-251 · Sons et musique synthétisés
+
+- **Aucun fichier audio** : chaque son est fabriqué par Web Audio au moment de le jouer (`src/lib/audio/`). Rien à télécharger, aucune licence, aucun poids dans le paquet. Sans Web Audio (tests, vieux navigateurs), tout reste silencieux sans erreur.
+- **Bruitages, actifs par défaut** (choix du MJ) : dés qui roulent sur le bois, puis le verdict (réussite, échec, fanfare de cuivres et cloche pour un critique, ligne descendante et tambour pour un échec critique), coups (plus lourds quand un personnage tombe en Critique ou à 0), soins, montée de niveau, cloche à chaque tour, double tambour à chaque round, cor pour le tour du MJ, victoire, défaite, et un petit claquement de bois sur les boutons principaux et les onglets. Une salve de dégâts de zone ne fait qu'un seul son.
+- **Branchés sur ce qui existe déjà** : `useGameSounds` écoute les effets visuels, les jets, les tours et les niveaux ; la logique du jeu ne change pas. La correspondance événement → son est pure (`soundEvents.ts`) et testée. Les niveaux sonores ont été mesurés par un rendu hors ligne et équilibrés, un limiteur évite la saturation quand les sons s'empilent.
+- **Musique d'ambiance, coupée par défaut** : un bourdon et des notes pincées tirées d'une gamme modale, jamais deux fois la même ; « taverne » (ré dorien) pendant la préparation, « donjon » (ré phrygien) en jeu.
+- Silencieux dans la fenêtre des joueurs (l'écran du MJ joue déjà) et dans un onglet en arrière-plan. Réglages dans Paramètres › Ambiance de jeu : bruitages et musique avec leur volume, bouton « Écouter un critique ».
+
+### D-252 · Bannières des grands moments
+
+- « Round N » traverse le plateau à chaque nouveau round ; « Victoire » quand tous les ennemis présents dans les groupes tombent à 0 PV, « Défaite » quand c'est le cas de tous les joueurs. Elles partent seules (1,8 s, 3,8 s), laissent passer les clics et sont annoncées aux lecteurs d'écran.
+- Ce n'est **pas une règle** : rien ne change dans la partie, et une table qui ne considère pas 0 PV comme une défaite peut les couper (Paramètres › Ambiance de jeu ; actives par défaut, comme le reste de l'ambiance demandée par le MJ).
+
 Demande du MJ : un serveur PulseHeberg héberge Codex et ses données ; mode en ligne complet, amitiés entre comptes, bouton pour passer de MJ/éditeur à joueur (rejoindre un salon), messagerie très poussée, et **avant toute chose** la liste des 20 points à vérifier avant de lancer un site web (capture d'une vidéo).
 
 ### D-248 · Site public et contrôle des 20 points de mise en ligne

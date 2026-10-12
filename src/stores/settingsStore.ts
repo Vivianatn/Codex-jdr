@@ -29,6 +29,16 @@ export interface SettingsState {
   stunServer: string
   /** Interface text size in percent (not the board). */
   textSize: TextSize
+  /** Sound effects of the table (D-251): dice, criticals, damage, turns. On by default. */
+  soundEffects: boolean
+  /** 0–1 */
+  soundVolume: number
+  /** Generated background music (D-251). Off by default. */
+  music: boolean
+  /** 0–1 */
+  musicVolume: number
+  /** Round, victory and defeat banners during play (D-252). */
+  gameBanners: boolean
   /** Screen currently showing (not saved). */
   surface: Surface
   setTheme: (theme: ThemePreference) => void
@@ -40,6 +50,11 @@ export interface SettingsState {
   setStunServer: (url: string) => void
   setTextSize: (size: TextSize) => void
   setSurface: (surface: Surface) => void
+  setSoundEffects: (on: boolean) => void
+  setSoundVolume: (volume: number) => void
+  setMusic: (on: boolean) => void
+  setMusicVolume: (volume: number) => void
+  setGameBanners: (on: boolean) => void
 }
 
 /**
@@ -58,6 +73,11 @@ export const useSettingsStore = create<SettingsState>()(
       stunServer: DEFAULT_STUN,
       textSize: 100,
       surface: 'prep',
+      soundEffects: true,
+      soundVolume: 0.7,
+      music: false,
+      musicVolume: 0.35,
+      gameBanners: true,
       setTheme: (theme) => set({ theme }),
       setAnimations: (animations) => set({ animations }),
       setLocale: (locale) => set({ locale }),
@@ -67,6 +87,11 @@ export const useSettingsStore = create<SettingsState>()(
       setStunServer: (stunServer) => set({ stunServer: stunServer.trim() }),
       setTextSize: (textSize) => set({ textSize }),
       setSurface: (surface) => set({ surface }),
+      setSoundEffects: (soundEffects) => set({ soundEffects }),
+      setSoundVolume: (soundVolume) => set({ soundVolume: Math.min(1, Math.max(0, soundVolume)) }),
+      setMusic: (music) => set({ music }),
+      setGameBanners: (gameBanners) => set({ gameBanners }),
+      setMusicVolume: (musicVolume) => set({ musicVolume: Math.min(1, Math.max(0, musicVolume)) }),
     }),
     {
       name: SETTINGS_STORAGE_KEY,
@@ -81,6 +106,11 @@ export const useSettingsStore = create<SettingsState>()(
         paperGrain,
         stunServer,
         textSize,
+        soundEffects,
+        soundVolume,
+        music,
+        musicVolume,
+        gameBanners,
       }) => ({
         theme,
         animations,
@@ -90,6 +120,11 @@ export const useSettingsStore = create<SettingsState>()(
         paperGrain,
         stunServer,
         textSize,
+        soundEffects,
+        soundVolume,
+        music,
+        musicVolume,
+        gameBanners,
       }),
     },
   ),

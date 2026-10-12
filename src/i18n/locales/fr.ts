@@ -1618,6 +1618,27 @@ export const fr = {
     language: 'Langue',
     languageFrench: 'Français',
   },
+  sound: {
+    title: 'Ambiance de jeu',
+    effects: 'Bruitages',
+    effectsHint:
+      'Les dés qui roulent, les critiques, les coups, les soins, les tours et les montées de niveau.',
+    music: 'Musique d’ambiance',
+    musicHint:
+      'Une taverne pendant la préparation, un donjon autour de la table. Jamais deux fois la même.',
+    volume: 'Volume',
+    test: 'Écouter un critique',
+    banners: 'Bannières de round, de victoire et de défaite',
+    bannersHint:
+      'Elles traversent le plateau puis s’en vont seules. Victoire : tous les ennemis des groupes à 0 PV ; défaite : tous les joueurs.',
+  },
+  moments: {
+    round: (n: number) => `Round ${n}`,
+    victory: 'Victoire',
+    victorySub: 'Le dernier ennemi est tombé.',
+    defeat: 'Défaite',
+    defeatSub: 'Plus aucun héros debout…',
+  },
   credits: {
     title: 'Crédits',
     icons: 'Icônes de jeu dessinées par Lorc, Delapouite et les autres auteurs de',

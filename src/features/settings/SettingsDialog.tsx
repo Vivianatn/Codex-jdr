@@ -17,6 +17,7 @@ import { AccountSection } from '@/features/account/AccountSection'
 import { BackupsSection } from '@/features/account/BackupsSection'
 import { CreditsSection } from './CreditsSection'
 import { PrivacySection } from './PrivacySection'
+import { SoundSection } from './SoundSection'
 
 export function SettingsButton() {
   const t = useT()
@@ -148,6 +149,8 @@ export function SettingsDialog({
             onChange={setDiceAnimation}
           />
         </section>
+
+        <SoundSection />
 
         <section className="space-y-2">
           <h3 className="font-sans text-sm font-medium tracking-normal text-ink">

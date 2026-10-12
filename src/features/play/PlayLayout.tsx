@@ -7,6 +7,7 @@ import { StartPlayPanel } from '@/features/sessions/StartPlayPanel'
 import { useT } from '@/i18n'
 import { useOnlineStore } from '@/online/onlineStore'
 import { useCampaignStore } from '@/stores/campaignStore'
+import { GameMoments } from './GameMoments'
 import { GroupsPanel } from './GroupsPanel'
 import { PlaySheetDrawer } from './PlaySheetDrawer'
 import { QuickPanel } from './QuickPanel'
@@ -71,6 +72,7 @@ function PlayTable() {
         <Suspense fallback={null}>
           <PlayMap />
         </Suspense>
+        <GameMoments />
         {/* The board is the hero: the groups float over it in glass (DA §10.6). */}
         <aside
           aria-label={t.play.quickAccess}
