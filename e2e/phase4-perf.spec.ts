@@ -14,7 +14,7 @@ test('200 tokens: zoom and pan stay fluid @perf', async ({ page }) => {
   test.setTimeout(120_000)
   await disableAppAnimations(page)
   await page.setViewportSize({ width: 1400, height: 900 })
-  await page.goto('/')
+  await page.goto('/app/')
   await createAccount(page)
   await createCampaign(page, 'Perf')
   await importCharacter(page, 'Joueurs', { name: 'Modèle', hp: 20 })

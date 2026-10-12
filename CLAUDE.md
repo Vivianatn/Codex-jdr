@@ -30,8 +30,12 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 | `npm run test:e2e`                   | Playwright + axe (dev server on :4173, production build with CSP on :4174) |
 | `npm run test:perf`                  | 200-token map FPS measurement (run alone)                                  |
 | `npm run screens`                    | Screenshots of the main screens, both themes                               |
+| `npm run launch:check`               | Build + the 20-point launch checklist (D-248)                              |
+| `npm run brand:assets`               | Regenerate favicons, social card, landing screenshot                       |
 
 ## Architecture
+
+- **Public website + app (D-248)**: the public pages are plain HTML at the repo root (`index.html` landing, `confidentialite.html`, `cgu.html`, `mentions-legales.html`, `404.html`); the app lives at `/app/` (`app/index.html`). `site/plugin.ts` injects head/header/footer and `{{site.…}}` facts from `site/config.ts`, emits robots/sitemap and serves pretty URLs + the real 404 in dev/preview. Never invent legal facts: they stay `TO_FILL` until the GM gives them (`.env.production.local`). `scripts/launch-check.ts` + `e2e/site.spec.ts` check the 20 launch points: fix the site rather than weakening a check. Audience measurement: `src/lib/analytics.ts` (Umami, cookieless, opt-out). Deployment: `deploy/` (Caddy + Docker Compose), guide `docs/DEPLOIEMENT.md`. Online-with-server roadmap: D-249 (phases 7–10).
 
 - `src/rules/` — **every house rule** (config + pure functions: stats, HP, skills, checks, grid). `DEFAULT_RULES` holds the GM's confirmed rules (DECISIONS D-101); each campaign stores its own copy (`campaign.rules`, read with `useCampaign().rules`).
 - `src/domain/` — pure game model: `types.ts` (Entity union by `kind`), `entity.ts` (factories, derived values, numbered enemy copies), `discord.ts` (Discord sheet export/import).

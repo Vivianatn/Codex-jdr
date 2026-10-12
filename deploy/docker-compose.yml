@@ -1,0 +1,76 @@
+# Codex on the server (D-248). Start: `docker compose --env-file .env up -d` (see docs/DEPLOIEMENT.md).
+# Only Caddy is reachable from outside (ports 80/443); everything else stays on the internal network.
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      CODEX_DOMAIN: ${CODEX_DOMAIN:?CODEX_DOMAIN manquant}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL manquant}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./site:/srv/site:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - umami
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-v2.19.0
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:?UMAMI_DB_PASSWORD manquant}@umami-db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:?UMAMI_APP_SECRET manquant}
+      DISABLE_TELEMETRY: '1'
+      DISABLE_UPDATES: '1'
+    depends_on:
+      umami-db:
+        condition: service_healthy
+
+  umami-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD}
+    volumes:
+      - umami-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U umami -d umami']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Audience data older than 13 months is deleted every day (privacy notice).
+  umami-retention:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${UMAMI_DB_PASSWORD}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          psql -h umami-db -U umami -d umami -v ON_ERROR_STOP=1 -c "
+            DELETE FROM event_data WHERE created_at < now() - interval '13 months';
+            DELETE FROM session_data WHERE created_at < now() - interval '13 months';
+            DELETE FROM website_event WHERE created_at < now() - interval '13 months';
+            DELETE FROM session s WHERE created_at < now() - interval '13 months'
+              AND NOT EXISTS (SELECT 1 FROM website_event e WHERE e.session_id = s.session_id);"
+          sleep 86400
+        done
+    depends_on:
+      umami-db:
+        condition: service_healthy
+
+volumes:
+  caddy-data:
+  caddy-config:
+  umami-db:

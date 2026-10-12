@@ -79,7 +79,7 @@ for (const viewport of VIEWPORTS) {
     test.setTimeout(240_000)
     await disableAppAnimations(page)
     await page.setViewportSize(viewport)
-    await page.goto('/')
+    await page.goto('/app/')
     const problems: string[] = []
     const check = async (screen: string, target: Page = page) => {
       await target.waitForTimeout(150)
@@ -147,7 +147,7 @@ for (const viewport of VIEWPORTS) {
     const campaignId = page.url().match(/#\/c\/([^/]+)/)![1]!
     const players = await page.context().newPage()
     await players.setViewportSize(viewport)
-    await players.goto(`/#/c/${campaignId}/view`)
+    await players.goto(`/app/#/c/${campaignId}/view`)
     await expect(players.getByTestId('map-canvas')).toBeVisible()
     await check('vue joueurs', players)
     await players.close()

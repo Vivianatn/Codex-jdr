@@ -41,7 +41,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('nothing readable is left on disk: campaign, characters, password', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/app/')
   await createAccount(page, 'Agathe')
   await createCampaign(page, 'Ombreval Secrète')
   await importCharacter(page, 'Joueurs', { name: 'Gorakdusoir', hp: 31 })
@@ -56,13 +56,13 @@ test('the players’ window opens only through an unlocked GM window, and locks 
   page,
   context,
 }) => {
-  await page.goto('/')
+  await page.goto('/app/')
   await createAccount(page)
   await createCampaign(page, 'Ombreval')
   const campaignId = page.url().match(/#\/c\/([^/]+)/)![1]!
 
   const players = await context.newPage()
-  await players.goto(`/#/c/${campaignId}/view`)
+  await players.goto(`/app/#/c/${campaignId}/view`)
   await expect(players.getByTestId('players-waiting')).toBeHidden()
 
   await page.getByRole('button', { name: 'Verrouiller' }).click()
@@ -91,11 +91,12 @@ test('the built app runs under its Content Security Policy without a single viol
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 
-  await page.goto(BUILD_URL)
+  await page.goto(`${BUILD_URL}/app/`)
   const csp = await page
     .locator('meta[http-equiv="Content-Security-Policy"]')
     .getAttribute('content')
-  expect(csp).toContain("connect-src 'none'")
+  // Only Codex's own server (D-248).
+  expect(csp).toContain("connect-src 'self'")
   expect(csp).not.toContain('unsafe-eval')
 
   await createAccount(page)
@@ -134,7 +135,7 @@ test('the built app runs under its Content Security Policy without a single viol
   })
   expect(echoed).toBe('bonjour')
 
-  // A fetch to anywhere is refused by the policy itself.
+  // A fetch to any other site is refused by the policy itself.
   const fetched = await page.evaluate(() =>
     fetch('https://example.com/').then(
       () => 'sent',

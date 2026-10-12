@@ -1618,10 +1618,21 @@ export const fr = {
     language: 'Langue',
     languageFrench: 'Français',
   },
+  analytics: {
+    title: 'Mesure d’audience',
+    body: 'Codex compte ses visites de façon anonyme, sans cookie et sur son propre serveur : rien n’est partagé avec un tiers.',
+    more: 'En savoir plus',
+    refuse: 'Refuser',
+    accept: 'Accepter',
+    setting: 'Mesure d’audience anonyme',
+    settingHint:
+      'Sans cookie, sur le serveur de Codex. Désactivée si ton navigateur demande à ne pas être suivi.',
+    fullNotice: 'Notice complète',
+  },
   privacy: {
     title: 'Données et confidentialité',
     summary:
-      'Tes campagnes, fiches, cartes et images restent sur cet appareil, chiffrées avec ton mot de passe. Pas de serveur, ni cookie, ni mesure d’audience. Seul le mode en ligne relie directement ton appareil à ceux que tu invites.',
+      'Tes campagnes, fiches, cartes et images restent sur cet appareil, chiffrées avec ton mot de passe. Aucun cookie ; la mesure d’audience, quand elle est active, est anonyme et sans cookie. Seul le mode en ligne relie directement ton appareil à ceux que tu invites.',
     noticeToggle: 'Lire la notice de confidentialité',
     notice: [
       'Responsable des données : toi. Codex n’a pas de serveur et son éditeur ne reçoit aucune donnée.',

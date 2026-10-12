@@ -25,7 +25,7 @@ async function device(browser: Browser, name: string): Promise<Page> {
   })
   await disableAppAnimations(page)
   await page.setViewportSize({ width: 1400, height: 900 })
-  await page.goto('/')
+  await page.goto('/app/')
   await createAccount(page, name)
   return page
 }

@@ -4,6 +4,45 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Passage en ligne sur un serveur (2026-10-12)
+
+Demande du MJ : un serveur PulseHeberg héberge Codex et ses données ; mode en ligne complet, amitiés entre comptes, bouton pour passer de MJ/éditeur à joueur (rejoindre un salon), messagerie très poussée, et **avant toute chose** la liste des 20 points à vérifier avant de lancer un site web (capture d'une vidéo).
+
+### D-248 · Site public et contrôle des 20 points de mise en ligne
+
+- **Site public séparé de l'application** : accueil, Confidentialité, CGU, Mentions légales et page 404 sont de vraies pages HTML (rapides, indexables) ; l'application passe à `/app/` (`noindex`, exclue de `robots.txt`). Vite construit plusieurs pages (`appType: 'mpa'`, `site/plugin.ts`) : en-tête, pied de page, balises de partage et icônes injectés dans chaque page, `robots.txt` et `sitemap.xml` générés, adresses propres (`/cgu`) et vraie 404 en développement comme en production. `base: '/'` (chemins absolus, sinon la 404 casse en profondeur) ; un shell de bureau construira avec `CODEX_BASE=./`.
+- **Les 20 points**, chacun vérifié automatiquement par `npm run launch:check` (`scripts/launch-check.ts` sur le build, `e2e/site.spec.ts` dans le navigateur) :
+  - 1–2 : pages Confidentialité (RGPD) et CGU, liées depuis chaque page, plus les mentions légales (LCEN) ;
+  - 3 : aucun secret dans ce qui part au navigateur (clés, chaînes de connexion, `.env`) ; seule variable publique : l'identifiant Umami ;
+  - 4 : HTTPS forcé par Caddy (redirection et HSTS 2 ans), aucune ressource en `http://` ;
+  - 5 : bandeau d'information sur la mesure d'audience, sur le site et dans l'application ; « Refuser » aussi simple qu'« Accepter », choix modifiable depuis le pied de page et les Paramètres. Codex ne dépose aucun cookie non indispensable : un « bandeau cookies » de consentement serait trompeur ;
+  - 6 : titre et description uniques par page ; 7 : image de partage 1200 × 630 (55 kB) et balises Open Graph / Twitter ; 8 : favicon SVG et PNG, icône Apple, manifeste ;
+  - 9 : sitemap et robots.txt ; 10 : texte alternatif pour chaque image (vérifié aussi dans le code de l'application) ; 11 : images compressées (budget par format, WebP au-delà de 100 kB ; les images importées dans l'app sont déjà redimensionnées en WebP) ;
+  - 12 : poids au chargement, 50 kB compressés au plus par page publique (l'accueil fait une dizaine de kB hors image), 420 kB pour l'application ; cache d'un an sur les fichiers versionnés, compression zstd/gzip ;
+  - 13–14 : contraste (axe, thèmes clair et sombre) et aucun défilement horizontal de 320 à 1440 px ; 15 : 404 personnalisée servie avec le statut 404 ; 16 : aucun lien interne cassé ;
+  - 17 : formulaires : messages d'erreur visibles et lus par les lecteurs d'écran, sous le champ concerné (`aria-invalid`). La création de compte n'affichait jusqu'ici que l'info-bulle du navigateur ;
+  - 18 : anti-spam, limites côté serveur, **à faire en phase 7** (le contrôle échoue tant qu'elles manquent) ;
+  - 19 : Umami auto-hébergé, sans cookie, relayé sous `/stats` (même origine), coupé par Do Not Track / GPC, données effacées après 13 mois ;
+  - 20 : un seul appel à l'action par page (accueil : « Ouvrir Codex »).
+- **Rien d'inventé** : éditeur, adresse et contact de l'hébergeur, pays du centre de données et domaine restent « À COMPLÉTER » (`site/config.ts`, `.env.production.local`) ; le contrôle refuse la mise en ligne tant qu'il en reste.
+- **CSP** : `connect-src 'self'` au lieu de `'none'` (mesure d'audience, puis API du mode en ligne) ; toujours aucune connexion vers un autre site. Caddy ajoute `frame-ancestors 'none'` en en-tête.
+- **Déploiement** : `deploy/` (Caddyfile vérifié avec `caddy adapt` et testé en local ; Docker Compose : Caddy, Umami, sa base, l'effacement à 13 mois) ; guide : [DEPLOIEMENT.md](DEPLOIEMENT.md).
+- Les pages publiques décrivent Codex **en ligne** (comptes sur le serveur, chiffrement de bout en bout, amis, messagerie) : elles ne seront publiées qu'une fois les phases 7 à 10 terminées. Leurs engagements deviennent des exigences de ces phases : cookie de session `HttpOnly; Secure; SameSite=Strict`, limitation des tentatives de connexion, journaux techniques gardés 1 an, comptes inactifs supprimés après 3 ans, sauvegardes effacées sous 30 jours, suppression du compte et export depuis l'application, signalement d'un message.
+
+### D-249 · Mode en ligne sur serveur : choix et découpage
+
+Choix du MJ : données **sur le serveur, chiffrées de bout en bout** (le serveur ne peut lire ni les campagnes ni les messages) ; serveur **Node.js, Fastify, PostgreSQL et WebSocket** derrière Caddy, en Docker Compose ; analytics **Umami auto-hébergé sans cookie** ; messagerie complète (privés et salons ; réponses, réactions, modification, épingles, recherche ; écriture en cours, accusés de lecture, présence, notifications, non-lus ; pièces jointes, partage de jets, fiches et objets, messages chuchotés du MJ).
+
+Ce choix remplace D-241 (comptes locaux seulement) et D-245 (pair-à-pair WebRTC sans serveur). Découpage :
+
+- **Phase 6** : site public et 20 points de mise en ligne (D-248).
+- **Phase 7** : serveur et comptes. `server/` (Fastify, PostgreSQL, WebSocket, validation partagée), comptes en ligne dont le mot de passe ne quitte jamais l'appareil (seule une preuve dérivée est envoyée ; clés enveloppées comme aujourd'hui), clés publiques d'identité, session par cookie, limites anti-spam, reprise des comptes et campagnes locaux.
+- **Phase 8** : amis et salons. Demandes, acceptation, blocage, présence ; bascule MJ/éditeur ↔ joueur ; salons pour rejoindre une campagne ou une partie (remplacent l'échange de codes WebRTC).
+- **Phase 9** : campagnes sur le serveur, chiffrées de bout en bout. Une clé par campagne remise à chaque membre avec sa clé publique ; le serveur contrôle les droits sur les métadonnées (table, campagne, rôle) ; les joueurs reçoivent une vue réduite chiffrée avec une clé à part (toujours ni bestiaire ni notes du MJ) ; copie locale chiffrée pour le hors-ligne.
+- **Phase 10** : messagerie chiffrée de bout en bout.
+
+---
+
 ## Tableau de bord et journal des éditeurs (2026-10-12)
 
 ### D-247 · Le tableau de bord montre toute la campagne et ce qu'a fait chaque éditeur

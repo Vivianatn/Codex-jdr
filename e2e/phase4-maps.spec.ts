@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await disableAppAnimations(page)
   await page.setViewportSize({ width: 1400, height: 900 })
-  await page.goto('/')
+  await page.goto('/app/')
   await createAccount(page)
 })
 
@@ -230,7 +230,7 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
   // --- Players' window -----------------------------------------------------
   const players = await context.newPage()
   await players.setViewportSize({ width: 1000, height: 700 })
-  await players.goto(`/#/c/${campaignId}/view`)
+  await players.goto(`/app/#/c/${campaignId}/view`)
   await expect(players.getByTestId('map-canvas')).toBeVisible()
   await expectNoSeriousA11yViolations(players)
 

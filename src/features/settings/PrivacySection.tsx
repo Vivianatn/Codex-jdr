@@ -1,9 +1,16 @@
 import { Download, ShieldCheck, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { CheckboxField } from '@/components/ui/fields'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { useCampaignActions } from '@/features/campaigns/useCampaignActions'
 import { useT } from '@/i18n'
+import {
+  ANALYTICS_WEBSITE_ID,
+  analyticsChoice,
+  browserRefusesTracking,
+  setAnalyticsChoice,
+} from '@/lib/analytics'
 
 /** GDPR: what Codex keeps, data portability and erasure (D-240). */
 export function PrivacySection() {
@@ -11,6 +18,7 @@ export function PrivacySection() {
   const actions = useCampaignActions()
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [measured, setMeasured] = useState(() => analyticsChoice() !== 'refused')
 
   return (
     <section className="space-y-3" data-testid="privacy-section">
@@ -26,7 +34,22 @@ export function PrivacySection() {
             <li key={line}>{line}</li>
           ))}
         </ul>
+        <a href="/confidentialite" className="mt-2 inline-block text-accent-text underline">
+          {t.analytics.fullNotice}
+        </a>
       </details>
+
+      {ANALYTICS_WEBSITE_ID && !browserRefusesTracking() && (
+        <CheckboxField
+          label={t.analytics.setting}
+          hint={t.analytics.settingHint}
+          checked={measured}
+          onChange={(checked) => {
+            setAnalyticsChoice(checked ? 'accepted' : 'refused')
+            setMeasured(checked)
+          }}
+        />
+      )}
 
       <div className="space-y-1">
         <Button icon={<Download />} onClick={() => void actions.exportAllToFile()}>

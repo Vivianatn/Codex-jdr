@@ -3,6 +3,7 @@ import { MotionConfig } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { createHashRouter, RouterProvider } from 'react-router'
 import { Toaster } from 'sonner'
+import { AnalyticsNotice } from '@/features/settings/AnalyticsNotice'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { routes } from './routes'
 import { useMediaQuery } from './useMediaQuery'
@@ -52,6 +53,7 @@ export function App() {
   return (
     <AppProviders>
       <RouterProvider router={router} />
+      <AnalyticsNotice />
     </AppProviders>
   )
 }

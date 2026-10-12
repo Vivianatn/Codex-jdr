@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- site:head -->
+    <!-- site:icons -->
+    <meta name="theme-color" content="#f6f2e9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15110d" media="(prefers-color-scheme: dark)" />
+    <script>
+      document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    </script>
+    <script type="module" src="/site/site.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <!-- site:header -->
+    <main id="contenu" class="prose">
+      <p class="eyebrow">Informations légales</p>
+      <h1>Mentions légales</h1>
+      <p class="updated">Dernière mise à jour : {{site.legalUpdated}}</p>
+
+      <h2>Éditeur</h2>
+      <dl>
+        <dt>Nom</dt>
+        <dd>{{site.publisher.name}}</dd>
+        <dt>Statut</dt>
+        <dd>{{site.publisher.status}}</dd>
+        <dt>Adresse</dt>
+        <dd>{{site.publisher.address}}</dd>
+        <dt>Contact</dt>
+        <dd><a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a></dd>
+        <dt>Directeur ou directrice de la publication</dt>
+        <dd>{{site.publisher.director}}</dd>
+      </dl>
+
+      <h2>Hébergeur</h2>
+      <dl>
+        <dt>Nom</dt>
+        <dd>{{site.host.name}}</dd>
+        <dt>Adresse</dt>
+        <dd>{{site.host.address}}</dd>
+        <dt>Contact</dt>
+        <dd>{{site.host.contact}}</dd>
+      </dl>
+
+      <h2>Propriété intellectuelle et crédits</h2>
+      <p>
+        Le nom, le logo et le code de Codex sont protégés. Polices Alegreya, Alegreya SC et Source
+        Sans 3 sous licence SIL Open Font License 1.1 ; icônes Lucide (licence ISC) et
+        game-icons.net (CC BY 3.0, auteurs crédités dans l’application).
+      </p>
+
+      <h2>Données personnelles</h2>
+      <p>Voir la page <a href="/confidentialite">Confidentialité</a>.</p>
+    </main>
+    <!-- site:footer -->
+  </body>
+</html>

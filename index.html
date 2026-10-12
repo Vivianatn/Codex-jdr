@@ -1,29 +1,94 @@
 <!doctype html>
-<html lang="fr" data-theme="light" data-motion="full">
+<html lang="fr" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Codex — le compagnon du Maître du Jeu" />
-    <meta name="theme-color" content="#F7F5F0" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <title>Codex</title>
+    <!-- site:head -->
+    <!-- site:icons -->
+    <meta name="theme-color" content="#f6f2e9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15110d" media="(prefers-color-scheme: dark)" />
+    <link rel="preload" as="image" href="/images/plateau.webp" type="image/webp" />
     <script>
-      // Apply the saved theme before first paint to avoid a light/dark flash.
-      try {
-        var saved = JSON.parse(localStorage.getItem('codex.settings') || '{}').state || {}
-        var theme = saved.theme || 'light'
-        if (theme === 'system')
-          theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-        document.documentElement.dataset.theme = theme
-        document.documentElement.dataset.motion = saved.animations || 'full'
-        document.documentElement.dataset.grain = saved.paperGrain === false ? 'off' : 'on'
-        if (saved.textSize && saved.textSize !== 100)
-          document.documentElement.style.fontSize = saved.textSize + '%'
-      } catch (e) {}
+      document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
     </script>
+    <script type="module" src="/site/site.ts"></script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <!-- site:header -->
+    <main id="contenu">
+      <section class="hero" aria-labelledby="titre">
+        <div>
+          <p class="eyebrow">Pour les maîtres du jeu</p>
+          <h1 id="titre">Prépare et mène tes parties sans perdre le fil</h1>
+          <p class="lead">
+            Fiches, dés, plateau avec brouillard de guerre, tours par groupes : tout ton JDR au même
+            endroit. Invite tes amis, joue en ligne et discute avec ta table.
+          </p>
+          <a class="button cta" href="/app/">Ouvrir Codex</a>
+          <p class="reassure">
+            Gratuit · tes campagnes et tes messages sont chiffrés de bout en bout.
+          </p>
+        </div>
+        <figure>
+          <img
+            src="/images/plateau.webp"
+            width="1200"
+            height="750"
+            fetchpriority="high"
+            alt="Le plateau de Codex en partie : à gauche, la colonne des groupes avec les points de vie de Gorak et Lyra ; au centre, une carte quadrillée où leurs mini-fiches s'affichent au-dessus des jetons."
+          />
+        </figure>
+      </section>
+
+      <h2 class="section-title">Tout ce qu’il faut à ta table</h2>
+      <ul class="features">
+        <li>
+          <h3>Fiches complètes</h3>
+          <p>
+            Caractéristiques, compétences, états, inventaire façon jeu vidéo, journal de chaque
+            personnage.
+          </p>
+        </li>
+        <li>
+          <h3>Dés et tests</h3>
+          <p>Jets libres ou de caractéristique, avantage, critiques, jets secrets du MJ.</p>
+        </li>
+        <li>
+          <h3>Plateau</h3>
+          <p>
+            Cartes carrées ou hexagonales, murs, brouillard de guerre et écran pour tes joueurs.
+          </p>
+        </li>
+        <li>
+          <h3>Tours par groupes</h3>
+          <p>Les groupes jouent l’un après l’autre, puis vient le tour du MJ.</p>
+        </li>
+        <li>
+          <h3>En ligne avec tes amis</h3>
+          <p>
+            Ajoute tes amis, prépare à plusieurs, puis passe en joueur pour rejoindre leur salon.
+          </p>
+        </li>
+        <li>
+          <h3>Messagerie</h3>
+          <p>
+            Messages privés, salons de campagne, réactions, pièces jointes et messages chuchotés du
+            MJ.
+          </p>
+        </li>
+        <li>
+          <h3>Tes règles maison</h3>
+          <p>Codex n’impose aucune mécanique : tu actives seulement ce que tu utilises.</p>
+        </li>
+        <li>
+          <h3>Chiffré de bout en bout</h3>
+          <p>Le serveur ne peut lire ni tes campagnes ni tes messages : la clé reste chez toi.</p>
+        </li>
+      </ul>
+    </main>
+    <!-- site:footer -->
   </body>
 </html>

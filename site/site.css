@@ -1,0 +1,388 @@
+/* Public pages (D-248): same tokens and fonts as the app (docs/CODEX-DA.md), no framework. */
+@import '@fontsource-variable/source-sans-3';
+@import '@fontsource-variable/alegreya';
+@import '@fontsource/alegreya-sc/500.css';
+@import '@fontsource/alegreya-sc/700.css';
+@import '../src/styles/tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--codex-bg);
+  color: var(--codex-ink);
+  font-family: var(--codex-font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  font-feature-settings: 'lnum' 1;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: var(--codex-accent-text);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--codex-accent-hover);
+}
+
+:focus-visible {
+  outline: 2px solid var(--codex-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  padding: 0.5rem 1rem;
+  background: var(--codex-surface);
+  border: 1px solid var(--codex-line);
+  border-radius: var(--codex-radius-sm);
+  z-index: 10;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* ---- header / footer ---------------------------------------------------- */
+
+.site-header,
+.site-footer,
+main {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 40rem) {
+  .site-header,
+  .site-footer,
+  main {
+    padding-inline: 2rem;
+  }
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  height: 4rem;
+}
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--codex-ink);
+  text-decoration: none;
+  font-family: var(--codex-font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+main {
+  flex: 1;
+  padding-block: 2rem 4rem;
+}
+
+.site-footer {
+  border-top: 1px solid var(--codex-line);
+  padding-block: 1.5rem 2rem;
+  color: var(--codex-ink-muted);
+  font-size: 0.875rem;
+}
+
+.site-footer ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+.site-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: var(--codex-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---- buttons ------------------------------------------------------------ */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: var(--codex-radius-sm);
+  border: 1px solid var(--codex-line-strong);
+  background: var(--codex-surface);
+  color: var(--codex-ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--codex-surface-2);
+  color: var(--codex-ink);
+}
+
+/* The one call to action of a page (checklist point 20). */
+.cta {
+  min-height: 3.25rem;
+  padding: 0 1.75rem;
+  font-size: 1.0625rem;
+  border-color: transparent;
+  background: var(--codex-accent);
+  color: var(--codex-on-accent);
+  box-shadow: var(--codex-shadow-soft);
+}
+
+.cta:hover {
+  background: var(--codex-accent-hover);
+  color: var(--codex-on-accent);
+}
+
+/* ---- landing -------------------------------------------------------------- */
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--codex-font-display);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--codex-gold-text);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  font-family: var(--codex-font-display);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  /* Small caps have no descenders: a tighter leading keeps the lines together. */
+  line-height: 1.08;
+}
+
+h2,
+h3 {
+  font-family: var(--codex-font-title);
+  font-weight: 600;
+}
+
+.hero {
+  display: grid;
+  gap: 2.5rem;
+  align-items: center;
+  padding-block: 1rem 3rem;
+}
+
+@media (min-width: 60rem) {
+  .hero {
+    grid-template-columns: 1fr 1.1fr;
+  }
+}
+
+.hero h1 {
+  margin: 0.5rem 0 1rem;
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+}
+
+.hero p.lead {
+  margin: 0 0 2rem;
+  max-width: 34rem;
+  font-size: 1.1875rem;
+  color: var(--codex-ink-muted);
+}
+
+.hero .reassure {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+  color: var(--codex-ink-muted);
+}
+
+.hero figure {
+  margin: 0;
+}
+
+.hero figure img {
+  display: block;
+  width: 100%;
+  border-radius: var(--codex-radius-lg);
+  border: 1px solid var(--codex-line);
+  box-shadow: var(--codex-shadow-soft);
+}
+
+.features {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.features li {
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: var(--codex-surface);
+  border: 1px solid var(--codex-line);
+  border-radius: var(--codex-radius);
+}
+
+.features h3 {
+  margin: 0 0 0.375rem;
+  font-size: 1.125rem;
+}
+
+.features p {
+  margin: 0;
+  color: var(--codex-ink-muted);
+}
+
+.section-title {
+  margin: 3rem 0 1.25rem;
+  font-size: 1.5rem;
+}
+
+/* ---- legal pages ------------------------------------------------------------- */
+
+.prose > * {
+  max-width: 46rem;
+}
+
+.prose h1 {
+  font-size: clamp(1.875rem, 5vw, 2.5rem);
+  margin: 0.5rem 0 0.5rem;
+}
+
+.prose h2 {
+  margin: 2.25rem 0 0.75rem;
+  font-size: 1.375rem;
+}
+
+.prose .updated {
+  margin: 0 0 2rem;
+  color: var(--codex-ink-muted);
+  font-size: 0.875rem;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.prose th,
+.prose td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 1px solid var(--codex-line);
+}
+
+.prose dt {
+  font-weight: 600;
+}
+
+.prose dd {
+  margin: 0 0 0.75rem;
+}
+
+/* ---- 404 ------------------------------------------------------------------- */
+
+.not-found {
+  padding-block: 3rem;
+}
+
+.not-found > * {
+  max-width: 36rem;
+}
+
+.not-found h1 {
+  font-size: clamp(2rem, 6vw, 3rem);
+  margin: 0.5rem 0 1rem;
+}
+
+/* ---- audience notice (checklist point 5) ----------------------------------- */
+
+.consent {
+  position: fixed;
+  z-index: 20;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  max-width: 30rem;
+  padding: 1rem 1.25rem;
+  background: var(--codex-surface-raised);
+  border: 1px solid var(--codex-line);
+  border-radius: var(--codex-radius);
+  box-shadow: var(--codex-shadow-overlay);
+  font-size: 0.9375rem;
+}
+
+.consent-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.0625rem;
+}
+
+.consent p {
+  margin: 0 0 0.75rem;
+}
+
+.consent-state {
+  color: var(--codex-ink-muted);
+}
+
+.consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.consent-actions .button {
+  flex: 1;
+}

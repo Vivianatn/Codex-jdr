@@ -1,0 +1,80 @@
+# Codex on the server (D-248). Caddy gets and renews the HTTPS certificates by
+# itself, and redirects every http:// request to https:// (checklist point 4).
+{
+	email {$ACME_EMAIL}
+	servers {
+		protocols h1 h2 h3
+	}
+}
+
+(security_headers) {
+	header {
+		# Never come back over plain HTTP, subdomains included (point 4).
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+		# Added to each page's own policy (which carries its script hashes): no framing, no plugins.
+		Content-Security-Policy "frame-ancestors 'none'; base-uri 'none'; object-src 'none'"
+		-Server
+	}
+}
+
+{$CODEX_DOMAIN} {
+	import security_headers
+	encode zstd gzip
+
+	# Technical logs, kept one year (privacy notice, legal duty of a host).
+	log {
+		output file /data/logs/access.log {
+			roll_size 50MiB
+			roll_keep_for 8760h
+		}
+		format json
+	}
+
+	# Audience measurement, same origin, without cookies (point 19, D-248).
+	handle_path /stats/* {
+		reverse_proxy umami:3000
+	}
+
+	# The online mode's API and real-time socket (phase 7). Secrets live on the server only (point 3).
+	handle /api/* {
+		reverse_proxy server:3000
+	}
+
+	handle {
+		root * /srv/site
+		# Hashed bundle files never change: cache them for a year (point 12).
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@pages path / /app/ *.html /confidentialite /cgu /mentions-legales
+		header @pages Cache-Control "no-cache"
+		# Pretty URLs: /cgu serves cgu.html.
+		try_files {path} {path}.html {path}/index.html
+		file_server
+	}
+
+	# Custom 404 page, with the 404 status (point 15).
+	handle_errors 404 {
+		root * /srv/site
+		rewrite * /404.html
+		file_server {
+			status 404
+		}
+	}
+}
+
+# One canonical address.
+www.{$CODEX_DOMAIN} {
+	redir https://{$CODEX_DOMAIN}{uri} permanent
+}
+
+# Umami's dashboard, for the GM only (its own login).
+stats.{$CODEX_DOMAIN} {
+	import security_headers
+	encode zstd gzip
+	reverse_proxy umami:3000
+}

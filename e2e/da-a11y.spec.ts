@@ -16,7 +16,7 @@ for (const theme of ['light', 'dark'] as const) {
     }, theme)
     await disableAppAnimations(page)
     await page.setViewportSize({ width: 1400, height: 900 })
-    await page.goto('/')
+    await page.goto('/app/')
     // Lock screen (D-241), then the empty campaigns screen.
     await expect(page.getByRole('heading', { name: 'Bienvenue dans Codex' })).toBeVisible()
     await expectNoSeriousA11yViolations(page)
@@ -60,7 +60,7 @@ for (const theme of ['light', 'dark'] as const) {
 
     const campaignId = page.url().match(/\/c\/([^/]+)\//)![1]!
     const players = await page.context().newPage()
-    await players.goto(`/#/c/${campaignId}/view`)
+    await players.goto(`/app/#/c/${campaignId}/view`)
     await page.getByRole('button', { name: 'Vue joueurs' }).click()
     await page.getByRole('menuitemradio', { name: 'Une pause' }).click()
     await expect(players.getByText('Une courte pause. On reprend dans un instant.')).toBeVisible()

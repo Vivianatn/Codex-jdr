@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- site:head -->
+    <!-- site:icons -->
+    <meta name="theme-color" content="#f6f2e9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15110d" media="(prefers-color-scheme: dark)" />
+    <script>
+      document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    </script>
+    <script type="module" src="/site/site.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <!-- site:header -->
+    <main id="contenu" class="not-found">
+      <p class="eyebrow">Erreur 404</p>
+      <h1>Cette page s’est perdue dans le brouillard</h1>
+      <p>
+        L’adresse est peut-être mal tapée, ou la page a été déplacée. Rien de grave : retourne à
+        l’accueil pour retrouver ton chemin.
+      </p>
+      <p><a class="button cta" href="/">Retour à l’accueil</a></p>
+    </main>
+    <!-- site:footer -->
+  </body>
+</html>

@@ -5,7 +5,7 @@ import { STATS, createAccount, createCampaign, importCharacter } from './support
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await disableAppAnimations(page)
-  await page.goto('/')
+  await page.goto('/app/')
   await createAccount(page)
 })
 

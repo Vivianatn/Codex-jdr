@@ -16,5 +16,13 @@
     "noUnusedParameters": true,
     "skipLibCheck": true
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "eslint.config.js", "e2e"]
+  "include": [
+    "vite.config.ts",
+    "playwright.config.ts",
+    "eslint.config.js",
+    "e2e",
+    "site/config.ts",
+    "site/plugin.ts",
+    "scripts"
+  ]
 }

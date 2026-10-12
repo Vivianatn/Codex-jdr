@@ -11,3 +11,7 @@ blob-report
 .vscode/*
 !.vscode/extensions.json
 src-tauri/target
+
+# Server secrets (deploy/.env.example is the template)
+deploy/.env
+deploy/site

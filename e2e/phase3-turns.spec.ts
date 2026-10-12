@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await disableAppAnimations(page)
   await page.setViewportSize({ width: 1400, height: 900 })
-  await page.goto('/')
+  await page.goto('/app/')
   await createAccount(page)
 })
 

@@ -14,7 +14,7 @@ import {
   migrateLegacyData,
   type AccountSummary,
 } from '@/security/accounts'
-import { MIN_PASSWORD_LENGTH } from '@/security/passwords'
+import { checkPassword, MIN_PASSWORD_LENGTH } from '@/security/passwords'
 import { startSession, useSessionStore } from '@/security/session'
 import { accountErrorMessage } from './accountErrors'
 import { PasswordField } from './PasswordField'
@@ -236,21 +236,45 @@ function LoginForm({
   )
 }
 
-/** New password + confirmation, with the length rule and passphrase advice. */
+/** First problem of a new password and its confirmation, as messages (null = fine). */
+function newPasswordProblems(
+  t: ReturnType<typeof useT>,
+  password: string,
+  confirm: string,
+  username = '',
+): { password: string | null; confirm: string | null } {
+  const problem = checkPassword(password, username)
+  return {
+    password: problem ? t.account.errors[problem] : null,
+    confirm: confirm !== password ? t.account.errors.passwordMismatch : null,
+  }
+}
+
+/**
+ * New password + confirmation, checked as you go (checklist point 17): each
+ * field says what is wrong once you leave it, or when the form is sent.
+ */
 function NewPasswordFields({
   password,
   confirm,
   onPassword,
   onConfirm,
   label,
+  username,
+  showErrors,
 }: {
   password: string
   confirm: string
   onPassword: (v: string) => void
   onConfirm: (v: string) => void
   label: string
+  username?: string
+  /** The form was sent: show every problem. */
+  showErrors: boolean
 }) {
   const t = useT()
+  const [left, setLeft] = useState({ password: false, confirm: false })
+  const problems = newPasswordProblems(t, password, confirm, username)
   return (
     <>
       <PasswordField
@@ -258,8 +282,9 @@ function NewPasswordFields({
         hint={t.account.passwordHint(MIN_PASSWORD_LENGTH)}
         autoComplete="new-password"
         required
-        minLength={MIN_PASSWORD_LENGTH}
         value={password}
+        error={(showErrors || left.password) && password ? problems.password : null}
+        onBlur={() => setLeft((l) => ({ ...l, password: true }))}
         onChange={(e) => onPassword(e.target.value)}
       />
       <p className="text-xs text-ink-muted">{t.account.passwordAdvice}</p>
@@ -268,6 +293,8 @@ function NewPasswordFields({
         autoComplete="new-password"
         required
         value={confirm}
+        error={(showErrors || left.confirm) && confirm ? problems.confirm : null}
+        onBlur={() => setLeft((l) => ({ ...l, confirm: true }))}
         onChange={(e) => onConfirm(e.target.value)}
       />
     </>
@@ -284,7 +311,8 @@ function CreateForm({
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [legacy, setLegacy] = useState(0)
-  const { busy, error, setError, run } = useSubmit()
+  const [sent, setSent] = useState(false)
+  const { busy, error, run } = useSubmit()
 
   useEffect(() => {
     legacyCampaignCount().then(setLegacy, () => setLegacy(0))
@@ -293,11 +321,11 @@ function CreateForm({
   return (
     <form
       className="space-y-4"
+      noValidate
       onSubmit={run(async () => {
-        if (password !== confirm) {
-          setError(t.account.errors.passwordMismatch)
-          return
-        }
+        setSent(true)
+        const problems = newPasswordProblems(t, password, confirm, username)
+        if (problems.password || problems.confirm) return
         const { account, key, recoveryCode } = await accounts.create({ username, password })
         if (legacy > 0) {
           const db = new CodexDB(accountDbName(account.id), { key })
@@ -329,6 +357,8 @@ function CreateForm({
         confirm={confirm}
         onPassword={setPassword}
         onConfirm={setConfirm}
+        username={username}
+        showErrors={sent}
       />
       {legacy > 0 && (
         <p className="rounded-xl bg-gold-soft px-3 py-2 text-sm text-ink">
@@ -364,16 +394,18 @@ function RecoverForm({
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const { busy, error, setError, run } = useSubmit()
+  const [sent, setSent] = useState(false)
+  const { busy, error, run } = useSubmit()
+  const username = list.find((a) => a.id === accountId)?.username
 
   return (
     <form
       className="space-y-4"
+      noValidate
       onSubmit={run(async () => {
-        if (password !== confirm) {
-          setError(t.account.errors.passwordMismatch)
-          return
-        }
+        setSent(true)
+        const problems = newPasswordProblems(t, password, confirm, username)
+        if (problems.password || problems.confirm) return
         const { account, key, recoveryCode } = await accounts.recover(accountId, code, password)
         onRecovered(recoveryCode, account, key)
       })}
@@ -394,6 +426,8 @@ function RecoverForm({
         confirm={confirm}
         onPassword={setPassword}
         onConfirm={setConfirm}
+        username={username}
+        showErrors={sent}
       />
       {error && (
         <p role="alert" className="text-sm font-medium text-hp-text">

@@ -4,12 +4,15 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import type { Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
+import { siteInputs, sitePlugin } from './site/plugin.ts'
 
 /**
- * Content Security Policy of the built app (D-243). Codex never talks to the
- * network: no connection at all, scripts only from the bundle (plus the theme
- * boot script, allowed by its hash), pictures only from the app or data: URLs.
- * Not applied by the dev server, whose hot reload needs inline code and a socket.
+ * Content Security Policy of every built page (D-243, D-248). Connections only
+ * to Codex's own server (audience measurement, and the online mode's API);
+ * scripts only from the bundle (plus each page's inline theme script, allowed
+ * by its hash), pictures only from the app or data: URLs. Not applied by the
+ * dev server, whose hot reload needs inline code and a socket. The production
+ * server repeats it as an HTTP header (deploy/Caddyfile).
  */
 function contentSecurityPolicy(): Plugin {
   return {
@@ -28,7 +31,7 @@ function contentSecurityPolicy(): Plugin {
           "style-src 'self' 'unsafe-inline'",
           "img-src 'self' data: blob:",
           "font-src 'self' data:",
-          "connect-src 'none'",
+          "connect-src 'self'",
           "manifest-src 'self'",
           "base-uri 'none'",
           "form-action 'none'",
@@ -44,13 +47,25 @@ function contentSecurityPolicy(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), contentSecurityPolicy()],
+  plugins: [react(), tailwindcss(), sitePlugin(), contentSecurityPolicy()],
+  // Several pages (D-248): the public site at /, the app at /app/. No SPA fallback:
+  // unknown paths get the 404 page.
+  appType: 'mpa',
+  server: {
+    // Build outputs and test reports are not sources: watching them also locks them on Windows.
+    watch: {
+      ignored: ['**/dist/**', '**/dist-e2e/**', '**/test-results/**', '**/playwright-report/**'],
+    },
+  },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  // Relative base so the build also works inside the Tauri shell (phase 6).
-  base: './',
+  // Absolute paths so the 404 page works at any depth. A desktop shell would build with CODEX_BASE=./
+  base: process.env.CODEX_BASE ?? '/',
   build: {
+    // Every supported browser has module preloading: no polyfill request on each page.
+    modulePreload: { polyfill: false },
+    rollupOptions: { input: siteInputs(fileURLToPath(new URL('.', import.meta.url))) },
     // Single-bundle local app (~280 kB gzip in phase 2). Route-level code splitting: phase 6 (D-011).
     chunkSizeWarningLimit: 1000,
     // No source maps in production: the bundle is all there is to read.

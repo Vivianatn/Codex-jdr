@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- site:head -->
+    <!-- site:icons -->
+    <meta name="theme-color" content="#f6f2e9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15110d" media="(prefers-color-scheme: dark)" />
+    <script>
+      document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    </script>
+    <script type="module" src="/site/site.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <!-- site:header -->
+    <main id="contenu" class="prose">
+      <p class="eyebrow">RGPD</p>
+      <h1>Confidentialité et données personnelles</h1>
+      <p class="updated">Dernière mise à jour : {{site.legalUpdated}}</p>
+
+      <h2>En bref</h2>
+      <ul>
+        <li>
+          Tes campagnes, tes fiches, tes cartes et tes messages sont
+          <strong>chiffrés de bout en bout</strong> : la clé reste sur tes appareils, le serveur ne
+          peut pas les lire.
+        </li>
+        <li>Pas de publicité, pas de revente, aucun traceur tiers, aucun cookie publicitaire.</li>
+        <li>
+          Un seul cookie, indispensable à ta connexion. La mesure d’audience est anonyme, sans
+          cookie, et tu peux la refuser.
+        </li>
+        <li>Tu peux exporter ou supprimer toutes tes données depuis l’application.</li>
+      </ul>
+
+      <h2>Qui est responsable de tes données ?</h2>
+      <p>
+        {{site.publisher.name}}, éditeur de Codex (voir les
+        <a href="/mentions-legales">mentions légales</a>). Pour toute question ou demande :
+        <a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a>.
+      </p>
+
+      <h2>Quelles données, pourquoi, sur quelle base ?</h2>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Données</th>
+            <th scope="col">Pourquoi</th>
+            <th scope="col">Base légale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              Compte : nom d’utilisateur, preuve de mot de passe (jamais le mot de passe lui-même),
+              clés de chiffrement chiffrées, clés publiques
+            </td>
+            <td>Te connecter et partager des campagnes chiffrées</td>
+            <td>Exécution des conditions d’utilisation</td>
+          </tr>
+          <tr>
+            <td>Amis : demandes, liste d’amis, comptes bloqués</td>
+            <td>Inviter tes amis, les retrouver, te protéger des indésirables</td>
+            <td>Exécution des conditions d’utilisation</td>
+          </tr>
+          <tr>
+            <td>
+              Contenu chiffré : campagnes, fiches, cartes, images, messages et pièces jointes
+              (illisibles par le serveur)
+            </td>
+            <td>Les synchroniser entre tes appareils et avec les membres de tes salons</td>
+            <td>Exécution des conditions d’utilisation</td>
+          </tr>
+          <tr>
+            <td>
+              Informations nécessaires à la synchronisation : membres et rôles d’un salon, dates,
+              tailles, présence en ligne, accusés de lecture
+            </td>
+            <td>Faire fonctionner le temps réel et les droits d’accès</td>
+            <td>Exécution des conditions d’utilisation</td>
+          </tr>
+          <tr>
+            <td>Journaux techniques : adresse IP, date, action, compte</td>
+            <td>Sécurité, lutte contre le spam et les abus, obligations légales d’un hébergeur</td>
+            <td>Intérêt légitime et obligation légale</td>
+          </tr>
+          <tr>
+            <td>Mesure d’audience anonyme : page vue, site d’origine, type d’appareil, pays</td>
+            <td>Savoir quelles pages sont utiles</td>
+            <td>Intérêt légitime (tu peux t’y opposer)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Codex ne demande ni adresse e-mail, ni numéro de téléphone, ni date de naissance. Si une
+        fiche contient le pseudo ou le portrait d’un vrai joueur, c’est toi qui le saisis :
+        demande-lui son accord et retire-le s’il le souhaite.
+      </p>
+
+      <h2 id="audience">Mesure d’audience</h2>
+      <p>
+        Codex compte ses visites avec Umami, installé sur son propre serveur. Il ne dépose
+        <strong>aucun cookie</strong>, ne conserve pas ton adresse IP et ne suit pas ton parcours
+        d’un site à l’autre ; les adresses de l’application (qui contiennent les identifiants de
+        campagne) ne sont jamais envoyées. Rien n’est partagé avec un tiers. Elle s’arrête
+        d’elle-même si ton navigateur envoie « Do Not Track » ou « Global Privacy Control ».
+      </p>
+      <p>
+        <button type="button" class="button" data-consent-open>
+          Choisir pour la mesure d’audience
+        </button>
+      </p>
+
+      <h2>Cookies et stockage sur ton appareil</h2>
+      <dl>
+        <dt>Cookie de session</dt>
+        <dd>
+          Indispensable pour rester connecté. Inaccessible aux scripts, envoyé seulement en HTTPS et
+          seulement à Codex. Il ne nécessite pas ton accord.
+        </dd>
+        <dt>Stockage local du navigateur</dt>
+        <dd>
+          Tes préférences d’affichage, ton choix sur la mesure d’audience et une copie chiffrée de
+          tes campagnes pour fonctionner hors connexion. Rien de tout cela n’est envoyé à un tiers.
+        </dd>
+      </dl>
+
+      <h2>Qui y a accès ?</h2>
+      <p>
+        Personne d’autre que toi et les personnes avec qui tu partages une campagne ou une
+        conversation. Les données sont hébergées chez {{site.host.name}}, {{site.host.location}},
+        qui agit pour notre compte et ne peut pas lire le contenu chiffré. Aucune donnée n’est
+        transférée hors de l’Union européenne.
+      </p>
+
+      <h2>Combien de temps ?</h2>
+      <ul>
+        <li>Compte et contenu : jusqu’à ce que tu supprimes ton compte.</li>
+        <li>
+          Après suppression : effacement immédiat, puis disparition des sauvegardes du serveur sous
+          30 jours.
+        </li>
+        <li>Comptes inactifs depuis 3 ans : supprimés.</li>
+        <li>Journaux techniques : 1 an, durée imposée aux hébergeurs.</li>
+        <li>Mesure d’audience : statistiques conservées 13 mois au plus.</li>
+      </ul>
+
+      <h2>Tes droits</h2>
+      <p>
+        Tu peux accéder à tes données, les corriger, les effacer, les récupérer dans un format
+        réutilisable, t’opposer à leur traitement ou en demander la limitation. Dans l’application :
+        <em>Paramètres › Données et confidentialité</em> pour tout exporter, et
+        <em>Paramètres › Compte</em> pour supprimer ton compte. Pour le reste, écris à
+        <a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a> ; réponse sous un
+        mois.
+      </p>
+      <p>
+        Si tu estimes que tes droits ne sont pas respectés, tu peux saisir la CNIL :
+        <a href="https://www.cnil.fr/fr/plaintes">cnil.fr/fr/plaintes</a>.
+      </p>
+
+      <h2>Sécurité</h2>
+      <p>
+        Connexion toujours chiffrée (HTTPS), mot de passe jamais transmis en clair, chiffrement de
+        bout en bout du contenu, limitation des tentatives de connexion. Sans ton mot de passe ni
+        ton code de secours, personne — pas même l’éditeur de Codex — ne peut récupérer tes données
+        chiffrées.
+      </p>
+
+      <h2>Mineurs</h2>
+      <p>
+        Avant 15 ans, il faut l’accord d’un parent pour créer un compte, comme le prévoit la loi
+        française.
+      </p>
+    </main>
+    <!-- site:footer -->
+  </body>
+</html>

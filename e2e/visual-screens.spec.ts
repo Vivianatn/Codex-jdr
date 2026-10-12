@@ -82,7 +82,7 @@ for (const theme of ['light', 'dark'] as const) {
     }, theme)
     await disableAppAnimations(page)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto('/')
+    await page.goto('/app/')
     await shot(page, theme, '00-welcome')
     await createAccount(page)
     await shot(page, theme, '01-campaigns-empty')
@@ -193,7 +193,7 @@ for (const theme of ['light', 'dark'] as const) {
     const campaignId = page.url().match(/\/c\/([^/]+)\//)![1]!
     const players = await page.context().newPage()
     await players.setViewportSize({ width: 1440, height: 810 })
-    await players.goto(`/#/c/${campaignId}/view`)
+    await players.goto(`/app/#/c/${campaignId}/view`)
     await expect(players.getByTestId('map-canvas')).toBeVisible()
     await players.waitForTimeout(400)
     await players.screenshot({ path: `test-results/screens/${theme}-12-players-map.png` })
