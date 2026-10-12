@@ -21,11 +21,11 @@ export const SITE = {
   name: 'Codex',
   /** Public address, without trailing slash (e.g. https://codex-jdr.fr). */
   url: (env('CODEX_SITE_URL') ?? 'https://codex.invalid').replace(/\/+$/, ''),
-  tagline: 'Le compagnon du maître du jeu',
+  tagline: 'Le grimoire du maître du jeu',
   locale: 'fr_FR',
   /** Social sharing picture (1200 × 630), in public/. */
   image: '/og-image.png',
-  imageAlt: 'Codex, le compagnon du maître du jeu : fiches, dés, plateau et partie en ligne.',
+  imageAlt: 'Codex, le grimoire du maître du jeu : fiches, dés, plateau et parties en ligne.',
   /** Date of the legal texts (shown as « Dernière mise à jour »). */
   legalUpdated: '12 octobre 2026',
   publisher: {
@@ -64,16 +64,16 @@ export const PAGES: SitePage[] = [
   {
     file: 'index.html',
     path: '/',
-    title: 'Codex — le compagnon du maître du jeu pour tes parties de JDR',
+    title: 'Codex · le grimoire du maître du jeu pour tes parties de JDR',
     description:
-      'Fiches de personnages, dés, plateau avec brouillard de guerre, tours par groupes et parties en ligne avec tes amis. Tes campagnes sont chiffrées de bout en bout.',
+      'Fiches, dés, plateau à brouillard de guerre, tours par groupes et parties en ligne entre amis. Tes campagnes restent chiffrées de bout en bout.',
     indexed: true,
     priority: 1,
   },
   {
     file: 'confidentialite.html',
     path: '/confidentialite',
-    title: 'Confidentialité et données personnelles — Codex',
+    title: 'Confidentialité et données personnelles · Codex',
     description:
       'Quelles données Codex conserve, pourquoi, combien de temps, et comment exercer tes droits (RGPD).',
     indexed: true,
@@ -82,7 +82,7 @@ export const PAGES: SitePage[] = [
   {
     file: 'cgu.html',
     path: '/cgu',
-    title: 'Conditions générales d’utilisation — Codex',
+    title: 'Conditions générales d’utilisation · Codex',
     description: 'Les règles d’utilisation de Codex, de ton compte et de la messagerie.',
     indexed: true,
     priority: 0.3,
@@ -90,7 +90,7 @@ export const PAGES: SitePage[] = [
   {
     file: 'mentions-legales.html',
     path: '/mentions-legales',
-    title: 'Mentions légales — Codex',
+    title: 'Mentions légales · Codex',
     description: 'Éditeur et hébergeur du site Codex.',
     indexed: true,
     priority: 0.2,
@@ -98,7 +98,7 @@ export const PAGES: SitePage[] = [
   {
     file: '404.html',
     path: '/404',
-    title: 'Page introuvable — Codex',
+    title: 'Page introuvable · Codex',
     description: 'Cette page n’existe pas ou plus.',
     indexed: false,
   },

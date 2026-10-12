@@ -153,7 +153,7 @@ test('scenario 7: export, delete and re-import a campaign with its characters', 
   await page.getByRole('button', { name: /Plus d’actions — Sauvegarde/ }).click()
   await page.getByRole('menuitem', { name: 'Supprimer' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Supprimer' }).click()
-  await expect(page.getByText('Aucune campagne pour l’instant')).toBeVisible()
+  await expect(page.getByText('Ta bibliothèque est vide')).toBeVisible()
   expect(await dump()).toEqual({ campaigns: [], entities: [] })
 
   await page.getByTestId('campaign-import-input').setInputFiles({

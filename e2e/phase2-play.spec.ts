@@ -185,7 +185,7 @@ for (const theme of ['light', 'dark'] as const) {
     // Quick panel, then the full sheet over the map.
     await page.getByRole('button', { name: 'Manipuler Gorak' }).click()
     await expect(
-      page.getByRole('complementary', { name: 'Manipulation rapide — Gorak' }),
+      page.getByRole('complementary', { name: 'Manipulation rapide : Gorak' }),
     ).toBeVisible()
     await expectNoSeriousA11yViolations(page)
     await page.getByRole('button', { name: 'Fiche complète' }).click()

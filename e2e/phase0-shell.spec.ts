@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('creates a campaign, switches modes and survives a reload', async ({ page }) => {
-  await expect(page.getByText('Aucune campagne pour l’instant')).toBeVisible()
+  await expect(page.getByText('Ta bibliothèque est vide')).toBeVisible()
   await createCampaign(page, 'La Crypte des Murmures')
 
   const modes = page.getByRole('radiogroup', { name: 'Mode' })
@@ -62,7 +62,7 @@ test('exports a campaign, deletes it and re-imports it identically', async ({ pa
   await page.getByRole('button', { name: /Plus d’actions — Aller-retour/ }).click()
   await page.getByRole('menuitem', { name: 'Supprimer' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Supprimer' }).click()
-  await expect(page.getByText('Aucune campagne pour l’instant')).toBeVisible()
+  await expect(page.getByText('Ta bibliothèque est vide')).toBeVisible()
 
   await page.getByTestId('campaign-import-input').setInputFiles({
     name: 'export.json',
@@ -142,7 +142,7 @@ test('GDPR: exports every campaign in one archive, then erases everything', asyn
   await page.getByTestId('erase-all-confirm').click()
   await expect(page.getByTestId('lock-screen')).toBeVisible()
   await unlock(page)
-  await expect(page.getByText('Aucune campagne pour l’instant')).toBeVisible()
+  await expect(page.getByText('Ta bibliothèque est vide')).toBeVisible()
   // Preferences are gone too: back to the default light theme.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 

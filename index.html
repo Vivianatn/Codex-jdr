@@ -7,7 +7,13 @@
     <!-- site:icons -->
     <meta name="theme-color" content="#ece0c6" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#110d0a" media="(prefers-color-scheme: dark)" />
-    <link rel="preload" as="image" href="/images/plateau.webp" type="image/webp" />
+    <link
+      rel="preload"
+      as="image"
+      href="/images/plateau.webp"
+      type="image/webp"
+      fetchpriority="high"
+    />
     <script>
       document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches
         ? 'dark'
@@ -22,14 +28,14 @@
       <section class="hero" aria-labelledby="titre">
         <div>
           <p class="eyebrow">Pour les maîtres du jeu</p>
-          <h1 id="titre">Prépare et mène tes parties sans perdre le fil</h1>
+          <h1 id="titre">Le grimoire de ta table</h1>
           <p class="lead">
-            Fiches, dés, plateau avec brouillard de guerre, tours par groupes : tout ton JDR au même
-            endroit. Invite tes amis, joue en ligne et discute avec ta table.
+            Les fiches, les dés, le plateau et les tours de jeu, rangés au même endroit. Ce que tu
+            prépares la veille est prêt à servir quand les joueurs s’assoient.
           </p>
           <a class="button cta" href="/app/">Ouvrir Codex</a>
           <p class="reassure">
-            Gratuit · tes campagnes et tes messages sont chiffrés de bout en bout.
+            Gratuit. Tes campagnes et tes messages sont chiffrés de bout en bout.
           </p>
         </div>
         <figure>
@@ -38,56 +44,71 @@
             width="1200"
             height="750"
             fetchpriority="high"
-            alt="Le plateau de Codex en partie : à gauche, la colonne des groupes avec les points de vie de Gorak et Lyra ; au centre, une carte quadrillée où leurs mini-fiches s'affichent au-dessus des jetons."
+            alt="Le plateau de Codex au début d’un combat : la bannière « Round 1 » traverse la carte, les mini-fiches de Lyra et Gorak flottent au-dessus de leurs jetons, la colonne des groupes à gauche."
           />
         </figure>
       </section>
 
-      <h2 class="section-title">Tout ce qu’il faut à ta table</h2>
-      <ul class="features">
-        <li>
-          <h3>Fiches complètes</h3>
+      <section class="chapter" aria-labelledby="fiches">
+        <img
+          src="/images/fiche.webp"
+          width="1200"
+          height="750"
+          loading="lazy"
+          decoding="async"
+          alt="La fiche de Gorak, barbare de niveau 3 : son médaillon, sa jauge de points de vie et les onglets Identité, Statistiques, Compétences, État, Inventaire et Journal."
+        />
+        <div>
+          <h2 id="fiches">Des fiches qui tiennent la route</h2>
           <p>
-            Caractéristiques, compétences, états, inventaire façon jeu vidéo, journal de chaque
-            personnage.
+            Caractéristiques, compétences, états, inventaire à emplacements comme dans un jeu vidéo,
+            journal de chaque personnage. Une fiche Discord se colle et s’importe d’un coup.
           </p>
-        </li>
-        <li>
-          <h3>Dés et tests</h3>
-          <p>Jets libres ou de caractéristique, avantage, critiques, jets secrets du MJ.</p>
-        </li>
-        <li>
-          <h3>Plateau</h3>
+        </div>
+      </section>
+
+      <section class="chapter chapter-flip" aria-labelledby="table">
+        <img
+          src="/images/table.webp"
+          width="1200"
+          height="750"
+          loading="lazy"
+          decoding="async"
+          alt="En pleine partie : la fiche rapide de Gorak ouverte à droite du plateau, avec ses caractéristiques réglables d’un clic."
+        />
+        <div>
+          <h2 id="table">Une table qui suit le rythme</h2>
           <p>
-            Cartes carrées ou hexagonales, murs, brouillard de guerre et écran pour tes joueurs.
+            Les groupes jouent chacun leur tour, puis vient le tien. Un clic sur un jeton ouvre sa
+            fiche ; les dés roulent, les coups portent, le brouillard se lève à mesure que le groupe
+            avance.
           </p>
-        </li>
-        <li>
-          <h3>Tours par groupes</h3>
-          <p>Les groupes jouent l’un après l’autre, puis vient le tour du MJ.</p>
-        </li>
-        <li>
-          <h3>En ligne avec tes amis</h3>
-          <p>
-            Ajoute tes amis, prépare à plusieurs, puis passe en joueur pour rejoindre leur salon.
-          </p>
-        </li>
-        <li>
-          <h3>Messagerie</h3>
-          <p>
-            Messages privés, salons de campagne, réactions, pièces jointes et messages chuchotés du
-            MJ.
-          </p>
-        </li>
-        <li>
-          <h3>Tes règles maison</h3>
-          <p>Codex n’impose aucune mécanique : tu actives seulement ce que tu utilises.</p>
-        </li>
-        <li>
-          <h3>Chiffré de bout en bout</h3>
-          <p>Le serveur ne peut lire ni tes campagnes ni tes messages : la clé reste chez toi.</p>
-        </li>
-      </ul>
+        </div>
+      </section>
+
+      <section class="extras" aria-labelledby="aussi">
+        <h2 id="aussi">Et aussi</h2>
+        <ul>
+          <li>
+            <strong>Tes règles maison.</strong> Codex n’impose aucune mécanique : tu actives ce que
+            tu utilises.
+          </li>
+          <li><strong>Un écran pour tes joueurs,</strong> sur la télé ou un second moniteur.</li>
+          <li>
+            <strong>Tes amis en ligne.</strong> Prépare à plusieurs, puis passe en joueur pour
+            rejoindre leur salon.
+          </li>
+          <li>
+            <strong>Une messagerie de table :</strong> messages privés, salons de campagne, messages
+            chuchotés du MJ.
+          </li>
+          <li>
+            <strong>Chiffré de bout en bout.</strong> Le serveur ne lit ni tes campagnes ni tes
+            messages.
+          </li>
+          <li><strong>Des bruitages et une musique d’ambiance,</strong> si le cœur t’en dit.</li>
+        </ul>
+      </section>
     </main>
     <!-- site:footer -->
   </body>

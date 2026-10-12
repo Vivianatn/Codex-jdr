@@ -174,7 +174,7 @@ for (const theme of ['light', 'dark'] as const) {
         .getByRole('complementary', { name: 'Accès rapide' })
         .getByRole('button', { name: `Manipuler ${name}` })
         .click()
-      const quick = page.getByRole('complementary', { name: `Manipulation rapide — ${name}` })
+      const quick = page.getByRole('complementary', { name: `Manipulation rapide : ${name}` })
       await quick.getByRole('button', { name: 'Placer sur la carte' }).click()
       if (name === 'Gorak') await shot(page, theme, '10-quick-panel')
       await quick.getByRole('button', { name: 'Fermer' }).first().click()

@@ -114,7 +114,7 @@ describe('quick panel (D-227)', () => {
     const { user, gob } = await playScreen()
     await user.click(screen.getByRole('button', { name: 'Manipuler Gobelin 1' }))
     const panel = await screen.findByRole('complementary', {
-      name: 'Manipulation rapide — Gobelin 1',
+      name: 'Manipulation rapide : Gobelin 1',
     })
 
     await user.click(within(panel).getByRole('button', { name: 'Ajouter 1 en Force' }))

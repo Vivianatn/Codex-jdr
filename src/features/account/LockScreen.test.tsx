@@ -49,7 +49,7 @@ describe('lock screen (D-241)', () => {
     await user.click(screen.getByLabelText(/J’ai rangé ce code/))
     await user.click(proceed)
 
-    await shows('Aucune campagne pour l’instant')
+    await shows('Ta bibliothèque est vide')
     expect(hasActiveDb()).toBe(true)
     expect(sessionKey()).toHaveLength(32)
 
@@ -73,6 +73,6 @@ describe('lock screen (D-241)', () => {
     await waitFor(() => expect(useSessionStore.getState().status).toBe('unlocked'), {
       timeout: 15_000,
     })
-    await shows('Aucune campagne pour l’instant')
+    await shows('Ta bibliothèque est vide')
   }, 90_000)
 })

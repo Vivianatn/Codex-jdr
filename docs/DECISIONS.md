@@ -24,6 +24,13 @@ Demande du MJ : « gamifier » Codex et faire en sorte qu'il ne ressemble pas à
 - **Musique d'ambiance, coupée par défaut** : un bourdon et des notes pincées tirées d'une gamme modale, jamais deux fois la même ; « taverne » (ré dorien) pendant la préparation, « donjon » (ré phrygien) en jeu.
 - Silencieux dans la fenêtre des joueurs (l'écran du MJ joue déjà) et dans un onglet en arrière-plan. Réglages dans Paramètres › Ambiance de jeu : bruitages et musique avec leur volume, bouton « Écouter un critique ».
 
+### D-253 · Des textes avec une voix
+
+- **Ce qui sonnait « généré »** : la même tournure partout (« Aucun X pour l'instant »), les formules passe-partout (« Vue d'ensemble », « Pour bien commencer », « Tout ce qu'il faut à ta table »), les tirets cadratins dans les libellés, et sur l'accueil la grille de huit cartes identiques.
+- **Ce qui les remplace** : des états vides qui parlent la langue de la table (« Ton bestiaire attend ses créatures », « Le coffre est vide », « Ni poison ni malédiction », « Les dés n'ont pas encore roulé », « La table attend ses joueurs »), des sous-titres concrets, des exemples de JDR dans les champs (« Un royaume en ruine, une dette de sang… »). Le tutoiement, la clarté et la longueur restent les mêmes : rien de plus long, rien de cryptique. Les libellés avec « — » passent à « : » ou « de » ; les titres de pages utilisent « · ».
+- **Accueil** : « Le grimoire de ta table », puis deux chapitres qui alternent texte et capture (les fiches, la table en jeu) et une courte liste « Et aussi » en texte, au lieu d'une grille de cartes. Devise : « le grimoire du maître du jeu ».
+- Corrigé au passage : l'état vide des cartes annonçait encore l'éditeur de plateau « dans une prochaine phase ».
+
 ### D-252 · Bannières des grands moments
 
 - « Round N » traverse le plateau à chaque nouveau round ; « Victoire » quand tous les ennemis présents dans les groupes tombent à 0 PV, « Défaite » quand c'est le cas de tous les joueurs. Elles partent seules (1,8 s, 3,8 s), laissent passer les clics et sont annoncées aux lecteurs d'écran.

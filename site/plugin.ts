@@ -68,7 +68,7 @@ const FOOTER = `<footer class="site-footer">
           <li><button type="button" class="site-link" data-consent-open>Mesure d’audience</button></li>
         </ul>
       </nav>
-      <p>© ${new Date().getFullYear()} ${SITE.name} — ${SITE.tagline.toLowerCase()}.</p>
+      <p>© ${new Date().getFullYear()} ${SITE.name}, ${SITE.tagline.toLowerCase()}.</p>
     </footer>`
 
 /** `{{site.publisher.email}}` → the value from SITE (escaped). */

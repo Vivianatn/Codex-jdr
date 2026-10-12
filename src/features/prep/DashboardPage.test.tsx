@@ -40,7 +40,7 @@ describe('dashboard', () => {
     ])
 
     const { user } = renderApp(`/c/${campaign.id}/prep/dashboard`)
-    const figures = await screen.findByRole('region', { name: 'La campagne en chiffres' })
+    const figures = await screen.findByRole('region', { name: 'Le registre' })
     await waitFor(() =>
       expect(within(figures).getByRole('link', { name: /Joueurs/ })).toHaveTextContent('1'),
     )

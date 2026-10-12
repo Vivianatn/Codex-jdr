@@ -143,7 +143,7 @@ test('a GM hosts, a player plays her character, a co-GM prepares a session', asy
   })
   await expect(player.getByRole('heading', { name: 'Tes campagnes' })).toBeVisible()
   // The guest's copy is gone; her own (empty) campaigns are back.
-  await expect(player.getByText('Aucune campagne pour l’instant')).toBeVisible()
+  await expect(player.getByText('Ta bibliothèque est vide')).toBeVisible()
   expect(
     await player.evaluate(
       async () =>

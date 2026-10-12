@@ -57,7 +57,7 @@ test('turns by groups, the GM turn, and quick manipulation during play', async (
 
   // Quick manipulation from the banner: a weapon and a stat, in a few clicks.
   await banner.getByRole('button', { name: /Manipuler Gorak/ }).click()
-  const panel = page.getByRole('complementary', { name: 'Manipulation rapide — Gorak' })
+  const panel = page.getByRole('complementary', { name: 'Manipulation rapide : Gorak' })
   await panel.getByRole('button', { name: 'Ajouter 1 en Force' }).click()
   await panel.getByLabel('Nouvel objet').fill('Hache')
   await panel.getByRole('checkbox', { name: 'Arme' }).check()

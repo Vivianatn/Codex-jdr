@@ -104,7 +104,7 @@ export function HpBar({
         aria-valuemin={0}
         aria-valuemax={max}
         aria-valuenow={current}
-        aria-valuetext={`${label} — ${t.sheet.hpBands[band]}`}
+        aria-valuetext={`${label}, ${t.sheet.hpBands[band]}`}
         // A game HUD gauge (D-250): sunken, framed in brass.
         className={cn(
           'relative overflow-hidden rounded-[3px] border border-line-strong bg-surface-sunken shadow-[inset_0_1px_3px_var(--codex-bevel-lo)]',

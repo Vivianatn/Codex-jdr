@@ -51,7 +51,7 @@ for (const theme of ['light', 'dark'] as const) {
       .getByRole('complementary', { name: 'Accès rapide' })
       .getByRole('button', { name: 'Manipuler Gorak' })
       .click()
-    const quick = page.getByRole('complementary', { name: 'Manipulation rapide — Gorak' })
+    const quick = page.getByRole('complementary', { name: 'Manipulation rapide : Gorak' })
     await quick.getByRole('button', { name: 'Placer sur la carte' }).click()
     await quick.getByRole('button', { name: 'Fermer' }).first().click()
     await page.getByRole('checkbox', { name: 'Mini-fiches des joueurs' }).check()

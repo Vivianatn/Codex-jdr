@@ -34,16 +34,26 @@ async function favicons() {
 
 const SCREENSHOT = resolve(root, 'test-results/screens/dark-11-play.png')
 
+/** Landing pictures (public/images), from `npm run screens`. */
+const PICTURES: Record<string, string> = {
+  'plateau.webp': 'dark-11-play.png',
+  'table.webp': 'dark-10-quick-panel.png',
+  'fiche.webp': 'dark-04-sheet-identity.png',
+}
+
 async function screenshot() {
-  if (!existsSync(SCREENSHOT)) {
-    console.warn('No play screenshot: run `npm run screens` first to refresh the landing picture.')
-    return
-  }
   mkdirSync(pub('images'), { recursive: true })
-  await sharp(SCREENSHOT)
-    .resize({ width: 1200 })
-    .webp({ quality: 78, effort: 6 })
-    .toFile(pub('images/plateau.webp'))
+  for (const [out, source] of Object.entries(PICTURES)) {
+    const file = resolve(root, 'test-results/screens', source)
+    if (!existsSync(file)) {
+      console.warn(`No ${source}: run \`npm run screens\` first to refresh ${out}.`)
+      continue
+    }
+    await sharp(file)
+      .resize({ width: 1200 })
+      .webp({ quality: 78, effort: 6 })
+      .toFile(pub(`images/${out}`))
+  }
 }
 
 async function socialCard() {
@@ -69,7 +79,7 @@ async function socialCard() {
       border: 1px solid #c9963a; box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
   </style></head><body><div class="glow"></div>
     <div class="text"><div class="logo">${logo}</div><h1>Codex</h1>
-      <p>Le compagnon du maître du jeu</p>
+      <p>Le grimoire du maître du jeu</p>
       <div class="tags">Fiches · Dés · Plateau · Parties en ligne</div></div>
     ${shot ? `<img class="shot" src="${shot}" alt="">` : ''}
   </body></html>`

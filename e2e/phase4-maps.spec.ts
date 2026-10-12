@@ -155,7 +155,7 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
   await card.getByRole('button', { name: 'Ajouter au groupe Groupe' }).click()
 
   await card.getByRole('button', { name: 'Manipuler Lyra' }).click()
-  const quick = page.getByRole('complementary', { name: 'Manipulation rapide — Lyra' })
+  const quick = page.getByRole('complementary', { name: 'Manipulation rapide : Lyra' })
   await quick.getByRole('button', { name: 'Placer sur la carte' }).click()
   await expect(quick.getByRole('combobox', { name: 'Taille du jeton' })).toBeVisible()
   await quick.getByRole('button', { name: 'Fermer' }).first().click()
@@ -167,7 +167,7 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
 
   // Mini sheet above the token (D-234): -2 HP, -2 Dexterity in a few keystrokes.
   await click(page, centre(6, 4))
-  const mini = page.getByRole('region', { name: 'Mini-fiche — Lyra' })
+  const mini = page.getByRole('region', { name: 'Mini-fiche de Lyra' })
   await expect(mini).toBeVisible()
   await mini.getByLabel('Modifier les PV de Lyra').fill('-2')
   await mini.getByLabel('Modifier les PV de Lyra').press('Enter')

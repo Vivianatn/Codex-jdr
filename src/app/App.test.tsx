@@ -15,7 +15,7 @@ beforeEach(async () => {
 describe('campaigns page', () => {
   it('shows a helpful empty state when there is no campaign', async () => {
     renderApp('/')
-    expect(await screen.findByText('Aucune campagne pour l’instant')).toBeInTheDocument()
+    expect(await screen.findByText('Ta bibliothèque est vide')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Nouvelle campagne' })).toBeInTheDocument()
   })
 
