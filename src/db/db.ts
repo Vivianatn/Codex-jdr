@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { normalizeEntityShape } from '@/domain/entity'
+import type { ActivityRecord } from '@/domain/activity'
 import type { RollRecord } from '@/domain/rolls'
 import type { GameMap } from '@/domain/maps'
 import type { SessionPlan, SessionRun } from '@/domain/sessions'
@@ -100,6 +101,21 @@ export const SCHEMA = {
     sessions: 'id, campaignId',
     sessionRuns: 'id, campaignId',
   },
+  // v10 (D-247): activity log of the editors, per campaign.
+  10: {
+    campaigns: 'id',
+    entities: 'id, campaignId',
+    bestiary: 'id, campaignId',
+    rolls: 'id, campaignId, [campaignId+at]',
+    itemLibrary: 'id, campaignId',
+    skills: 'id, campaignId',
+    maps: 'id, campaignId',
+    assets: 'id, campaignId',
+    backups: 'id, createdAt',
+    sessions: 'id, campaignId',
+    sessionRuns: 'id, campaignId',
+    activity: 'id, campaignId, [campaignId+at]',
+  },
 } as const
 
 /**
@@ -127,6 +143,8 @@ export class CodexDB extends Dexie {
   sessions!: EntityTable<SessionPlan, 'id'>
   /** Games played, one per start of play (D-244). */
   sessionRuns!: EntityTable<SessionRun, 'id'>
+  /** Who did what, per campaign (D-247). */
+  activity!: EntityTable<ActivityRecord, 'id'>
 
   /**
    * @param options.key data key of the account: every record is then encrypted at rest (D-241).
@@ -230,6 +248,8 @@ export class CodexDB extends Dexie {
     this.version(8).stores(SCHEMA[8])
     // v9 (D-244): session plans and runs. New tables only.
     this.version(9).stores(SCHEMA[9])
+    // v10 (D-247): editors' activity log. New table only.
+    this.version(10).stores(SCHEMA[10])
   }
 
   /** Committed writes, local or received (D-245). Returns the unsubscribe. */

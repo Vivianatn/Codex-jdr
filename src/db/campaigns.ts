@@ -69,6 +69,7 @@ export function createCampaignRepository(
     db().assets,
     db().sessions,
     db().sessionRuns,
+    db().activity,
   ]
 
   return {
@@ -140,6 +141,7 @@ export function createCampaignRepository(
         await db().rolls.where('campaignId').equals(id).delete()
         await db().sessions.where('campaignId').equals(id).delete()
         await db().sessionRuns.where('campaignId').equals(id).delete()
+        await db().activity.where('campaignId').equals(id).delete()
         await db().campaigns.delete(id)
       })
     },

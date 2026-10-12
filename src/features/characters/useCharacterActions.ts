@@ -7,6 +7,7 @@ import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
 import type { PrepSection } from '@/stores/uiStore'
+import { recordActivity } from '@/stores/activityLog'
 
 /** Where each kind of character lives in Préparation. */
 export function sectionFor(kind: Entity['kind']): PrepSection {
@@ -37,6 +38,7 @@ export function useCharacterActions() {
     /** Saves a bestiary template (shared library) and opens it. */
     async saveTemplate(template: EnemyTemplate, toastText: string) {
       await bestiaryRepository.save(template)
+      recordActivity(template.campaignId, t.activity.templateCreated(entityName(template)))
       toast.success(toastText)
       navigate(`${base}/bestiary/t/${template.id}`)
     },

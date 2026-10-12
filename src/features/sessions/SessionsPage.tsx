@@ -13,6 +13,7 @@ import { newSessionPlan, type SessionPlan, type SessionRun } from '@/domain/sess
 import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useIntlLocale, useT } from '@/i18n'
+import { recordActivity } from '@/stores/activityLog'
 
 /** Préparation › Sessions: reusable session plans and the games played (D-244). */
 export function SessionsPage() {
@@ -27,6 +28,7 @@ export function SessionsPage() {
   const create = async () => {
     const plan = newSessionPlan(campaign.id, t.sessions.defaultTitle)
     await sessionRepository.savePlan(plan)
+    recordActivity(campaign.id, t.activity.sessionCreated(plan.title))
     navigate(editorPath(plan.id))
   }
   const newButton = (
@@ -144,6 +146,7 @@ export function SessionsPage() {
               onClick={async () => {
                 if (!deleting) return
                 await sessionRepository.removePlan(deleting.id)
+                recordActivity(campaign.id, t.activity.sessionRemoved(deleting.title))
                 toast(t.sessions.removed)
                 setDeleting(null)
               }}

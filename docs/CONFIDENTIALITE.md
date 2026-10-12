@@ -17,6 +17,7 @@ Si tu utilises Codex pour ta table, **tu es responsable des données que tu y sa
 | Nom du compte (prénom ou pseudo), données de connexion chiffrées                | Base locale du navigateur (IndexedDB) | Te connecter                    |
 | Campagnes, personnages, compétences, objets, bestiaire, notes                   | Base locale du navigateur (IndexedDB) | Faire fonctionner l'application |
 | Historique des jets de dés                                                      | IndexedDB                             | Journal de partie               |
+| Journal des modifications : nom de compte de qui a modifié quoi, et quand       | IndexedDB                             | Tableau de bord de la campagne  |
 | Cartes et images importées (portraits, fonds de carte)                          | IndexedDB                             | Plateau et fiches               |
 | Réglages d'affichage (thème, taille du texte, animations, dernier écran ouvert) | `localStorage` du navigateur          | Retrouver tes préférences       |
 
@@ -30,6 +31,7 @@ Quand tu ouvres une campagne en ligne ou rejoins celle de quelqu'un, les apparei
 
 - le MJ envoie aux éditeurs toute la campagne partagée, et aux joueurs seulement ce qu'ils peuvent voir à la table ;
 - chacun voit le nom de compte des autres participants ;
+- les éditeurs voient le journal des modifications (qui a modifié quoi, et quand) ; les joueurs ne le reçoivent jamais ;
 - les appareils échangent leurs **adresses IP** pour se connecter ; un serveur STUN public (par défaut celui de Google, modifiable ou désactivable dans les Paramètres) les voit aussi, jamais les données ;
 - la copie reçue par un invité est temporaire, chiffrée, et supprimée quand il quitte la partie.
 

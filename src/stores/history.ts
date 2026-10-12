@@ -52,7 +52,15 @@ interface Binding<S> {
   write: (snapshot: S) => void
 }
 
+/** A recorded change, an undo or a redo, with the label of the change concerned. */
+export interface HistoryEvent {
+  kind: 'do' | 'undo' | 'redo'
+  label: string
+}
+
 export type HistoryStore<S> = StoreApi<HistoryState<S>> & {
+  /** Called after each recorded change, undo and redo (activity log, D-247). Returns the unsubscribe. */
+  onEvent: (listener: (event: HistoryEvent) => void) => () => void
   /** @internal — connects the history to the store it tracks. */
   bind: (binding: Binding<S>) => void
   /** @internal — called by the tracked store after each set. */
@@ -79,13 +87,17 @@ export function createHistory<S extends object>(options: HistoryOptions = {}): H
   let suspended = 0
   let txBefore: S | null = null
   let txLabel = defaultLabel
+  const listeners = new Set<(event: HistoryEvent) => void>()
+  const emit = (event: HistoryEvent) => listeners.forEach((l) => l(event))
 
   const store = createStore<HistoryState<S>>()((set, get) => {
-    const push = (label: string, snapshot: S) =>
+    const push = (label: string, snapshot: S) => {
       set((s) => {
         const past = [...s.past, { label, snapshot, at: now() }].slice(-limit)
         return { past, future: [], canUndo: past.length > 0, canRedo: false }
       })
+      emit({ kind: 'do', label })
+    }
 
     const move = (from: 'past' | 'future') => {
       if (!binding || depth > 0) return
@@ -105,6 +117,7 @@ export function createHistory<S extends object>(options: HistoryOptions = {}): H
         const future = from === 'past' ? [...s.future, current] : remaining
         return { past, future, canUndo: past.length > 0, canRedo: future.length > 0 }
       })
+      emit({ kind: from === 'past' ? 'undo' : 'redo', label: entry.label })
     }
 
     return {
@@ -147,11 +160,18 @@ export function createHistory<S extends object>(options: HistoryOptions = {}): H
     bind: (b: Binding<S>) => {
       binding = b
     },
+    onEvent: (listener: (event: HistoryEvent) => void) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
     record: (before: S, after: S) => {
       if (suspended > 0 || depth > 0 || shallowEqual(before, after)) return
       const s = store.getState()
       const past = [...s.past, { label: defaultLabel, snapshot: before, at: now() }].slice(-limit)
       store.setState({ past, future: [], canUndo: true, canRedo: false })
+      emit({ kind: 'do', label: defaultLabel })
     },
   })
 }

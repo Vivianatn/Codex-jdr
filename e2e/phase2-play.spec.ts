@@ -20,7 +20,7 @@ test.beforeEach(async ({ page }) => {
 const hpField = (page: Page, name: string) => page.getByLabel(`Modifier les PV de ${name}`)
 
 async function addGoblin(page: Page) {
-  await page.getByRole('link', { name: 'Bestiaire' }).click()
+  await page.getByRole('link', { name: 'Bestiaire', exact: true }).click()
   await page.getByRole('link', { name: 'Nouveau modèle' }).first().click()
   await page.getByLabel(/Pseudo/).fill('Gobelin')
   await page.getByRole('button', { name: /Suivant/ }).click()

@@ -18,6 +18,7 @@ import {
   type RulesConfig,
   type StatRounding,
 } from '@/rules'
+import { recordActivity } from '@/stores/activityLog'
 
 function parseFaces(text: string): number[] {
   return [
@@ -46,7 +47,10 @@ export function RulesPage() {
   const rules = campaign.rules
   const [facesError, setFacesError] = useState<string | null>(null)
 
-  const save = (next: RulesConfig) => void campaignRepository.updateRules(campaign.id, next)
+  const save = (next: RulesConfig) => {
+    void campaignRepository.updateRules(campaign.id, next)
+    recordActivity(campaign.id, t.activity.rules)
+  }
   const patch = <K extends keyof RulesConfig>(key: K, value: Partial<RulesConfig[K]>) =>
     save({ ...rules, [key]: { ...(rules[key] as object), ...value } })
 

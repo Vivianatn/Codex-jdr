@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { campaignRepository } from '@/db/campaigns'
 import { activeDb } from '@/db/db'
+import type { ActivityRecord } from '@/domain/activity'
 import { createEntity } from '@/domain/entity'
 import { newElement, newMap } from '@/domain/maps'
 import { newSessionPlan } from '@/domain/sessions'
 import { HOST_ID } from '@/domain/turns'
 import { getMessages } from '@/i18n'
 import { defaultRules } from '@/rules'
+import { flushActivity } from '@/stores/activityLog'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
 import { GuestSession } from './guestSession'
@@ -263,5 +265,58 @@ describe('players (D-245)', () => {
     await new Promise((r) => setTimeout(r, 20))
     p2.guest.choose(lyra.id)
     await eventually(() => expect(p2.rejected).toContain('taken'))
+  })
+})
+
+describe('activity log (D-247)', () => {
+  const line = (campaignId: string, author: { id: string; name: string }): ActivityRecord => ({
+    id: crypto.randomUUID(),
+    campaignId,
+    at: Date.now(),
+    author,
+    kind: 'do',
+    label: 'Carte « Crypte » modifiée',
+    count: 1,
+  })
+
+  it('signs the host’s changes, takes editors’ lines signed by themselves only, hides them from players', async () => {
+    const { host, campaign, lyra } = await world()
+    store().updateEntity(lyra.id, (e) => ({ ...e, level: 2 }), 'Modification de Lyra')
+    await flushActivity()
+    expect(await activeDb().activity.toArray()).toMatchObject([
+      { author: { id: HOST_ID, name: 'MJ' }, label: 'Modification de Lyra', count: 1 },
+    ])
+
+    const a = join(host, 'editor', 'Agathe')
+    const { selfId } = await a.guest.ready
+    await eventually(async () => expect(await a.guest.copy.activity.count()).toBe(1))
+    const own = line(campaign.id, { id: selfId, name: 'Agathe' })
+    await a.guest.copy.activity.put(own)
+    await eventually(async () =>
+      expect((await activeDb().activity.get(own.id))?.author.name).toBe('Agathe'),
+    )
+
+    const forged = line(campaign.id, { id: HOST_ID, name: 'MJ' })
+    await a.guest.copy.activity.put(forged)
+    await eventually(() => expect(a.rejected).toContain('forbidden'))
+    expect(await activeDb().activity.get(forged.id)).toBeUndefined()
+
+    const p = join(host, 'player', 'Chloé')
+    await p.guest.ready
+    expect(await p.guest.copy.activity.count()).toBe(0)
+  })
+
+  it('signs a player’s move with the player’s name', async () => {
+    const { host, lyra, map } = await world()
+    const p = join(host, 'player', 'Chloé')
+    const { selfId } = await p.guest.ready
+    p.guest.choose(lyra.id)
+    startGame('online')
+    p.guest.intent({ type: 'move', mapId: map.id, tokenId: 'tk-lyra', col: 4, row: 2 })
+    await eventually(async () => {
+      await flushActivity()
+      const lines = await activeDb().activity.toArray()
+      expect(lines.some((l) => l.author.id === selfId && l.author.name === 'Chloé')).toBe(true)
+    })
   })
 })

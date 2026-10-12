@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 import type { Entity } from '@/domain/types'
 import { formatRelativeTime, useIntlLocale, useT } from '@/i18n'
 import { useRollStore } from '@/stores/rollStore'
+import { rollSummary } from '@/features/dice/rollSummary'
 
 /** Journal (SPEC §2.2): sheet events and this character's rolls, newest first. */
 export function JournalTab({ entity }: { entity: Entity }) {
@@ -15,19 +16,7 @@ export function JournalTab({ entity }: { entity: Entity }) {
       id: r.id,
       at: r.at,
       roll: true,
-      text: r.check
-        ? t.journal.check(
-            r.label,
-            r.check.natural,
-            r.check.outcome.critical
-              ? r.check.outcome.critical.kind === 'success'
-                ? t.dice.critSuccess[r.check.outcome.critical.tier]
-                : t.dice.critFailure[r.check.outcome.critical.tier]
-              : r.check.outcome.success
-                ? t.dice.success
-                : t.dice.failure,
-          )
-        : `${r.label} : ${r.total}`,
+      text: rollSummary(t, r),
     })),
   ].sort((a, b) => b.at - a.at)
   if (entries.length === 0) return <p className="text-sm text-ink-muted">{t.journal.empty}</p>

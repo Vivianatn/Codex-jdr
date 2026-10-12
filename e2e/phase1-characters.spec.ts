@@ -96,7 +96,7 @@ test('scenario 1: create a player with the wizard and copy the sheet for Discord
 
 test('scenario 2 (part): create a Gobelin template and add 5 numbered copies', async ({ page }) => {
   await createCampaign(page, 'Gobelins')
-  await page.getByRole('link', { name: 'Bestiaire' }).click()
+  await page.getByRole('link', { name: 'Bestiaire', exact: true }).click()
   await page.getByRole('link', { name: 'Nouveau modèle' }).first().click()
   await page.getByLabel(/Pseudo/).fill('Gobelin')
   await next(page)
@@ -196,7 +196,7 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoSeriousA11yViolations(page)
     await page.keyboard.press('Escape')
 
-    await page.getByRole('link', { name: 'Règles' }).click()
+    await page.getByRole('link', { name: 'Règles', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Règles de la campagne' })).toBeVisible()
     await expectNoSeriousA11yViolations(page)
   })

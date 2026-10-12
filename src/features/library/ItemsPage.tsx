@@ -18,6 +18,7 @@ import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { ChestIllustration } from '@/components/illustrations'
+import { recordActivity } from '@/stores/activityLog'
 
 const MENU_ITEM =
   'flex min-h-9 cursor-pointer items-center rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2'
@@ -140,6 +141,7 @@ export function ItemsPage() {
                   icon={<Trash />}
                   onClick={async () => {
                     await itemLibrary.remove(item.id)
+                    recordActivity(campaign.id, t.activity.itemRemoved(item.name))
                     toast.success(t.inventory.templateDeleted(item.name))
                   }}
                 />
@@ -153,6 +155,7 @@ export function ItemsPage() {
         onClose={() => setEditing(null)}
         onSave={async (item) => {
           await itemLibrary.save(item, campaign.id)
+          recordActivity(campaign.id, t.activity.itemSaved(item.name))
           setEditing(null)
           toast.success(t.inventory.templateSaved)
         }}

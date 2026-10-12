@@ -47,6 +47,24 @@ describe('history middleware', () => {
     expect(h().canRedo).toBe(false)
   })
 
+  it('tells listeners about changes, undos and redos, not about untracked or empty ones', () => {
+    const { history, h, s } = setup()
+    const events: unknown[] = []
+    const stop = history.onEvent((e) => events.push(e))
+    h().transaction('Gorak −7 PV', () => s().damage('gorak', 7))
+    h().transaction('Rien', () => s().setLabel('x'))
+    h().untracked(() => s().nextRound())
+    h().undo()
+    h().redo()
+    stop()
+    s().nextRound()
+    expect(events).toEqual([
+      { kind: 'do', label: 'Gorak −7 PV' },
+      { kind: 'undo', label: 'Gorak −7 PV' },
+      { kind: 'redo', label: 'Gorak −7 PV' },
+    ])
+  })
+
   it('ignores changes outside the tracked slice', () => {
     const { h, s } = setup()
     s().setLabel('UI only')

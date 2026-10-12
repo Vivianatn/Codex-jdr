@@ -19,6 +19,7 @@ import { useRollStore } from '@/stores/rollStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useRollerName } from './useRollerName'
 import { RollCard } from './RollCard'
+import { recordActivity } from '@/stores/activityLog'
 
 const QUICK_DICE = [4, 6, 8, 10, 12, 20, 100]
 const GM = '__gm__'
@@ -188,8 +189,10 @@ function Macros() {
   const [expression, setExpression] = useState('')
   const [error, setError] = useState<string | null>(null)
   const macros = campaign.library.macros
-  const save = (next: typeof macros) =>
+  const save = (next: typeof macros) => {
     void campaignRepository.updateLibrary(campaign.id, { ...campaign.library, macros: next })
+    recordActivity(campaign.id, t.activity.macros)
+  }
 
   return (
     <section aria-labelledby="macros-heading" className="space-y-2">

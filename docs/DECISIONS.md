@@ -4,6 +4,18 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Tableau de bord et journal des éditeurs (2026-10-12)
+
+### D-247 · Le tableau de bord montre toute la campagne et ce qu'a fait chaque éditeur
+
+Demande du MJ : « affiche toutes les données relatives à la campagne ainsi que les dernières choses qu'ont faites les éditeurs ». Rien n'enregistrait jusqu'ici **qui** avait fait une modification.
+
+- **Tableau de bord** (DA §10.2) : en-tête (création, dernière modification), « La campagne en chiffres » (joueurs, alliés et familiers, ennemis en jeu, modèles du bestiaire, compétences, objets, états, cartes, séances préparées, parties jouées, jets ; chaque tuile mène à sa section), « Le groupe » (médaillon, niveau, barre de PV), « Partie » (en cours ou non, opérateur, carte en jeu, groupes, tour, dernière partie), « Derniers jets » (5) et « Ce qu'ont fait les éditeurs ». « Pour bien commencer » ne reste que tant que la campagne est vide.
+- **Journal d'activité** : table `activity` (schéma v10), une ligne = auteur (identifiant + nom de compte), action, moment. L'action est le libellé que l'historique d'annulation donne déjà à chaque modification (« Gorak −7 PV », « Gobelin 2 déplacé ») : rien à maintenir en double. Les annulations et rétablissements sont consignés (« Annulé : … »). Les écritures qui ne passent pas par l'historique (bestiaire, bibliothèque d'objets, états, règles, jets favoris, séances, nom de la campagne) ajoutent leur ligne explicitement (`recordActivity`).
+- **Lignes fusionnées** : la même action du même auteur dans les 2 minutes (déplacer un jeton pas à pas, taper dans un champ) met à jour la ligne avec un compteur « × 3 » au lieu d'en empiler. 300 lignes au plus par campagne ; seul l'hôte élague.
+- **En ligne** : la table est synchronisée vers les éditeurs, **jamais vers les joueurs** (ce que prépare le MJ n'a pas à leur être révélé). Un co-éditeur écrit ses propres lignes ; l'hôte n'accepte que celles signées de l'identifiant et du nom de cet éditeur, et refuse toute suppression : personne ne peut se faire passer pour un autre ni effacer la trace d'un autre. Les intentions des joueurs (déplacer leur jeton, lancer leurs dés) sont signées de leur nom par l'hôte. Version du protocole passée à 2 (nouvelle table).
+- **Pas dans l'export** : le journal décrit qui a travaillé sur la campagne, pas la campagne elle-même ; il est supprimé avec elle.
+
 ## Mise en page sans défilement horizontal (2026-10-12)
 
 ### D-246 · Jamais de barre de défilement horizontale

@@ -9,7 +9,7 @@ import type { GuestRole, PeerInfo } from './onlineStore'
  * players send intents the host checks and performs.
  */
 
-export const PROTOCOL_VERSION = 1
+export const PROTOCOL_VERSION = 2
 
 /** Tables shared online (backups stay on the host). */
 export const SYNC_TABLES = [
@@ -23,6 +23,7 @@ export const SYNC_TABLES = [
   'sessions',
   'sessionRuns',
   'assets',
+  'activity',
 ] as const
 export type SyncTable = (typeof SYNC_TABLES)[number]
 

@@ -13,6 +13,7 @@ import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
 import { useCampaignStore } from '@/stores/campaignStore'
+import { recordActivity } from '@/stores/activityLog'
 
 const NO_MAP = '__none__'
 
@@ -36,7 +37,11 @@ export function SessionEditor() {
   if (plan === undefined) return null
   if (plan === null || plan.campaignId !== campaign.id) return <Navigate to={listPath} replace />
 
-  const save = (patch: Partial<SessionPlan>) => sessionRepository.savePlan({ ...plan, ...patch })
+  const save = (patch: Partial<SessionPlan>) => {
+    const next = { ...plan, ...patch }
+    recordActivity(campaign.id, t.activity.sessionEdited(next.title))
+    return sessionRepository.savePlan(next)
+  }
   const addObjective = () => {
     const text = objective.trim()
     if (!text) return

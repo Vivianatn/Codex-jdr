@@ -17,6 +17,7 @@ import { useCampaignStore } from '@/stores/campaignStore'
 import { CharacterSheet, CopyForDiscordButton } from './CharacterSheet'
 import { SpawnButton } from './SpawnDialog'
 import { useCharacterActions } from './useCharacterActions'
+import { recordActivity } from '@/stores/activityLog'
 
 function BackLink({ to }: { to: string }) {
   const t = useT()
@@ -153,7 +154,9 @@ export function TemplateSheetPage() {
           onChange={(recipe) => {
             // Re-read so quick successive edits never overwrite each other.
             void bestiaryRepository.get(template.id).then((latest) => {
-              if (latest) void bestiaryRepository.save(recipe(latest) as EnemyTemplate)
+              if (!latest) return
+              void bestiaryRepository.save(recipe(latest) as EnemyTemplate)
+              recordActivity(campaign.id, t.activity.templateEdited(entityName(latest)))
             })
           }}
           context={{ owners: [] }}
@@ -167,6 +170,7 @@ export function TemplateSheetPage() {
                 onConfirm={async () => {
                   navigate(back)
                   await bestiaryRepository.remove(template.id)
+                  recordActivity(campaign.id, t.activity.templateRemoved(name))
                   toast.success(t.bestiary.templateDeleted(name))
                 }}
               />

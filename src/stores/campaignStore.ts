@@ -15,6 +15,7 @@ import { normalizeMap, type GameMap } from '@/domain/maps'
 import type { Entity, Skill, SkillDefinition } from '@/domain/types'
 
 export type MapLibrary = Record<string, GameMap>
+import { recordActivity } from './activityLog'
 import { createHistory, withHistory } from './history'
 
 /**
@@ -339,6 +340,12 @@ export async function flushAutosave(): Promise<void> {
   }
   await pending
 }
+
+// Every undoable change, undo and redo goes to the activity log (D-247).
+campaignHistory.onEvent((event) => {
+  const { campaignId, status } = useCampaignStore.getState()
+  if (status === 'ready') recordActivity(campaignId, event.label, event.kind)
+})
 
 useCampaignStore.subscribe((state, previous) => {
   if (

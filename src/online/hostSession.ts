@@ -1,6 +1,7 @@
 import { toast } from 'sonner'
 import { activeDb, type CodexDB } from '@/db/db'
 import { markRemote } from '@/db/middleware'
+import { isValidActivity, type ActivityRecord } from '@/domain/activity'
 import { isSafeImageDataUrl, safeImage } from '@/db/sanitize'
 import type { Campaign } from '@/db/types'
 import { blockingWall, inBounds, tokenCenter } from '@/domain/maps'
@@ -11,6 +12,7 @@ import { createMapActions } from '@/features/game/mapActions'
 import type { Messages } from '@/i18n/locales/fr'
 import { withDefaultRules } from '@/rules'
 import { applyExternalChanges, useCampaignStore } from '@/stores/campaignStore'
+import { withActivityAuthor } from '@/stores/activityLog'
 import { applyExternalRolls } from '@/stores/rollStore'
 import { channelLink, type Link } from './link'
 import { useOnlineStore, type GuestRole, type PeerInfo } from './onlineStore'
@@ -282,9 +284,20 @@ export class HostSession {
     const current = await this.currentPlay()
     const live = current.live
     const operating = live?.operator.id === peer.info.id
+    const author = { id: peer.info.id, name: peer.info.name }
     for (const change of changes) {
       const table = this.db().table(change.table)
       if (live && !operating && OPERATOR_TABLES.has(change.table)) return 'notOperator'
+      if (change.table === 'activity') {
+        // An editor only writes lines signed with its own name, and never erases the log.
+        if (change.del.length) return 'forbidden'
+        for (const record of change.put) {
+          if (!isValidActivity(record, campaignId, author)) return 'forbidden'
+          const existing = (await table.get(String(record.id))) as ActivityRecord | undefined
+          if (existing && existing.author.id !== author.id) return 'forbidden'
+        }
+        continue
+      }
       for (const record of change.put) {
         const id = String(record.id)
         if (change.table === 'campaigns') {
@@ -373,6 +386,9 @@ export class HostSession {
     if (store.campaignId !== this.options.campaignId) await store.load(this.options.campaignId)
     const campaign: Campaign = { ...record, rules: withDefaultRules(record.rules) }
     const game = createGameActions(this.options.t, campaign)
+    // What follows is synchronous: the activity log signs it with the player's name.
+    const asPlayer = <R>(fn: () => R): R =>
+      withActivityAuthor({ id: peer.info.id, name: peer.info.name }, fn)
 
     if (intent.type === 'move') {
       const map = useCampaignStore.getState().maps[intent.mapId]
@@ -389,15 +405,17 @@ export class HostSession {
         )
       )
         return 'blocked'
-      createMapActions(this.options.t, campaign, game).moveToken(map.id, token.id, cell)
+      asPlayer(() =>
+        createMapActions(this.options.t, campaign, game).moveToken(map.id, token.id, cell),
+      )
       return null
     }
     if (intent.type === 'check') {
-      game.check(intent.entityId, intent.stat, { mode: intent.mode })
+      asPlayer(() => game.check(intent.entityId, intent.stat, { mode: intent.mode }))
       return null
     }
     try {
-      game.freeRoll(intent.expression, { entityId: intent.entityId })
+      asPlayer(() => game.freeRoll(intent.expression, { entityId: intent.entityId }))
       return null
     } catch {
       return 'invalid'

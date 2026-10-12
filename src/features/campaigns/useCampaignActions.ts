@@ -6,6 +6,7 @@ import type { Messages } from '@/i18n/locales/fr'
 import { MAX_IMPORT_BYTES } from '@/db/sanitize'
 import { downloadJson, slugify } from '@/lib/files'
 import { flushAutosave, useCampaignStore } from '@/stores/campaignStore'
+import { recordActivity } from '@/stores/activityLog'
 
 export function importErrorMessage(t: Messages, error: unknown): string {
   if (!(error instanceof CampaignImportError)) return t.errors.generic
@@ -47,6 +48,7 @@ export function useCampaignActions() {
 
     async update(id: string, input: { name: string; description: string }): Promise<void> {
       await campaignRepository.update(id, input)
+      recordActivity(id, t.activity.campaign)
       toast.success(t.campaigns.renamed)
     },
 

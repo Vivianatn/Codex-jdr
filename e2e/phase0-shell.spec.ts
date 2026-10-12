@@ -22,7 +22,7 @@ test('creates a campaign, switches modes and survives a reload', async ({ page }
   await createCampaign(page, 'La Crypte des Murmures')
 
   const modes = page.getByRole('radiogroup', { name: 'Mode' })
-  await page.getByRole('link', { name: 'Bestiaire' }).click()
+  await page.getByRole('link', { name: 'Bestiaire', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Bestiaire', exact: true })).toBeVisible()
 
   await modes.getByRole('radio', { name: 'En jeu' }).click()
@@ -92,7 +92,7 @@ for (const theme of ['light', 'dark'] as const) {
     await createCampaign(page, 'Accessible')
     await expectNoSeriousA11yViolations(page) // dashboard
 
-    await page.getByRole('link', { name: 'Joueurs' }).click()
+    await page.getByRole('link', { name: 'Joueurs', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Joueurs', exact: true })).toBeVisible()
     await expectNoSeriousA11yViolations(page) // section empty state
 

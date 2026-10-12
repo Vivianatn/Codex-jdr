@@ -1,5 +1,6 @@
 import type { CodexDB } from '@/db/db'
 import type { Asset, Campaign } from '@/db/types'
+import type { ActivityRecord } from '@/domain/activity'
 import type { GameMap } from '@/domain/maps'
 import type { RollRecord } from '@/domain/rolls'
 import type { SessionPlan, SessionRun } from '@/domain/sessions'
@@ -19,6 +20,8 @@ export interface CampaignData {
   sessions: SessionPlan[]
   sessionRuns: SessionRun[]
   assets: Asset[]
+  /** Editors' activity log (D-247): editors only. */
+  activity: ActivityRecord[]
 }
 
 export function emptyCampaignData(): CampaignData {

@@ -14,6 +14,7 @@ import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
+import { recordActivity } from '@/stores/activityLog'
 
 /** The campaign condition list (SPEC §4.10): every entry, starters included, is the GM's to edit. */
 export function ConditionsPage() {
@@ -21,8 +22,10 @@ export function ConditionsPage() {
   const campaign = useCampaign()
   const custom = campaign.library.conditions
   const [editing, setEditing] = useState<ConditionTemplate | null>(null)
-  const save = (conditions: ConditionTemplate[]) =>
-    campaignRepository.updateLibrary(campaign.id, { ...campaign.library, conditions })
+  const save = (conditions: ConditionTemplate[]) => {
+    recordActivity(campaign.id, t.activity.conditions)
+    return campaignRepository.updateLibrary(campaign.id, { ...campaign.library, conditions })
+  }
 
   return (
     <PageTransition className="px-4 py-8 sm:px-8">
