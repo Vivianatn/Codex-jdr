@@ -81,7 +81,7 @@ export type ToolItem = MapTool | ToolGroupKey
 const isGroup = (item: ToolItem): item is ToolGroupKey => item in TOOL_GROUPS
 
 const BUTTON =
-  'inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted transition-colors duration-150 hover:bg-surface-2 hover:text-ink [&_svg]:size-5 [&_svg]:stroke-[1.75]'
+  'inline-flex size-11 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors duration-150 hover:bg-surface-2 hover:text-ink [&_svg]:size-5 [&_svg]:stroke-[1.75]'
 const ACTIVE = 'bg-accent-soft text-accent-text hover:bg-accent-soft hover:text-accent-text'
 const MENU =
   'z-50 max-h-[70vh] min-w-52 overflow-y-auto rounded-xl border border-line bg-surface-raised p-1 shadow-lifted'
@@ -161,7 +161,7 @@ export function MapToolbar({
       className={cn(
         'flex gap-1 p-1',
         orientation === 'bar'
-          ? 'codex-glass items-center !rounded-[14px]'
+          ? 'codex-glass items-center !rounded-lg'
           : 'w-[60px] flex-col items-center border-r border-line bg-surface py-2',
       )}
     >

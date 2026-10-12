@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn'
  * error = 2 px HP colour. The second pixel is an inset shadow (no layout shift).
  */
 export const FIELD =
-  'w-full rounded-[10px] border border-line-strong bg-surface px-3 text-[0.9375rem] text-ink placeholder:text-ink-muted transition-[border-color,box-shadow] duration-150 hover:border-ink-muted focus-visible:border-focus focus-visible:shadow-[inset_0_0_0_1px_var(--codex-focus),0_0_0_3px_var(--codex-accent-soft)] aria-invalid:border-hp aria-invalid:shadow-[inset_0_0_0_1px_var(--codex-hp)] disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-faint'
+  'w-full rounded-md border border-line-strong bg-surface-raised shadow-[inset_0_1px_3px_var(--codex-bevel-lo)] px-3 text-[0.9375rem] text-ink placeholder:text-ink-muted transition-[border-color,box-shadow] duration-150 hover:border-ink-muted focus-visible:border-focus focus-visible:shadow-[inset_0_0_0_1px_var(--codex-focus),0_0_0_3px_var(--codex-accent-soft)] aria-invalid:border-hp aria-invalid:shadow-[inset_0_0_0_1px_var(--codex-hp)] disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-faint'
 
 interface FieldShellProps {
   label: string

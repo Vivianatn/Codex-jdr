@@ -15,6 +15,7 @@ import {
 } from '@/stores/settingsStore'
 import { AccountSection } from '@/features/account/AccountSection'
 import { BackupsSection } from '@/features/account/BackupsSection'
+import { CreditsSection } from './CreditsSection'
 import { PrivacySection } from './PrivacySection'
 
 export function SettingsButton() {
@@ -174,6 +175,8 @@ export function SettingsDialog({
         <BackupsSection />
 
         <PrivacySection />
+
+        <CreditsSection />
       </div>
     </Dialog>
   )

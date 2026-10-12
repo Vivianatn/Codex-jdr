@@ -122,7 +122,7 @@ function Frame({
         <LogoMark />
         <Wordmark />
       </div>
-      <div className="w-full max-w-[440px] space-y-5 rounded-[20px] border border-line bg-surface-raised p-6 shadow-overlay sm:p-8">
+      <div className="w-full max-w-[440px] space-y-5 rounded-xl border border-line bg-surface-raised p-6 shadow-overlay sm:p-8">
         {title && (
           <div>
             <h1 className="type-screen-title text-[1.75rem] text-ink">{title}</h1>

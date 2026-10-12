@@ -1,6 +1,7 @@
 import { MapTokenBlock } from '@/features/maps/MapTokenBlock'
 import { motion } from 'framer-motion'
-import { FileText, Minus, Plus, Shield, Sword, X } from 'lucide-react'
+import { FileText, Minus, Plus, X } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button, IconButton } from '@/components/ui/Button'
 import { CheckboxField, SelectField } from '@/components/ui/fields'
@@ -252,7 +253,13 @@ function ItemsBlock({ entity }: { entity: Entity }) {
                     size="sm"
                     variant={item.slot ? 'secondary' : 'ghost'}
                     label={item.slot ? t.quick.unequip(item.name) : t.quick.equip(item.name)}
-                    icon={item.type === 'weapon' ? <Sword /> : <Shield />}
+                    icon={
+                      item.type === 'weapon' ? (
+                        <GameIcon name="broadsword" />
+                      ) : (
+                        <GameIcon name="round-shield" />
+                      )
+                    }
                     aria-pressed={Boolean(item.slot)}
                     onClick={() => actions.toggleEquip(entity.id, item.id)}
                   />

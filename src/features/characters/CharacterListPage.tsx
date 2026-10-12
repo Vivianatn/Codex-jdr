@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { ClipboardPaste, Plus, Users } from 'lucide-react'
+import { ClipboardPaste, Plus } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useShallow } from 'zustand/react/shallow'
@@ -71,7 +72,7 @@ export function CharacterListPage({
 
       {entities.length === 0 ? (
         <EmptyState
-          icon={<Users />}
+          icon={<GameIcon name="two-shadows" />}
           illustration={illustration}
           eyebrow={title}
           title={emptyTitle}

@@ -43,7 +43,7 @@ export function TabList({ label, children }: { label: string; children: ReactNod
     <RadixTabs.List
       aria-label={label}
       // Tabs wrap on narrow screens: all of them stay in view.
-      className="flex flex-wrap gap-x-6 border-b border-line"
+      className="flex flex-wrap gap-x-1 border-b border-line-strong"
     >
       {children}
     </RadixTabs.List>
@@ -57,15 +57,17 @@ export function Tab({ value, children }: { value: string; children: ReactNode })
     <RadixTabs.Trigger
       value={value}
       className={cn(
-        'relative inline-flex items-center gap-2 py-3 text-[0.9375rem] whitespace-nowrap transition-colors [&>svg]:size-4',
-        active ? 'font-semibold text-ink' : 'font-medium text-ink-muted hover:text-ink',
+        'relative -mb-px inline-flex items-center gap-2 rounded-t-md border border-b-0 px-4 py-2.5 text-[0.9375rem] whitespace-nowrap transition-colors [&>svg]:size-4',
+        active
+          ? 'border-line-strong bg-surface font-semibold text-ink shadow-[inset_0_1px_0_var(--codex-bevel-hi)]'
+          : 'border-transparent font-medium text-ink-muted hover:bg-surface-2 hover:text-ink',
       )}
     >
       {children}
       {active && (
         <motion.span
           layoutId={state?.underline}
-          className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-accent"
+          className="absolute inset-x-0 -top-px h-[3px] rounded-t-md bg-accent"
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           aria-hidden
         />

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/Button'
@@ -275,7 +276,7 @@ function Wizard({ kind, ownerId }: { kind: EntityKind; ownerId: string | null })
               </p>
             )}
             {current === 'recap' ? (
-              <Button variant="primary" icon={<Sparkles />} onClick={finish}>
+              <Button variant="primary" icon={<GameIcon name="magic-swirl" />} onClick={finish}>
                 {t.wizard.create}
               </Button>
             ) : (

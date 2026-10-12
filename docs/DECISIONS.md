@@ -4,7 +4,17 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
-## Passage en ligne sur un serveur (2026-10-12)
+## Interface façon jeu vidéo (2026-10-12)
+
+Demande du MJ : « gamifier » Codex et faire en sorte qu'il ne ressemble pas à une IA. Précisions du MJ : l'interface doit faire penser aux jeux vidéo, **sans ajouter de système de jeu** (pas de succès ni de progression du MJ) ; direction « RPG classique » (Baldur's Gate 3, Divinity) ; sons actifs par défaut, musique coupée ; retravailler l'apparence et les textes (le code, la documentation et l'historique git restent tels quels).
+
+### D-250 · Direction « RPG classique »
+
+- **Ce qui faisait « IA »** et disparaît : le violet d'accent (la couleur par défaut des interfaces générées), les icônes génériques au trait et les « étincelles » (compétences, états), les coins très arrondis, les surfaces lisses et identiques, l'effet verre.
+- **Palette** : rouge sang pour l'action, laiton et or pour les cadres, cuir sombre (En jeu) ou parchemin (Préparation). Contrastes vérifiés (AA partout, AAA pour le texte courant) puis par axe dans les deux thèmes. Jetons nouveaux : `--codex-frame` (filet doré intérieur des panneaux, porté par les ombres), `--codex-bevel-hi/lo` (relief), `--codex-leather` (dégradé de cuir). Le violet reste seulement là où le jeu vidéo l'attend : rareté « épique » et Sagesse.
+- **Composants** : boutons en relief qui s'enfoncent au clic (primaire rouge serti de laiton en petites capitales gravées, secondaire en cuir) ; jauges de PV façon HUD (creusées, cerclées, reflet, graduations tous les dixièmes) ; onglets en plaques reliées à la page ; section courante du menu en plaque sertie avec une barre rouge ; champs creusés ; sélecteurs en touches. Rayons 4 à 10 px.
+- **Icônes** : glyphes game-icons.net (CC BY 3.0) pour tout ce qui appartient au jeu (sections, objets, états, dés, épées, couronne du MJ…), extraits par `scripts/game-icons.ts` (67 glyphes, seuls ceux utilisés vont dans le paquet) et affichés par `GameIcon` / `gameIcon()`. Les actions d'interface (fermer, annuler, ajouter) gardent des icônes au trait sobres. Crédits dans Paramètres › Crédits.
+- Logo et favicon : un écu de cuir serti d'or, codex crème et losange rouge.
 
 Demande du MJ : un serveur PulseHeberg héberge Codex et ses données ; mode en ligne complet, amitiés entre comptes, bouton pour passer de MJ/éditeur à joueur (rejoindre un salon), messagerie très poussée, et **avant toute chose** la liste des 20 points à vérifier avant de lancer un site web (capture d'une vidéo).
 

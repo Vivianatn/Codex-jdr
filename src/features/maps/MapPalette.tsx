@@ -115,7 +115,7 @@ export function PaletteMenu() {
           aria-label={t.maps.palette}
           aria-pressed={tool === 'place'}
           className={cn(
-            'inline-flex size-11 items-center justify-center rounded-[10px] text-ink-muted hover:bg-surface-2 hover:text-ink xl:hidden [&_svg]:size-5',
+            'inline-flex size-11 items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-ink xl:hidden [&_svg]:size-5',
             tool === 'place' && 'bg-accent-soft text-accent-text',
           )}
         >

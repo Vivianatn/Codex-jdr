@@ -27,7 +27,7 @@ async function favicons() {
   ] as const) {
     let image = sharp(svg, { density: 72 * (size / 32) * 2 }).resize(size, size)
     // iOS draws the touch icon on black: give it the parchment background.
-    if (file === 'apple-touch-icon.png') image = image.flatten({ background: '#f6f2e9' })
+    if (file === 'apple-touch-icon.png') image = image.flatten({ background: '#110d0a' })
     await image.png({ compressionLevel: 9, palette: true }).toFile(pub(file))
   }
 }
@@ -56,9 +56,9 @@ async function socialCard() {
     @font-face { font-family: 'Alegreya'; font-weight: 400 900; src: url(${font('@fontsource-variable/alegreya/files/alegreya-latin-wght-normal.woff2')}); }
     @font-face { font-family: 'Source Sans 3'; font-weight: 200 900; src: url(${font('@fontsource-variable/source-sans-3/files/source-sans-3-latin-wght-normal.woff2')}); }
     * { margin: 0; box-sizing: border-box; }
-    body { width: 1200px; height: 630px; overflow: hidden; background: #15110d; color: #f2eadd;
+    body { width: 1200px; height: 630px; overflow: hidden; background: #110d0a; color: #f2eadd;
       font-family: 'Source Sans 3'; position: relative; }
-    .glow { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 70% at 20% 40%, rgba(224,174,78,0.16), transparent 70%); }
+    .glow { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 70% at 20% 40%, rgba(163,48,42,0.22), transparent 70%); }
     .text { position: absolute; left: 72px; top: 110px; width: 560px; }
     .logo { width: 72px; height: 72px; margin-bottom: 28px; }
     .logo svg { width: 100%; height: 100%; }

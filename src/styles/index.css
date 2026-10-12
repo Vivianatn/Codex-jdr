@@ -305,3 +305,38 @@
 :root[data-motion='off'] .idle-pulse {
   animation: none !important;
 }
+
+/* « RPG classique » (D-250): raised, bevelled controls and framed panels, like a game menu. */
+@utility bevel {
+  box-shadow:
+    inset 0 1px 0 var(--codex-bevel-hi),
+    inset 0 -2px 0 var(--codex-bevel-lo),
+    0 2px 5px var(--codex-bevel-lo);
+}
+
+@utility bevel-pressed {
+  box-shadow: inset 0 2px 4px var(--codex-bevel-lo);
+}
+
+@utility bg-leather {
+  background-image: var(--codex-leather);
+}
+
+@utility bg-crimson {
+  background-image: linear-gradient(180deg, var(--codex-accent-hover), var(--codex-accent-active));
+}
+
+@utility bg-blood {
+  background-image: linear-gradient(180deg, var(--codex-danger), var(--codex-danger-hover));
+}
+
+@utility bg-brass {
+  background-image: linear-gradient(180deg, var(--codex-gold-soft), var(--codex-surface-2));
+}
+
+/* Engraved labels of the main game buttons. */
+@utility type-button {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}

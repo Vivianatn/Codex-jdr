@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Dices, UserRound } from 'lucide-react'
+import { UserRound } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router'
 import { Button } from '@/components/ui/Button'
@@ -216,7 +217,7 @@ function Sheet({
         <Button
           type="submit"
           variant="primary"
-          icon={<Dices />}
+          icon={<GameIcon name="rolling-dices" />}
           disabled={!canAct || !expression.trim()}
         >
           {t.online.roll}

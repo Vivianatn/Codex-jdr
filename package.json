@@ -55,6 +55,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9.39.5",
+    "@iconify-json/game-icons": "^1.2.4",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.2",

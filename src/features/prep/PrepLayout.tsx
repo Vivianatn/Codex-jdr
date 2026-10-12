@@ -34,14 +34,14 @@ export function PrepLayout() {
                   to={`/c/${campaign.id}/prep/${id}`}
                   className={({ isActive }) =>
                     cn(
-                      'flex h-8 items-center gap-2 rounded-md px-2.5 text-[0.8125rem] whitespace-nowrap transition-colors duration-150 md:h-9 md:gap-2.5 md:px-3 md:text-sm',
+                      'relative flex h-8 items-center gap-2 rounded-md border px-2.5 text-[0.8125rem] whitespace-nowrap transition-colors duration-150 md:h-9 md:gap-2.5 md:px-3 md:text-sm',
                       isActive
-                        ? 'bg-accent-soft font-medium text-accent-text'
-                        : 'text-ink-muted hover:bg-surface-2 hover:text-ink',
+                        ? 'border-gold-line bg-leather font-semibold text-ink bevel before:absolute before:inset-y-1.5 before:-left-px before:w-[3px] before:rounded-r-sm before:bg-accent before:content-[""] [&>svg]:text-accent-text'
+                        : 'border-transparent text-ink-muted hover:bg-surface-2 hover:text-ink',
                     )
                   }
                 >
-                  <Icon className="size-4 shrink-0" aria-hidden />
+                  <Icon className="size-5 shrink-0" aria-hidden />
                   {sectionLabel(t, id)}
                 </NavLink>
               </li>

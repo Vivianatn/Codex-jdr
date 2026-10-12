@@ -36,7 +36,7 @@ export function CharacterCard({
   return (
     <motion.li
       variants={listItemVariants}
-      className="group flex flex-col rounded-[14px] border border-line bg-surface shadow-soft transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lifted"
+      className="group flex flex-col rounded-lg border border-line bg-surface shadow-soft transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lifted"
     >
       <Link
         to={to}

@@ -1,41 +1,24 @@
-import {
-  ArrowDown,
-  Brain,
-  Droplet,
-  Eye,
-  EyeOff,
-  Flame,
-  Ghost,
-  Heart,
-  Moon,
-  Shield,
-  Skull,
-  Snail,
-  Snowflake,
-  Sparkles,
-  Star,
-  Zap,
-  type LucideIcon,
-} from 'lucide-react'
+import { gameIcon, type IconComponent } from '@/components/iconFactory'
 import type { ConditionColor, ConditionIcon, Rarity } from '@/domain/types'
 
-export const CONDITION_ICON_COMPONENTS: Record<ConditionIcon, LucideIcon> = {
-  skull: Skull,
-  flame: Flame,
-  zap: Zap,
-  'eye-off': EyeOff,
-  heart: Heart,
-  ghost: Ghost,
-  eye: Eye,
-  'arrow-down': ArrowDown,
-  droplet: Droplet,
-  sparkles: Sparkles,
-  brain: Brain,
-  snail: Snail,
-  shield: Shield,
-  snowflake: Snowflake,
-  moon: Moon,
-  star: Star,
+/** Engraved game glyphs (game-icons.net, D-250). */
+export const CONDITION_ICON_COMPONENTS: Record<ConditionIcon, IconComponent> = {
+  skull: gameIcon('death-skull'),
+  flame: gameIcon('flame'),
+  zap: gameIcon('lightning-helix'),
+  'eye-off': gameIcon('blindfold'),
+  heart: gameIcon('heart-plus'),
+  ghost: gameIcon('ghost'),
+  eye: gameIcon('eye-target'),
+  'arrow-down': gameIcon('falling'),
+  droplet: gameIcon('heart-drop'),
+  sparkles: gameIcon('magic-swirl'),
+  brain: gameIcon('brain'),
+  snail: gameIcon('snail'),
+  shield: gameIcon('checked-shield'),
+  snowflake: gameIcon('snowflake-1'),
+  moon: gameIcon('moon'),
+  star: gameIcon('star-formation'),
 }
 
 /**

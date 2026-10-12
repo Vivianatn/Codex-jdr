@@ -88,13 +88,13 @@ export interface BoardTheme {
 }
 
 const KINDS_LIGHT = {
-  player: '#6D5BD0',
+  player: '#2F64A8',
   ally: '#2B7D4C',
   familiar: '#137570',
   enemy: '#C43C3A',
   npc: '#B23D73',
 }
-const KINDS_DARK = { ...KINDS_LIGHT, player: '#7562D8' }
+const KINDS_DARK = { ...KINDS_LIGHT, player: '#4D86C9' }
 
 export const BOARD_LIGHT: BoardTheme = {
   name: 'light',
@@ -117,7 +117,7 @@ export const BOARD_LIGHT: BoardTheme = {
     showLock: true,
   },
   fog: { masked: 'rgba(33,28,38,0.45)', hatch: 'rgba(255,253,248,0.10)', softEdge: 0 },
-  brush: '#6D5BD0',
+  brush: '#9A2A23',
   token: {
     kinds: KINDS_LIGHT,
     edge: '#FFFDF8',
@@ -130,10 +130,10 @@ export const BOARD_LIGHT: BoardTheme = {
     down: '#8C8069',
     temp: '#3A80CC',
     active: { color: '#A97B22', width: 3, glow: 'rgba(217,164,65,0.55)', blur: 18 },
-    selection: '#6D5BD0',
+    selection: '#B07A1E',
     hiddenEdge: '#8C8069',
     condition: { bg: '#FFFDF8', stroke: '#8C8069', size: 16 },
-    moveFill: 'rgba(109,91,208,0.10)',
+    moveFill: 'rgba(176,122,30,0.12)',
   },
   label: {
     text: '#FFFDF8',
@@ -144,7 +144,7 @@ export const BOARD_LIGHT: BoardTheme = {
     padY: 2,
     gap: 4,
   },
-  area: { fill: 'rgba(109,91,208,0.14)', stroke: '#6D5BD0', width: 2 },
+  area: { fill: 'rgba(154,42,35,0.14)', stroke: '#9A2A23', width: 2 },
   measure: {
     line: '#211C26',
     width: 2,
@@ -199,7 +199,7 @@ export const BOARD_DARK: BoardTheme = {
     showLock: true,
   },
   fog: { masked: 'rgba(12,9,7,0.62)', hatch: 'rgba(242,234,221,0.06)', softEdge: 0 },
-  brush: '#B4A6F4',
+  brush: '#E2B45C',
   token: {
     kinds: KINDS_DARK,
     edge: '#15110D',
@@ -212,10 +212,10 @@ export const BOARD_DARK: BoardTheme = {
     down: '#85745F',
     temp: '#8DBDF0',
     active: { color: '#E0AE4E', width: 3, glow: 'rgba(224,174,78,0.45)', blur: 16 },
-    selection: '#B4A6F4',
+    selection: '#E2B45C',
     hiddenEdge: '#B3A691',
     condition: { bg: '#1F1913', stroke: '#85745F', size: 16 },
-    moveFill: 'rgba(180,166,244,0.10)',
+    moveFill: 'rgba(226,180,92,0.10)',
   },
   label: {
     text: '#F2EADD',
@@ -226,7 +226,7 @@ export const BOARD_DARK: BoardTheme = {
     padY: 2,
     gap: 4,
   },
-  area: { fill: 'rgba(180,166,244,0.16)', stroke: '#B4A6F4', width: 2 },
+  area: { fill: 'rgba(226,180,92,0.16)', stroke: '#E2B45C', width: 2 },
   measure: {
     line: '#F2EADD',
     width: 2,
@@ -297,7 +297,7 @@ export const BOARD_PLAYERS: BoardTheme = {
     padY: 4,
     gap: 6,
   },
-  area: { fill: 'rgba(180,166,244,0.20)', stroke: '#B4A6F4', width: 3 },
+  area: { fill: 'rgba(226,180,92,0.20)', stroke: '#E2B45C', width: 3 },
   measure: { ...BOARD_DARK.measure, width: 3, dash: [12, 8], font: 22 },
   ping: { color: '#E0AE4E', width: 4, dot: 12 },
 }

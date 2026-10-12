@@ -1,5 +1,6 @@
 import { ENTITY_DRAG_TYPE } from '@/features/maps/dragTypes'
-import { ChevronDown, ChevronUp, Plus, Trash, UserPlus, Users, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Plus, Trash, UserPlus, X } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useState, type FormEvent } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button, IconButton } from '@/components/ui/Button'
@@ -44,7 +45,7 @@ export function GroupsPanel() {
   return (
     <div className="space-y-5">
       <h2 className="flex items-center gap-2 font-display text-[0.6875rem] font-semibold tracking-[0.16em] text-ink-muted uppercase">
-        <Users className="size-3.5" aria-hidden />
+        <GameIcon name="two-shadows" className="size-3.5" aria-hidden />
         {t.turns.groups}
       </h2>
       {play.groups.map((group, index) => (
@@ -169,7 +170,7 @@ function GroupCard({
             if (!e) return null
             const name = entityName(e)
             return (
-              <li key={id} className="space-y-1.5 rounded-[10px] bg-surface-2/70 p-1.5">
+              <li key={id} className="space-y-1.5 rounded-md bg-surface-2/70 p-1.5">
                 <OpenButton
                   entity={e}
                   current={turn.status === 'playing' && turn.memberId === id}
@@ -266,7 +267,7 @@ function OpenButton({ entity, current = false }: { entity: Entity; current?: boo
       aria-current={current ? 'step' : undefined}
       className={cn(
         // A button sizes to its content: w-full keeps long names inside the panel.
-        'flex min-h-11 w-full min-w-0 items-center gap-2 rounded-[10px] px-1.5 py-1 text-left hover:bg-surface-2',
+        'flex min-h-11 w-full min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-left hover:bg-surface-2',
         current && 'bg-gold-soft hover:bg-gold-soft',
       )}
     >

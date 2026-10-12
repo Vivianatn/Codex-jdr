@@ -1,5 +1,6 @@
 import * as Popover from '@radix-ui/react-popover'
-import { Copy, Crown, Link2, UserPlus, UserRoundPen, Wifi, WifiOff, X } from 'lucide-react'
+import { Copy, Link2, UserPlus, UserRoundPen, Wifi, WifiOff, X } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button, IconButton } from '@/components/ui/Button'
@@ -111,7 +112,7 @@ function Participants({ peers }: { peers: PeerInfo[] }) {
         data-testid="participants"
       >
         <li className="flex items-center gap-2 px-3 py-2 text-sm text-ink">
-          <Crown className="size-4 text-gold-text" aria-hidden />
+          <GameIcon name="crown" className="size-4 text-gold-text" aria-hidden />
           {t.online.you}
           {operator === 'host' && (
             <span className="text-xs text-ink-muted">· {t.online.operating}</span>

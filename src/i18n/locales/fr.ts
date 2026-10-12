@@ -1618,6 +1618,14 @@ export const fr = {
     language: 'Langue',
     languageFrench: 'Français',
   },
+  credits: {
+    title: 'Crédits',
+    icons: 'Icônes de jeu dessinées par Lorc, Delapouite et les autres auteurs de',
+    iconsLicence: '(licence CC BY 3.0).',
+    fonts:
+      'Polices Alegreya, Alegreya SC et Source Sans 3, sous licence SIL Open Font License 1.1.',
+    lucide: 'Icônes d’interface Lucide, sous licence ISC.',
+  },
   analytics: {
     title: 'Mesure d’audience',
     body: 'Codex compte ses visites de façon anonyme, sans cookie et sur son propre serveur : rien n’est partagé avec un tiers.',

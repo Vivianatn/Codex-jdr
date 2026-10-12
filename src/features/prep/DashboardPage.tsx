@@ -1,5 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Dices, History, Swords, type LucideIcon } from 'lucide-react'
+import { History } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
+import { gameIcon, type IconComponent } from '@/components/iconFactory'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/Button'
@@ -28,6 +30,7 @@ import { SECTION_ICONS } from './sections'
 
 const ACTIVITY_PAGE = 15
 const RECENT_ROLLS = 5
+const DiceIcon = gameIcon('rolling-dices')
 
 /**
  * Overview of the campaign (DA §10.2): every figure of the campaign, the
@@ -59,7 +62,12 @@ export function DashboardPage() {
   const figures: Figure[] = [
     { key: 'players', value: players.length, section: 'players' },
     { key: 'allies', value: count(['ally', 'familiar']), section: 'allies' },
-    { key: 'enemies', value: count(['enemy']), section: 'bestiary', icon: Swords },
+    {
+      key: 'enemies',
+      value: count(['enemy']),
+      section: 'bestiary',
+      icon: gameIcon('crossed-swords'),
+    },
     { key: 'templates', value: templates?.length, section: 'bestiary' },
     { key: 'skills', value: Object.keys(skills).length, section: 'skills' },
     { key: 'items', value: items?.length, section: 'items' },
@@ -67,7 +75,7 @@ export function DashboardPage() {
     { key: 'maps', value: Object.keys(maps).length, section: 'maps' },
     { key: 'sessions', value: plans?.length, section: 'sessions' },
     { key: 'runs', value: runs?.length, section: 'sessions', icon: History },
-    { key: 'rolls', value: rolls.length, icon: Dices },
+    { key: 'rolls', value: rolls.length, icon: gameIcon('rolling-dices') },
   ]
 
   return (
@@ -87,7 +95,7 @@ export function DashboardPage() {
             </p>
           </div>
           <Link to={`/c/${campaign.id}/play`} className={buttonClasses('primary', 'lg')}>
-            <Swords className="size-4" aria-hidden />
+            <GameIcon name="crossed-swords" className="size-4" aria-hidden />
             {t.dashboard.playCta}
           </Link>
         </header>
@@ -183,14 +191,14 @@ interface Figure {
   /** undefined while loading. */
   value: number | undefined
   section?: PrepSection
-  icon?: LucideIcon
+  icon?: IconComponent
 }
 
 function FigureTile({ figure, label, base }: { figure: Figure; label: string; base: string }) {
-  const Icon = figure.icon ?? (figure.section ? SECTION_ICONS[figure.section] : Dices)
+  const Icon = figure.icon ?? (figure.section ? SECTION_ICONS[figure.section] : DiceIcon)
   const body = (
     <>
-      <Icon className="size-4 text-ink-muted" aria-hidden />
+      <Icon className="size-6 text-gold-text" aria-hidden />
       <span className="tabular font-display text-2xl leading-none font-bold text-ink">
         {figure.value ?? '–'}
       </span>
@@ -357,7 +365,11 @@ function RecentRolls() {
         <ul className="mt-3 space-y-2">
           {recent.map((r) => (
             <li key={r.id} className="flex gap-3 text-sm">
-              <Dices className="mt-0.5 size-3.5 shrink-0 text-accent-text" aria-hidden />
+              <GameIcon
+                name="rolling-dices"
+                className="mt-0.5 size-3.5 shrink-0 text-accent-text"
+                aria-hidden
+              />
               <span className="min-w-0 flex-1 break-words text-ink">
                 <span className="font-semibold">{nameOf(r)}</span> · {rollSummary(t, r)}
               </span>

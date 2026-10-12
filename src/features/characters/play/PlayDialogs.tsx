@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { CornerOrnament } from '@/components/Brand'
-import { Crown, Swords } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
@@ -277,7 +277,8 @@ export function OpposedDialog({
                   transition={{ type: 'spring', stiffness: 300, damping: 18 }}
                 >
                   {result.winner === duelist.side && (
-                    <Crown
+                    <GameIcon
+                      name="crown"
                       className="absolute -top-3 left-1/2 z-10 size-5 -translate-x-1/2 text-gold"
                       aria-hidden
                     />
@@ -288,7 +289,7 @@ export function OpposedDialog({
                 </motion.div>
               ))}
               <span className="flex justify-center text-ink-muted sm:order-2" aria-hidden>
-                <Swords className="size-6" />
+                <GameIcon name="crossed-swords" className="size-6" />
               </span>
             </motion.div>
           )}

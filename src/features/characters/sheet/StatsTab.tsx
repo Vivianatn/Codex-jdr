@@ -1,4 +1,5 @@
-import { Bed, Clover, Coffee, Minus, Plus, Shield, Sparkles, Weight, X } from 'lucide-react'
+import { Bed, Clover, Coffee, Minus, Plus, Weight, X } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useState } from 'react'
 import { Button, IconButton } from '@/components/ui/Button'
 import { NumberInput } from '@/components/ui/fields'
@@ -181,7 +182,7 @@ export function StatsTab({
               <StatContextMenu key={key} groups={groups}>
                 <li
                   className={cn(
-                    'rounded-[14px] border border-t-[3px] border-line bg-surface p-4 shadow-soft',
+                    'rounded-lg border border-t-[3px] border-line bg-surface p-4 shadow-soft',
                     STAT_STYLES[key].border,
                   )}
                 >
@@ -205,7 +206,7 @@ export function StatsTab({
                       <button
                         type="button"
                         onClick={() => actions.check(entity.id, key)}
-                        className="tabular rounded-[10px] px-2 font-display text-[2.75rem] leading-none font-bold text-ink transition-colors hover:bg-accent-soft hover:text-accent-text"
+                        className="tabular rounded-md px-2 font-display text-[2.75rem] leading-none font-bold text-ink transition-colors hover:bg-accent-soft hover:text-accent-text"
                         aria-label={t.checks.test(t.stats.names[key], s.total)}
                         title={t.checks.test(t.stats.names[key], s.total)}
                       >
@@ -320,7 +321,7 @@ function DerivedPanels({ entity, rules }: { entity: Entity; rules: RulesConfig }
   return (
     <>
       {defense !== null && (
-        <Panel title={t.derived.defense} icon={<Shield />}>
+        <Panel title={t.derived.defense} icon={<GameIcon name="checked-shield" />}>
           <p className="tabular font-display text-3xl font-semibold text-ink">{defense}</p>
         </Panel>
       )}
@@ -485,7 +486,7 @@ function XpPanel({
         {progress && progress.pendingLevels > 0 && (
           <Button
             variant="primary"
-            icon={<Sparkles />}
+            icon={<GameIcon name="sparkles" />}
             className="bg-gold text-[#1f1d2b] hover:bg-gold/90"
             onClick={() => setLevelUp(true)}
           >

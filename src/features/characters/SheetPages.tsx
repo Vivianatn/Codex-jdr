@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, Skull, Trash, UserX } from 'lucide-react'
+import { ArrowLeft, Trash, UserX } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -138,7 +139,11 @@ export function TemplateSheetPage() {
     return (
       <PageTransition className="px-4 py-8 sm:px-8">
         <BackLink to={back} />
-        <EmptyState icon={<Skull />} title={t.sheet.notFoundTitle} body={t.sheet.notFoundBody} />
+        <EmptyState
+          icon={<GameIcon name="death-skull" />}
+          title={t.sheet.notFoundTitle}
+          body={t.sheet.notFoundBody}
+        />
       </PageTransition>
     )
   }

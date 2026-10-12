@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { motion } from 'framer-motion'
-import { Plus, Upload, Users } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { LogoMark, Ornament, Wordmark } from '@/components/Brand'
@@ -50,7 +51,11 @@ export function CampaignsPage() {
   )
   // Every account plays both roles: GM of its campaigns, player or co-GM in others' (D-245).
   const joinButton = (
-    <Button icon={<Users />} onClick={() => setJoining(true)} title={t.online.joinHint}>
+    <Button
+      icon={<GameIcon name="tabletop-players" />}
+      onClick={() => setJoining(true)}
+      title={t.online.joinHint}
+    >
       {t.online.join}
     </Button>
   )

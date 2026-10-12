@@ -133,7 +133,7 @@ export function PlayerView() {
       {/* Turn banner, inside the 5 % TV safety margin (DA §10.8). */}
       {screen === 'map' && turn.status !== 'stopped' && (
         <div
-          className="absolute top-[5%] left-[5%] flex items-baseline gap-[1.4vh] rounded-[18px] border border-[rgba(201,150,58,0.6)] bg-[rgba(21,17,13,0.86)] px-[2vh] py-[1.2vh]"
+          className="absolute top-[5%] left-[5%] flex items-baseline gap-[1.4vh] rounded-lg border border-[rgba(201,150,58,0.6)] bg-[rgba(21,17,13,0.86)] px-[2vh] py-[1.2vh]"
           aria-live="polite"
         >
           <span className="font-display text-[2.4vh] font-bold tracking-[0.14em] text-[#EBC274] uppercase">

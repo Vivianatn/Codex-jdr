@@ -1,5 +1,6 @@
 /*
- * Codex design tokens — art direction « Codex à la chandelle » (docs/CODEX-DA.md §2).
+ * Codex design tokens — art direction « RPG classique » (D-250, docs/CODEX-DA.md):
+ * crimson, brass and gold on dark leather (play) or parchment (preparation).
  * Raw values live here as --codex-* variables; Tailwind utilities are mapped
  * onto them in index.css (@theme inline) so the theme can switch at runtime.
  * The dark block also applies to any subtree with data-theme="dark" (play screen).
@@ -7,21 +8,21 @@
 
 :root {
   color-scheme: light;
-  --codex-bg: #f6f2e9;
-  --codex-surface: #fffdf8;
-  --codex-surface-2: #efe9dc;
-  --codex-surface-glass: rgb(255 253 248 / 0.84);
-  --codex-ink: #211c26;
-  --codex-ink-muted: #655d6e;
-  --codex-line: #e2daca;
-  --codex-line-strong: #8c8069;
-  --codex-accent: #6d5bd0;
-  --codex-accent-hover: #5c4ac0;
-  --codex-accent-soft: #ece8fa;
-  --codex-accent-text: #5844ba;
-  --codex-gold: #d9a441;
-  --codex-gold-soft: #f7ecd3;
-  --codex-gold-text: #82601b;
+  --codex-bg: #ece0c6;
+  --codex-surface: #f7efdc;
+  --codex-surface-2: #e6d8b8;
+  --codex-surface-glass: rgb(247 239 220 / 0.95);
+  --codex-ink: #2a1c11;
+  --codex-ink-muted: #66513b;
+  --codex-line: #d3bf96;
+  --codex-line-strong: #8b6d44;
+  --codex-accent: #9a2a23;
+  --codex-accent-hover: #a9302a;
+  --codex-accent-soft: #f2d6c9;
+  --codex-accent-text: #8c261f;
+  --codex-gold: #c99232;
+  --codex-gold-soft: #f3e2b8;
+  --codex-gold-text: #7a5512;
   --codex-hp: #e05252;
   --codex-hp-text: #ae2e2b;
   --codex-heal: #2e9a5e;
@@ -35,18 +36,18 @@
   --codex-stat-charisma: #c94a85;
   --codex-stat-wisdom: #8b5cc7;
   --codex-stat-luck: #a87719;
-  --codex-surface-raised: #ffffff;
-  --codex-surface-sunken: #eae3d4;
-  --codex-ink-faint: #9a9183;
-  --codex-on-accent: #ffffff;
-  --codex-accent-active: #4e3dae;
-  --codex-focus: #6d5bd0;
+  --codex-surface-raised: #fbf5e7;
+  --codex-surface-sunken: #dfcfab;
+  --codex-ink-faint: #998566;
+  --codex-on-accent: #fff6ea;
+  --codex-accent-active: #7a1f19;
+  --codex-focus: #9a2a23;
   --codex-on-gold: #2a1e08;
-  --codex-gold-line: #a97b22;
-  --codex-gold-glow: rgb(217 164 65 / 0.4);
+  --codex-gold-line: #9c7424;
+  --codex-gold-glow: rgb(201 146 50 / 0.4);
   --codex-hp-soft: #fcece7;
-  --codex-danger: #c43c3a;
-  --codex-danger-hover: #a93230;
+  --codex-danger: #a8291f;
+  --codex-danger-hover: #8f2219;
   --codex-heal-soft: #eaf3e9;
   --codex-warning-text: #8a5a0e;
   --codex-warning-soft: #f8f0e1;
@@ -82,24 +83,30 @@
   --codex-rarity-legendary: #a97b22;
   --codex-rarity-legendary-text: #82601b;
   --codex-rarity-legendary-soft: #f7ecd3;
-  --codex-token-player: #6d5bd0;
+  --codex-token-player: #2f64a8;
   --codex-token-ally: #2b7d4c;
   --codex-token-familiar: #137570;
   --codex-token-foe: #c43c3a;
   --codex-token-npc: #b23d73;
-  --codex-scrim: rgb(33 28 38 / 0.4);
-  --codex-glass-line: rgb(140 128 105 / 0.35);
-  --codex-bar: rgb(255 253 248 / 0.94);
-  --codex-shadow-soft: 0 1px 2px rgb(33 28 38 / 0.06), 0 4px 16px rgb(33 28 38 / 0.06);
-  --codex-shadow-lifted: 0 2px 4px rgb(33 28 38 / 0.06), 0 12px 32px rgb(33 28 38 / 0.1);
-  --codex-shadow-overlay: 0 4px 8px rgb(33 28 38 / 0.1), 0 24px 64px rgb(33 28 38 / 0.22);
-  --codex-radius-sm: 8px;
-  --codex-radius: 12px;
-  --codex-radius-lg: 16px;
-  --codex-radius-xl: 20px;
+  --codex-scrim: rgb(42 28 17 / 0.45);
+  --codex-glass-line: rgb(139 109 68 / 0.45);
+  --codex-bar: rgb(247 239 220 / 0.96);
+  --codex-shadow-soft:
+    inset 0 0 0 1px var(--codex-frame), 0 1px 2px rgb(60 36 16 / 0.12),
+    0 4px 14px rgb(60 36 16 / 0.1);
+  --codex-shadow-lifted:
+    inset 0 0 0 1px var(--codex-frame), 0 2px 4px rgb(60 36 16 / 0.14),
+    0 12px 30px rgb(60 36 16 / 0.18);
+  --codex-shadow-overlay:
+    inset 0 0 0 1px var(--codex-frame), 0 4px 8px rgb(60 36 16 / 0.16),
+    0 24px 60px rgb(60 36 16 / 0.3);
+  --codex-radius-sm: 4px;
+  --codex-radius: 6px;
+  --codex-radius-lg: 8px;
+  --codex-radius-xl: 10px;
   --codex-radius-pill: 999px;
   --codex-blur-glass: 16px;
-  --codex-grain-opacity: 0.025;
+  --codex-grain-opacity: 0.05;
   --codex-dur-fast: 150ms;
   --codex-dur-base: 220ms;
   --codex-dur-slow: 300ms;
@@ -110,13 +117,17 @@
   --codex-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --codex-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   /* Empty-state illustrations (DA §11.3). */
-  --codex-ill-line: #4a4252;
-  --codex-ill-fill: #fffdf8;
-  --codex-ill-fill-2: #efe9dc;
-  --codex-ill-faint: #cbc1ab;
-  --codex-ill-accent: #6d5bd0;
-  --codex-ill-accent-soft: #ece8fa;
-  --codex-ill-shadow: rgb(33 28 38 / 0.08);
+  --codex-ill-line: #4a3524;
+  --codex-ill-fill: #f7efdc;
+  --codex-ill-fill-2: #e6d8b8;
+  --codex-ill-faint: #c8b38a;
+  --codex-ill-accent: #9a2a23;
+  --codex-ill-accent-soft: #f2d6c9;
+  --codex-ill-shadow: rgb(60 36 16 / 0.1);
+  --codex-frame: rgb(156 116 36 / 0.32);
+  --codex-bevel-hi: rgb(255 250 238 / 0.55);
+  --codex-bevel-lo: rgb(70 40 14 / 0.22);
+  --codex-leather: linear-gradient(180deg, #f9f2e1 0%, #ebdfc2 100%);
   --codex-font-display: 'Alegreya SC', 'Alegreya Variable', Georgia, serif;
   --codex-font-title: 'Alegreya Variable', 'Alegreya', Georgia, serif;
   --codex-font-body: 'Source Sans 3 Variable', 'Source Sans 3', system-ui, sans-serif;
@@ -125,21 +136,21 @@
 :root[data-theme='dark'],
 [data-theme='dark'] {
   color-scheme: dark;
-  --codex-bg: #15110d;
-  --codex-surface: #1f1913;
-  --codex-surface-2: #29211a;
-  --codex-surface-glass: rgb(31 25 19 / 0.82);
-  --codex-ink: #f2eadd;
-  --codex-ink-muted: #b3a691;
-  --codex-line: #362c23;
-  --codex-line-strong: #85745f;
-  --codex-accent: #7562d8;
-  --codex-accent-hover: #6655cc;
-  --codex-accent-soft: #2c2540;
-  --codex-accent-text: #b4a6f4;
-  --codex-gold: #e0ae4e;
-  --codex-gold-soft: #3a2c17;
-  --codex-gold-text: #ebc274;
+  --codex-bg: #110d0a;
+  --codex-surface: #1c1611;
+  --codex-surface-2: #261d16;
+  --codex-surface-glass: rgb(24 19 14 / 0.95);
+  --codex-ink: #efe5d1;
+  --codex-ink-muted: #b8a78a;
+  --codex-line: #3b2f22;
+  --codex-line-strong: #806848;
+  --codex-accent: #a3302a;
+  --codex-accent-hover: #b8392f;
+  --codex-accent-soft: #3d1d18;
+  --codex-accent-text: #f09a86;
+  --codex-gold: #d9a646;
+  --codex-gold-soft: #3a2b15;
+  --codex-gold-text: #ecc77a;
   --codex-hp: #e35d5d;
   --codex-hp-text: #f28b82;
   --codex-heal: #4cb97a;
@@ -153,18 +164,18 @@
   --codex-stat-charisma: #e57aab;
   --codex-stat-wisdom: #a782dc;
   --codex-stat-luck: #e2b65e;
-  --codex-surface-raised: #241e17;
-  --codex-surface-sunken: #191410;
-  --codex-ink-faint: #75695a;
-  --codex-on-accent: #ffffff;
-  --codex-accent-active: #5848be;
-  --codex-focus: #b4a6f4;
+  --codex-surface-raised: #231b14;
+  --codex-surface-sunken: #0c0907;
+  --codex-ink-faint: #7a6a55;
+  --codex-on-accent: #fbefe0;
+  --codex-accent-active: #87251f;
+  --codex-focus: #e2b45c;
   --codex-on-gold: #2a1e08;
-  --codex-gold-line: #c9963a;
-  --codex-gold-glow: rgb(224 174 78 / 0.45);
+  --codex-gold-line: #b88a3a;
+  --codex-gold-glow: rgb(217 166 70 / 0.45);
   --codex-hp-soft: #3e241f;
-  --codex-danger: #c43c3a;
-  --codex-danger-hover: #a93230;
+  --codex-danger: #b3322b;
+  --codex-danger-hover: #9a2a24;
   --codex-heal-soft: #263323;
   --codex-warning-text: #f0bf6e;
   --codex-warning-soft: #3f2f1a;
@@ -200,24 +211,27 @@
   --codex-rarity-legendary: #c9963a;
   --codex-rarity-legendary-text: #ebc274;
   --codex-rarity-legendary-soft: #3a2c17;
-  --codex-token-player: #7562d8;
+  --codex-token-player: #4d86c9;
   --codex-token-ally: #2b7d4c;
   --codex-token-familiar: #137570;
   --codex-token-foe: #c43c3a;
   --codex-token-npc: #b23d73;
-  --codex-scrim: rgb(8 6 4 / 0.62);
-  --codex-glass-line: rgb(242 234 221 / 0.1);
-  --codex-bar: rgb(21 17 13 / 0.94);
-  --codex-shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.3);
-  --codex-shadow-lifted: 0 2px 6px rgb(0 0 0 / 0.35), 0 16px 40px rgb(0 0 0 / 0.45);
-  --codex-shadow-overlay: 0 4px 12px rgb(0 0 0 / 0.45), 0 32px 80px rgb(0 0 0 / 0.6);
-  --codex-radius-sm: 8px;
-  --codex-radius: 12px;
-  --codex-radius-lg: 16px;
-  --codex-radius-xl: 20px;
+  --codex-scrim: rgb(6 4 3 / 0.66);
+  --codex-glass-line: rgb(184 138 58 / 0.32);
+  --codex-bar: rgb(17 13 10 / 0.96);
+  --codex-shadow-soft:
+    inset 0 0 0 1px var(--codex-frame), 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.35);
+  --codex-shadow-lifted:
+    inset 0 0 0 1px var(--codex-frame), 0 2px 6px rgb(0 0 0 / 0.45), 0 16px 40px rgb(0 0 0 / 0.5);
+  --codex-shadow-overlay:
+    inset 0 0 0 1px var(--codex-frame), 0 4px 12px rgb(0 0 0 / 0.5), 0 32px 80px rgb(0 0 0 / 0.65);
+  --codex-radius-sm: 4px;
+  --codex-radius: 6px;
+  --codex-radius-lg: 8px;
+  --codex-radius-xl: 10px;
   --codex-radius-pill: 999px;
   --codex-blur-glass: 16px;
-  --codex-grain-opacity: 0.03;
+  --codex-grain-opacity: 0.045;
   --codex-dur-fast: 150ms;
   --codex-dur-base: 220ms;
   --codex-dur-slow: 300ms;
@@ -227,13 +241,17 @@
   --codex-ease-in: cubic-bezier(0.55, 0, 1, 0.45);
   --codex-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --codex-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --codex-ill-line: #cfc3af;
-  --codex-ill-fill: #241d16;
-  --codex-ill-fill-2: #29211a;
-  --codex-ill-faint: #4e4236;
-  --codex-ill-accent: #b4a6f4;
-  --codex-ill-accent-soft: #2c2540;
-  --codex-ill-shadow: rgb(0 0 0 / 0.35);
+  --codex-ill-line: #d6c5a6;
+  --codex-ill-fill: #211a13;
+  --codex-ill-fill-2: #2a2018;
+  --codex-ill-faint: #4f4130;
+  --codex-ill-accent: #f09a86;
+  --codex-ill-accent-soft: #3d1d18;
+  --codex-ill-shadow: rgb(0 0 0 / 0.4);
+  --codex-frame: rgb(201 150 58 / 0.2);
+  --codex-bevel-hi: rgb(255 236 200 / 0.1);
+  --codex-bevel-lo: rgb(0 0 0 / 0.45);
+  --codex-leather: linear-gradient(180deg, #2a2119 0%, #1a140f 100%);
   --codex-font-display: 'Alegreya SC', 'Alegreya Variable', Georgia, serif;
   --codex-font-title: 'Alegreya Variable', 'Alegreya', Georgia, serif;
   --codex-font-body: 'Source Sans 3 Variable', 'Source Sans 3', system-ui, sans-serif;

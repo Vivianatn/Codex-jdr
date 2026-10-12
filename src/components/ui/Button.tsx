@@ -37,7 +37,7 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
 
 const ICON_SIZES: Record<Size, string> = {
   sm: 'size-8 rounded-lg [&_svg]:size-4',
-  md: 'size-10 rounded-[10px] [&_svg]:size-5',
+  md: 'size-10 rounded-md [&_svg]:size-5',
   lg: 'size-11 rounded-xl [&_svg]:size-5',
   xl: 'size-12 rounded-xl [&_svg]:size-5',
 }

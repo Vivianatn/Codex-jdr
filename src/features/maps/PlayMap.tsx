@@ -1,5 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { Dices, ExternalLink, ImagePlus, Map as MapIcon, MonitorPlay } from 'lucide-react'
+import { ExternalLink, ImagePlus, Map as MapIcon, MonitorPlay } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useMemo, useRef } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
@@ -230,9 +231,9 @@ export function PlayMap() {
               onClick={() => setDiceOpen(true)}
               aria-label={t.maps.rollDice}
               title={t.maps.rollDice}
-              className="inline-flex size-11 items-center justify-center rounded-[10px] text-ink-muted hover:bg-surface-2 hover:text-ink [&_svg]:size-5"
+              className="inline-flex size-11 items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-ink [&_svg]:size-5"
             >
-              <Dices aria-hidden />
+              <GameIcon name="rolling-dices" aria-hidden />
             </button>
             <PlayerViewMenu campaignId={campaign.id} display={play.display} />
           </MapToolbar>
@@ -283,7 +284,7 @@ function PlayerViewMenu({ campaignId, display }: { campaignId: string; display: 
           <button
             type="button"
             className={cn(
-              'inline-flex h-11 items-center gap-1.5 rounded-[10px] px-3 text-sm font-medium [&_svg]:size-5',
+              'inline-flex h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium [&_svg]:size-5',
               display.mode === 'map'
                 ? 'text-ink-muted hover:bg-surface-2 hover:text-ink'
                 : 'bg-gold-soft text-gold-text',

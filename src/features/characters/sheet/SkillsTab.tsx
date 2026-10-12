@@ -1,4 +1,5 @@
-import { Pencil, Plus, Unlink, Users, WandSparkles } from 'lucide-react'
+import { Pencil, Plus, Unlink } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useState } from 'react'
 import { Button, IconButton } from '@/components/ui/Button'
 import { SelectField } from '@/components/ui/fields'
@@ -154,7 +155,7 @@ export function SkillList({ skills, handlers }: { skills: Skill[]; handlers: Ski
                       )}
                       {shared > 1 && (
                         <p className="mt-1 inline-flex items-center gap-1 text-xs text-accent-text">
-                          <Users className="size-3" aria-hidden />
+                          <GameIcon name="two-shadows" className="size-3" aria-hidden />
                           {t.skills.sharedBy(shared)}
                         </p>
                       )}
@@ -166,7 +167,7 @@ export function SkillList({ skills, handlers }: { skills: Skill[]; handlers: Ski
                       <Button
                         size="sm"
                         variant="primary"
-                        icon={<WandSparkles />}
+                        icon={<GameIcon name="spell-book" />}
                         disabled={Boolean(skillBlock(skill))}
                         onClick={() => handlers.launch!(skill)}
                         aria-label={t.skills.launchSkill(skill.name)}

@@ -32,7 +32,7 @@ export function StartPlayPanel() {
   return (
     <div className="flex flex-1 items-center justify-center overflow-y-auto bg-bg p-6">
       <div
-        className="w-full max-w-lg space-y-5 rounded-[20px] border border-line bg-surface-raised p-6 shadow-overlay"
+        className="w-full max-w-lg space-y-5 rounded-xl border border-line bg-surface-raised p-6 shadow-overlay"
         data-testid="start-play"
       >
         <div className="flex flex-col items-center text-center">

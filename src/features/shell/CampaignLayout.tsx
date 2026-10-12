@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, Hammer, Swords } from 'lucide-react'
+import { ArrowLeft, Hammer } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useMemo } from 'react'
 import { Link, Navigate, Outlet, useMatch, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -146,7 +147,7 @@ export function ModeSwitch({ campaignId }: { campaignId: string }) {
       }
       options={[
         { value: 'prep', label: t.modes.prep, icon: <Hammer /> },
-        { value: 'play', label: t.modes.play, icon: <Swords /> },
+        { value: 'play', label: t.modes.play, icon: <GameIcon name="crossed-swords" /> },
       ]}
     />
   )

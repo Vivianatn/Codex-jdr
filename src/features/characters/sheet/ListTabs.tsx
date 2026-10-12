@@ -1,4 +1,4 @@
-import { Dices } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useShallow } from 'zustand/react/shallow'
 import type { Entity } from '@/domain/types'
 import { formatRelativeTime, useIntlLocale, useT } from '@/i18n'
@@ -25,7 +25,11 @@ export function JournalTab({ entity }: { entity: Entity }) {
       {entries.map((entry) => (
         <li key={entry.id} className="flex gap-3 text-sm">
           {entry.roll ? (
-            <Dices className="mt-0.5 size-3.5 shrink-0 text-accent-text" aria-hidden />
+            <GameIcon
+              name="rolling-dices"
+              className="mt-0.5 size-3.5 shrink-0 text-accent-text"
+              aria-hidden
+            />
           ) : (
             <span className="mt-1.5 size-1.5 shrink-0 rotate-45 bg-gold" aria-hidden />
           )}

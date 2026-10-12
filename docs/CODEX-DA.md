@@ -4,6 +4,8 @@
 > Il se lit de haut en bas. Chaque valeur est exacte et doit être reprise telle quelle. Aucun choix n'est laissé ouvert.
 > Les maquettes correspondantes sont sur le canvas « Codex — DA Grimoire moderne ».
 
+> **Mise à jour D-250 (2026-10-12) : direction « RPG classique ».** Le MJ veut une interface qui évoque les jeux vidéo de rôle (façon Baldur's Gate 3) et rien qui fasse penser à une interface générée. Ce qui change par rapport à ce document : la palette (rouge sang, laiton et or sur cuir sombre ou parchemin ; plus aucun violet), les rayons (4 à 10 px), les panneaux sertis d'un filet doré (dans `--codex-shadow-*`), les boutons en relief (`bevel`, `bg-crimson`, `bg-leather`, `type-button`), les jauges de PV façon HUD, les onglets en plaques et les icônes de jeu game-icons.net. **Les valeurs de `src/styles/tokens.css` font foi** ; les tableaux de couleurs ci-dessous décrivent l'ancienne palette et ne sont plus à reprendre. Le reste (typographie, espacements, mouvement, écrans) reste valable. Détail : [DECISIONS.md, D-250](DECISIONS.md).
+
 ---
 
 ## 1. Intention

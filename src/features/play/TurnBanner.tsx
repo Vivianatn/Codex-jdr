@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { ChevronRight, CircleStop, Crown, Play, SkipForward } from 'lucide-react'
+import { ChevronRight, CircleStop, Play, SkipForward } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { Fragment } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useIdle } from '@/app/useIdle'
@@ -95,7 +96,7 @@ export function TurnBanner() {
             )}
             aria-current={turn.status === 'gm' ? 'step' : undefined}
           >
-            <Crown className="size-3.5" aria-hidden />
+            <GameIcon name="crown" className="size-3.5" aria-hidden />
             {t.turns.gmTurn}
           </li>
         </ol>
@@ -158,7 +159,7 @@ function GroupChip({
   return (
     <li
       className={cn(
-        'flex shrink-0 items-center gap-2 rounded-[14px] py-1.5 pr-2.5 pl-1.5',
+        'flex shrink-0 items-center gap-2 rounded-lg py-1.5 pr-2.5 pl-1.5',
         current ? 'bg-gold-soft shadow-[inset_0_0_0_1px_var(--codex-gold-line)]' : 'bg-surface-2',
       )}
     >
@@ -196,7 +197,7 @@ function GroupChip({
                     layoutId="turn-halo"
                     className={cn(
                       'absolute inset-0',
-                      e.kind === 'enemy' ? 'rounded-[9px]' : 'rounded-full',
+                      e.kind === 'enemy' ? 'rounded-md' : 'rounded-full',
                     )}
                     style={{
                       boxShadow:

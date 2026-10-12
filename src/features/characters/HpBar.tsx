@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Droplet, Skull } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useRef, useState } from 'react'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
@@ -22,11 +22,11 @@ const BAND_TEXT: Record<HpBand, string> = {
   down: 'text-ink-muted',
 }
 
-/** Track heights: 6 px (lists), 10 px (mini sheet), 12 px (sheet). */
+/** Track heights: 6 px (lists), 10 px (mini sheet), 14 px (sheet). */
 const TRACK = {
   sm: 'h-1.5',
-  md: 'h-2.5 shadow-[inset_0_0_0_1px_var(--codex-line)]',
-  lg: 'h-3 shadow-[inset_0_0_0_1px_var(--codex-line)]',
+  md: 'h-2.5',
+  lg: 'h-3.5',
 }
 
 /**
@@ -90,8 +90,10 @@ export function HpBar({
             {temp > 0 && <span className="ml-1 font-semibold text-info-text">+{temp}</span>}
           </span>
           <span className={cn('inline-flex items-center gap-1 font-semibold', BAND_TEXT[band])}>
-            {band === 'critical' && <Droplet className="size-3" aria-hidden />}
-            {band === 'down' && <Skull className="size-3" aria-hidden />}
+            {band === 'critical' && (
+              <GameIcon name="bleeding-wound" className="size-3" aria-hidden />
+            )}
+            {band === 'down' && <GameIcon name="death-skull" className="size-3" aria-hidden />}
             {t.sheet.hpBands[band]}
           </span>
         </div>
@@ -103,16 +105,20 @@ export function HpBar({
         aria-valuemax={max}
         aria-valuenow={current}
         aria-valuetext={`${label} — ${t.sheet.hpBands[band]}`}
-        className={cn('relative overflow-hidden rounded-full bg-surface-2', TRACK[size])}
+        // A game HUD gauge (D-250): sunken, framed in brass.
+        className={cn(
+          'relative overflow-hidden rounded-[3px] border border-line-strong bg-surface-sunken shadow-[inset_0_1px_3px_var(--codex-bevel-lo)]',
+          TRACK[size],
+        )}
       >
         <motion.div
-          className="absolute inset-y-0 left-0 rounded-full bg-warning-soft"
+          className="absolute inset-y-0 left-0 bg-warning-soft"
           initial={false}
           animate={{ width: `${ghost * 100}%` }}
           transition={{ duration: 0.6, ease: [0.65, 0, 0.35, 1] }}
         />
         <motion.div
-          className={cn('absolute inset-y-0 left-0 rounded-full', BAND_COLORS[band])}
+          className={cn('absolute inset-y-0 left-0', BAND_COLORS[band])}
           initial={false}
           animate={{ width: `${ratio * 100}%` }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
@@ -120,7 +126,7 @@ export function HpBar({
         {temp > 0 && max > 0 && (
           // Temporary HP: hatched segment right after the fill.
           <div
-            className="absolute inset-y-0 rounded-full bg-hp-temp shadow-[inset_0_0_0_1px_var(--codex-info)]"
+            className="absolute inset-y-0 bg-hp-temp shadow-[inset_0_0_0_1px_var(--codex-info)]"
             style={{
               left: `${ratio * 100}%`,
               width: `${Math.min(1 - ratio, temp / max) * 100}%`,
@@ -130,6 +136,15 @@ export function HpBar({
             aria-hidden
           />
         )}
+        {/* Glass on the gauge, and tick marks every tenth on the larger sizes. */}
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-0 bg-[image:linear-gradient(180deg,var(--codex-bevel-hi),transparent_60%)]',
+            size !== 'sm' &&
+              'after:absolute after:inset-0 after:bg-[image:repeating-linear-gradient(90deg,transparent_0,transparent_calc(10%-1px),var(--codex-bevel-lo)_calc(10%-1px),var(--codex-bevel-lo)_10%)] after:content-[""]',
+          )}
+          aria-hidden
+        />
         {shaking && (
           <motion.div
             className="absolute inset-0 bg-hp"

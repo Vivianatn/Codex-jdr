@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { Dices, Star, Trash, X } from 'lucide-react'
+import { Star, Trash, X } from 'lucide-react'
+import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { Button, IconButton } from '@/components/ui/Button'
@@ -32,7 +33,7 @@ export function DiceButton() {
   return (
     <IconButton
       label={t.dice.open}
-      icon={<Dices />}
+      icon={<GameIcon name="rolling-dices" />}
       variant={open ? 'secondary' : 'ghost'}
       aria-pressed={open}
       onClick={() => setOpen(!open)}
@@ -69,7 +70,7 @@ export function DicePanel() {
     >
       <div className="flex items-center justify-between border-b border-line px-4 py-3">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
-          <Dices className="size-5 text-accent-text" aria-hidden />
+          <GameIcon name="rolling-dices" className="size-5 text-accent-text" aria-hidden />
           {t.dice.title}
         </h2>
         <IconButton label={t.dice.close} icon={<X />} size="sm" onClick={() => setOpen(false)} />
@@ -133,7 +134,7 @@ function Tray({ inputRef }: { inputRef: React.RefObject<HTMLInputElement> }) {
           autoComplete="off"
           spellCheck={false}
         />
-        <Button type="submit" variant="primary" icon={<Dices />}>
+        <Button type="submit" variant="primary" icon={<GameIcon name="rolling-dices" />}>
           {t.dice.roll}
         </Button>
       </div>

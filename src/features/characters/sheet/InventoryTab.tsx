@@ -10,13 +10,11 @@ import {
   Pencil,
   Plus,
   Search,
-  Shield,
   Shirt,
-  Sword,
   Trash,
   Weight,
-  type LucideIcon,
 } from 'lucide-react'
+import { gameIcon, type IconComponent } from '@/components/iconFactory'
 import { useMemo, useState, type DragEvent, type FormEvent } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button, IconButton } from '@/components/ui/Button'
@@ -61,9 +59,9 @@ const DRAG_TYPE = 'application/x-codex-item'
 const BAG_COLUMNS = 6
 const MIN_BAG_SLOTS = 24
 
-const SLOT_ICONS: Record<EquipSlot, LucideIcon> = {
-  mainHand: Sword,
-  offHand: Shield,
+const SLOT_ICONS: Record<EquipSlot, IconComponent> = {
+  mainHand: gameIcon('broadsword'),
+  offHand: gameIcon('round-shield'),
   armor: Shirt,
   accessory1: CircleDot,
   accessory2: CircleDot,
