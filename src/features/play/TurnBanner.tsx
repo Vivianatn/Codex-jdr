@@ -34,7 +34,7 @@ export function TurnBanner() {
   return (
     <section
       aria-label={t.turns.banner}
-      className="relative z-20 flex min-h-16 shrink-0 items-center gap-3.5 border-b border-line bg-[var(--codex-bar)] px-4 py-2"
+      className="relative z-20 flex min-h-16 shrink-0 flex-wrap items-center gap-x-3.5 gap-y-2 border-b border-line bg-[var(--codex-bar)] px-4 py-2"
     >
       {turn.status !== 'stopped' && (
         <>
@@ -62,7 +62,8 @@ export function TurnBanner() {
       ) : (
         <ol
           aria-label={t.turns.order}
-          className="flex min-w-0 flex-1 [scrollbar-width:none] items-center gap-2 overflow-x-auto px-1 py-1"
+          // Every group in view: the chips wrap rather than scroll out of sight.
+          className="flex min-w-[min(100%,16rem)] flex-1 flex-wrap items-center gap-2 px-1 py-1"
         >
           {groups.map((group, index) => (
             <Fragment key={group.id}>

@@ -11,6 +11,7 @@ Local-first GM companion for a homebrew D&D-like RPG. **The full product spec is
 - Write tests with the code, not after.
 - Code and comments in English. **All UI text in French**, through `src/i18n/locales/fr.ts` (typed: `const t = useT(); t.nav.players`). Address the GM with « tu ».
 - During play: no blocking modals (except delete confirmations) — use drawers and toasts.
+- **No horizontal scrolling, ever (D-246):** everything is reachable as shown, from 390 px phones to desktops — wrap, stack or reflow instead of `overflow-x-auto`; a `<button>` used as a row needs `w-full`. `e2e/layout.spec.ts` checks every screen at six sizes.
 - **Art direction: [docs/CODEX-DA.md](docs/CODEX-DA.md)** (« Codex à la chandelle »). Every UI change follows it: tokens only (no raw colours outside `boardTheme.ts` and illustrations), type styles (`type-screen-title`, `type-eyebrow`, `type-section`…), glass only over the board, ornaments only where §6 allows. Gaps and deviations are logged in DECISIONS (D-235–238).
 
 ## Environment

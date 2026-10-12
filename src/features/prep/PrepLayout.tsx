@@ -24,7 +24,8 @@ export function PrepLayout() {
         aria-label={t.nav.prepSections}
         className="shrink-0 border-b border-line md:w-60 md:border-r md:border-b-0"
       >
-        <ul className="flex gap-1 overflow-x-auto p-2 md:flex-col md:overflow-visible md:p-3">
+        {/* Narrow screens: every section in view, on several lines — never a sideways scroll. */}
+        <ul className="flex flex-wrap gap-1 p-2 md:flex-col md:flex-nowrap md:p-3">
           {PREP_SECTIONS.map((id) => {
             const Icon = SECTION_ICONS[id]
             return (
@@ -33,7 +34,7 @@ export function PrepLayout() {
                   to={`/c/${campaign.id}/prep/${id}`}
                   className={({ isActive }) =>
                     cn(
-                      'flex h-9 items-center gap-2.5 rounded-md px-3 text-sm whitespace-nowrap transition-colors duration-150',
+                      'flex h-8 items-center gap-2 rounded-md px-2.5 text-[0.8125rem] whitespace-nowrap transition-colors duration-150 md:h-9 md:gap-2.5 md:px-3 md:text-sm',
                       isActive
                         ? 'bg-accent-soft font-medium text-accent-text'
                         : 'text-ink-muted hover:bg-surface-2 hover:text-ink',

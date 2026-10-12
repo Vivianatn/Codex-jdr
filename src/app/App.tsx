@@ -5,6 +5,7 @@ import { createHashRouter, RouterProvider } from 'react-router'
 import { Toaster } from 'sonner'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { routes } from './routes'
+import { useMediaQuery } from './useMediaQuery'
 import { useApplyPreferences, useResolvedTheme } from './usePreferences'
 
 // Hash routing keeps deep links working from file:// and inside the Tauri shell.
@@ -18,6 +19,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
   // In play, toasts sit at the bottom left of the board, clear of the groups
   // column and the zoom control (DA §8.11, §10.6).
   const playing = useSettingsStore((s) => s.surface === 'play')
+  // The groups column only exists from the `lg` breakpoint: below it, no room to leave.
+  const besideGroups = useMediaQuery('(min-width: 1024px)')
 
   return (
     <MotionConfig
@@ -29,7 +32,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <Toaster
           theme={theme}
           position={playing ? 'bottom-left' : 'bottom-right'}
-          offset={playing ? { left: 296, bottom: 92 } : 20}
+          offset={playing && besideGroups ? { left: 296, bottom: 92 } : 20}
           closeButton
           toastOptions={{
             classNames: {

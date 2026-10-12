@@ -30,7 +30,7 @@ export function OnlinePanel() {
           icon={hosting ? <Wifi /> : <WifiOff />}
           data-testid="online-button"
         >
-          {t.online.button}
+          <span className="sr-only sm:not-sr-only">{t.online.button}</span>
           {hosting && connected > 0 && <span className="tabular-nums">· {connected}</span>}
         </Button>
       </Popover.Trigger>

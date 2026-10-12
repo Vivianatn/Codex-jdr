@@ -20,16 +20,24 @@ export function AppHeader({
   return (
     <header
       className={cn(
-        'glass sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-line px-3 sm:px-4',
+        // Phones: the mode switch takes its own line instead of pushing the page sideways.
+        'glass sticky top-0 z-30 flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-3 py-2 sm:h-14 sm:flex-nowrap sm:px-4 sm:py-0',
         className,
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">{start}</div>
-      {center && <div className="flex shrink-0 justify-center">{center}</div>}
-      <div className="flex flex-1 items-center justify-end gap-1">
+      {center && (
+        <div className="order-last flex basis-full justify-center sm:order-none sm:shrink-0 sm:basis-auto">
+          {center}
+        </div>
+      )}
+      <div className="flex shrink-0 items-center justify-end gap-0.5 sm:flex-1 sm:gap-1">
         {end}
         <LockButton />
-        <ThemeToggle />
+        {/* Also in the settings: left out on phones to keep the header on one line. */}
+        <span className="hidden sm:contents">
+          <ThemeToggle />
+        </span>
         <SettingsButton />
       </div>
     </header>

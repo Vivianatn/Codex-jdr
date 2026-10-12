@@ -265,7 +265,8 @@ function OpenButton({ entity, current = false }: { entity: Entity; current?: boo
       aria-label={t.turns.open(name)}
       aria-current={current ? 'step' : undefined}
       className={cn(
-        'flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-[10px] px-1.5 py-1 text-left hover:bg-surface-2',
+        // A button sizes to its content: w-full keeps long names inside the panel.
+        'flex min-h-11 w-full min-w-0 items-center gap-2 rounded-[10px] px-1.5 py-1 text-left hover:bg-surface-2',
         current && 'bg-gold-soft hover:bg-gold-soft',
       )}
     >

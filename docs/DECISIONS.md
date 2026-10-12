@@ -4,6 +4,18 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Mise en page sans défilement horizontal (2026-10-12)
+
+### D-246 · Jamais de barre de défilement horizontale
+
+Demande du MJ (capture du panneau des groupes) : « il ne faut pas de barre de défilement horizontale, tout doit être disponible dès que l'on voit ».
+
+- **Audit automatique** (`e2e/layout.spec.ts`, `npm run test:layout`, inclus dans `test:e2e`) : avec la campagne exemple, il parcourt l'écran de connexion, les campagnes, « Rejoindre une partie », chaque section de préparation, l'assistant de création, l'import Discord, chaque onglet d'une fiche, une session, l'éditeur de carte, le démarrage, la table, la manipulation rapide, la fenêtre joueurs, les paramètres et le panneau en ligne, à six tailles (1440, 1280, 1024, 768, 620 et 390 px de large). Il signale tout élément qui défile de côté, la page elle-même, et tout élément fixé à l'écran (notifications, fenêtres) qui en dépasse. Il a été vérifié en réintroduisant un défaut.
+- **Corrigé** : les lignes du panneau des groupes prenaient la largeur de leur contenu (un `<button>` ne s'étire pas : `w-full`) ; la navigation de préparation et les onglets de fiche défilaient sur petit écran (ils passent à la ligne) ; le bandeau des tours cachait des groupes derrière une barre masquée (ils passent à la ligne) ; sur téléphone, l'en-tête poussait la page à 596 px (le sélecteur Préparation / En jeu prend sa propre ligne, « En ligne » devient une icône, le changement de thème reste dans les Paramètres) ; en jeu, les notifications étaient décalées pour une colonne de groupes absente sous 1024 px et sortaient de l'écran.
+- Règle consignée dans CLAUDE.md : passer à la ligne, empiler ou réorganiser plutôt que `overflow-x-auto`.
+
+---
+
 ## Sessions, partie démarrée à la main, mode en ligne (2026-10-12)
 
 ### D-244 · Les quêtes deviennent des sessions ; la partie se démarre à la main

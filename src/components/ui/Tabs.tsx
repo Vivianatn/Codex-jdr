@@ -42,7 +42,8 @@ export function TabList({ label, children }: { label: string; children: ReactNod
   return (
     <RadixTabs.List
       aria-label={label}
-      className="flex [scrollbar-width:thin] gap-6 overflow-x-auto border-b border-line"
+      // Tabs wrap on narrow screens: all of them stay in view.
+      className="flex flex-wrap gap-x-6 border-b border-line"
     >
       {children}
     </RadixTabs.List>
