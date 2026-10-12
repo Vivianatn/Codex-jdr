@@ -89,7 +89,6 @@ export function MapEditorPage() {
     return () => window.removeEventListener('keydown', down)
   }, [onChange, t])
 
-
   if (!map) return <Navigate to={`/c/${campaign.id}/prep/maps`} replace />
 
   const element =

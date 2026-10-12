@@ -73,3 +73,14 @@ export interface CampaignExport {
   maps: GameMap[]
   assets: Asset[]
 }
+
+/** Every campaign of this device in one file (GDPR data portability, D-240). */
+export const ARCHIVE_EXPORT_VERSION = 1
+export const ARCHIVE_EXPORT_FORMAT = 'codex-archive'
+
+export interface ArchiveExport {
+  format: typeof ARCHIVE_EXPORT_FORMAT
+  version: number
+  exportedAt: string
+  campaigns: CampaignExport[]
+}

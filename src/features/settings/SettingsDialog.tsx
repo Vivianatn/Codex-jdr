@@ -12,6 +12,7 @@ import {
   type ThemePreference,
   type TextSize,
 } from '@/stores/settingsStore'
+import { PrivacySection } from './PrivacySection'
 
 export function SettingsButton() {
   const t = useT()
@@ -148,6 +149,8 @@ export function SettingsDialog({
           </h3>
           <p className="text-sm text-ink-muted">{t.settings.languageFrench}</p>
         </section>
+
+        <PrivacySection />
       </div>
     </Dialog>
   )

@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { campaignRepository, CampaignImportError } from '@/db/campaigns'
+import { campaignRepository, CampaignImportError, splitImportFile } from '@/db/campaigns'
 import type { Campaign } from '@/db/types'
 import { useT } from '@/i18n'
 import type { Messages } from '@/i18n/locales/fr'
@@ -20,6 +20,16 @@ export function importErrorMessage(t: Messages, error: unknown): string {
     case 'invalidCampaign':
       return t.importErrors.invalidCampaign
   }
+}
+
+/** Removes every `codex.*` key of localStorage (settings, last screens…). */
+export function clearLocalPreferences(storage: Storage = localStorage): void {
+  const keys: string[] = []
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i)
+    if (key?.startsWith('codex.')) keys.push(key)
+  }
+  for (const key of keys) storage.removeItem(key)
 }
 
 export function useCampaignActions() {
@@ -52,20 +62,49 @@ export function useCampaignActions() {
       toast.success(t.campaigns.exported)
     },
 
+    /** Imports a campaign file, or every campaign of an archive. Returns the last one imported. */
     async importFromFile(file: File): Promise<Campaign | null> {
+      let last: Campaign | null = null
       try {
-        const { campaign, renamed } = await campaignRepository.importCampaign(
-          await file.text(),
-          t.campaigns.copySuffix,
-        )
-        toast.success(
-          renamed ? t.campaigns.importedAsCopy(campaign.name) : t.campaigns.imported(campaign.name),
-        )
-        return campaign
+        const parts = splitImportFile(await file.text())
+        for (const part of parts) {
+          const { campaign, renamed } = await campaignRepository.importCampaign(
+            part,
+            t.campaigns.copySuffix,
+          )
+          last = campaign
+          if (parts.length === 1)
+            toast.success(
+              renamed
+                ? t.campaigns.importedAsCopy(campaign.name)
+                : t.campaigns.imported(campaign.name),
+            )
+        }
+        if (parts.length !== 1) toast.success(t.privacy.archiveImported(parts.length))
+        return last
       } catch (error) {
         toast.error(importErrorMessage(t, error))
-        return null
+        return last
       }
+    },
+
+    /** GDPR portability: every campaign of this device in one file. */
+    async exportAllToFile(): Promise<void> {
+      await flushAutosave()
+      const data = await campaignRepository.exportAll()
+      const date = new Date().toISOString().slice(0, 10)
+      downloadJson(`codex-archive-${date}.json`, data)
+      toast.success(t.privacy.exported(data.campaigns.length))
+    },
+
+    /** GDPR erasure: the database and every preference kept on this device. */
+    async eraseAll(): Promise<void> {
+      await useCampaignStore.getState().unload()
+      await campaignRepository.eraseAll()
+      clearLocalPreferences()
+      // Reload from the campaigns screen so no in-memory copy survives.
+      window.location.hash = '#/'
+      window.location.reload()
     },
   }
 }

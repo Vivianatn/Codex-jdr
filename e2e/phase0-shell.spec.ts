@@ -119,3 +119,40 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoSeriousA11yViolations(page) // settings dialog
   })
 }
+
+test('GDPR: exports every campaign in one archive, then erases everything', async ({ page }) => {
+  await createCampaign(page, 'Première')
+  await page.getByRole('button', { name: 'Retour aux campagnes' }).click()
+  await createCampaign(page, 'Seconde')
+  await page.getByRole('button', { name: 'Retour aux campagnes' }).click()
+  await page.getByRole('button', { name: 'Changer de thème' }).click()
+
+  await page.getByRole('button', { name: 'Ouvrir les paramètres' }).click()
+  const privacy = page.getByTestId('privacy-section')
+  await privacy.getByText('Lire la notice de confidentialité').click()
+  await expect(privacy.getByText(/Responsable des données : toi/)).toBeVisible()
+  await expectNoSeriousA11yViolations(page)
+
+  const downloadPromise = page.waitForEvent('download')
+  await privacy.getByRole('button', { name: 'Tout exporter' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/^codex-archive-\d{4}-\d{2}-\d{2}\.json$/)
+  const archive = JSON.parse(await readFile(await download.path(), 'utf8'))
+  expect(archive.format).toBe('codex-archive')
+  expect(archive.campaigns.map((c: { campaign: { name: string } }) => c.campaign.name)).toEqual([
+    'Première',
+    'Seconde',
+  ])
+
+  await privacy.getByRole('button', { name: 'Tout effacer' }).click()
+  await page.getByTestId('erase-all-confirm').click()
+  await expect(page.getByText('Aucune campagne pour l’instant')).toBeVisible()
+  // Preferences are gone too: back to the default light theme.
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+
+  // The archive brings both campaigns back.
+  await page.getByTestId('campaign-import-input').setInputFiles(await download.path())
+  await expect(page.getByText('Archive importée : 2 campagnes.')).toBeVisible()
+  await expect(page.getByRole('link', { name: /Première/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Seconde/ })).toBeVisible()
+})

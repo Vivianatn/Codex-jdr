@@ -1393,6 +1393,35 @@ export const fr = {
     language: 'Langue',
     languageFrench: 'Français',
   },
+  privacy: {
+    title: 'Données et confidentialité',
+    summary:
+      'Codex fonctionne entièrement hors ligne : tes campagnes, fiches, cartes et images restent sur cet appareil. Rien n’est envoyé sur Internet, il n’y a ni compte, ni cookie, ni mesure d’audience.',
+    noticeToggle: 'Lire la notice de confidentialité',
+    notice: [
+      'Responsable des données : toi. Codex n’a pas de serveur et son éditeur ne reçoit aucune donnée.',
+      'Données conservées : ce que tu saisis (campagnes, personnages, notes, jets, cartes, images) dans la base locale du navigateur (IndexedDB), et tes réglages d’affichage (localStorage).',
+      'Si tu y notes des informations sur de vraies personnes (prénoms, pseudos Discord, portraits), informe-les et n’en garde que le nécessaire.',
+      'Durée : les données restent tant que tu ne les supprimes pas. Supprimer une campagne efface tout ce qui lui appartient.',
+      'Tes droits : accès et portabilité avec « Tout exporter » (fichier JSON lisible), effacement avec « Tout effacer ».',
+      'Les fichiers exportés quittent la protection de Codex : range-les en lieu sûr.',
+    ],
+    exportAll: 'Tout exporter',
+    exportAllHint:
+      'Toutes les campagnes de cet appareil dans un seul fichier, réimportable depuis l’écran Campagnes.',
+    exported: (n: number) =>
+      n === 0
+        ? 'Archive exportée (aucune campagne).'
+        : `Archive exportée : ${n} campagne${n > 1 ? 's' : ''}.`,
+    archiveImported: (n: number) => `Archive importée : ${n} campagne${n > 1 ? 's' : ''}.`,
+    eraseAll: 'Tout effacer',
+    eraseAllHint:
+      'Supprime définitivement toutes les campagnes et tous les réglages de cet appareil.',
+    eraseDialogTitle: 'Tout effacer ?',
+    eraseDialogBody:
+      'Toutes les campagnes, fiches, cartes, images, jets et réglages de cet appareil seront supprimés définitivement. Exporte d’abord une archive si tu veux les garder.',
+    eraseConfirm: 'Effacer définitivement',
+  },
   time: {
     justNow: 'à l’instant',
   },

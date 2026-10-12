@@ -304,3 +304,9 @@ export const BOARD_PLAYERS: BoardTheme = {
 
 /** Pixel sizes of the DA are given for a 70 px cell. */
 export const DA_CELL = 70
+
+/** Fonts of the board (Konva cannot read the `--codex-font-*` variables, DA §4, D-239). */
+export const BOARD_FONTS = {
+  body: "'Source Sans 3 Variable', 'Source Sans 3', system-ui, sans-serif",
+  display: "'Alegreya SC', Georgia, serif",
+} as const

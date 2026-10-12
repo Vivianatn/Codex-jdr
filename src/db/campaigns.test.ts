@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { CampaignImportError, createCampaignRepository, parseExport } from './campaigns'
+import {
+  CampaignImportError,
+  createCampaignRepository,
+  parseExport,
+  splitImportFile,
+} from './campaigns'
 import { createEntity } from '@/domain/entity'
 import { newItem } from '@/domain/items'
 import { newElement, newMap } from '@/domain/maps'
@@ -97,6 +102,46 @@ describe('export / import', () => {
       expect(e).toBeInstanceOf(CampaignImportError)
       expect((e as CampaignImportError).code).toBe(code)
     }
+  })
+})
+
+describe('personal data (GDPR, D-240)', () => {
+  it('archives every campaign with its content, and the archive imports back', async () => {
+    const a = await repo.create({ name: 'Première' })
+    const b = await repo.create({ name: 'Seconde' })
+    await db.entities.add(createEntity('player', b.id, defaultRules()))
+
+    const archive = await repo.exportAll()
+    expect(archive.format).toBe('codex-archive')
+    expect(archive.campaigns.map((c) => c.campaign.name)).toEqual(['Première', 'Seconde'])
+    expect(archive.campaigns[1]!.entities).toHaveLength(1)
+
+    await repo.eraseAll()
+    const parts = splitImportFile(JSON.stringify(archive))
+    for (const part of parts) await repo.importCampaign(part)
+    expect((await repo.list()).map((c) => c.id).sort()).toEqual([a.id, b.id].sort())
+    expect(await db.entities.count()).toBe(1)
+  })
+
+  it('a single campaign file splits into itself', () => {
+    expect(splitImportFile('{"format":"codex-campaign"}')).toEqual([{ format: 'codex-campaign' }])
+  })
+
+  it.each([
+    ['{"format":"codex-archive","version":9,"campaigns":[]}', 'unsupportedVersion'],
+    ['{"format":"codex-archive","version":1}', 'wrongFormat'],
+    ['nope', 'invalidJson'],
+  ])('rejects archive %s with %s', (input, code) => {
+    expect(() => splitImportFile(input)).toThrow(
+      expect.objectContaining({ code }) as unknown as Error,
+    )
+  })
+
+  it('erases everything, in every table', async () => {
+    const c = await repo.create({ name: 'Effacée' })
+    await db.entities.add(createEntity('player', c.id, defaultRules()))
+    await repo.eraseAll()
+    for (const table of db.tables) expect(await table.count()).toBe(0)
   })
 })
 

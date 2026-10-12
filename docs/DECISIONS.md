@@ -4,6 +4,33 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Polices plus humaines et RGPD (2026-10-12)
+
+### D-239 · Polices humanistes à la place de Cinzel, Fraunces et Inter
+
+Demande du MJ : des polices « plus humaines ». Cinzel (capitales romaines gravées) et Inter (grotesque d'interface) donnaient un ton froid. Remplacement rôle pour rôle, toujours 100 % hors ligne (Fontsource) et sous licence SIL OFL 1.1 :
+
+| Rôle                                                                      | Avant              | Après                                                        |
+| ------------------------------------------------------------------------- | ------------------ | ------------------------------------------------------------ |
+| Titres d'écran, surtitres, chiffres de caractéristiques, résultats de dés | Cinzel 500/600/700 | Alegreya SC 500/700 (petites capitales calligraphiques)      |
+| Titres de section et de carte, noms                                       | Fraunces variable  | Alegreya variable                                            |
+| Interface et texte courant                                                | Inter variable     | Source Sans 3 variable (sans humaniste, chiffres tabulaires) |
+
+Alegreya et Alegreya SC sont de la même famille : les titres gardent une seule voix. Alegreya a des chiffres elzéviriens par défaut ; `body` active `lnum` pour que les nombres de jeu restent alignés. Alegreya SC n'a pas de graisse 600 : titres d'écran et de dialogue en 500 (plus légers, plus manuscrits), surtitres en 700. Le plateau (Konva) lit ses polices dans `BOARD_FONTS` (`boardTheme.ts`) au lieu de littéraux dispersés dans `MapCanvas`.
+
+### D-240 · Conformité RGPD d'une application locale
+
+Codex n'a ni serveur, ni compte, ni cookie, ni mesure d'audience, ni appel réseau (vérifié : aucun `fetch`, aucune ressource externe, polices embarquées). L'éditeur ne traite donc aucune donnée ; le MJ est seul responsable de ce qu'il y saisit, y compris sur ses joueurs (prénoms, pseudos Discord, portraits). Ce qui manquait pour qu'il puisse exercer et faire respecter les droits :
+
+- **Information** : section « Données et confidentialité » dans les Paramètres (résumé + notice dépliable) et [CONFIDENTIALITE.md](CONFIDENTIALITE.md).
+- **Accès et portabilité (art. 15 et 20)** : « Tout exporter » produit une archive JSON lisible (`codex-archive` v1 : toutes les campagnes au format `codex-campaign`). L'écran Campagnes réimporte indifféremment une campagne ou une archive.
+- **Effacement (art. 17)** : « Tout effacer » vide toutes les tables IndexedDB et toutes les clés `codex.*` du localStorage, après une confirmation (seule modale autorisée : suppression), puis recharge l'application sur l'écran Campagnes. La suppression d'une campagne effaçait déjà tout ce qui lui appartient (D-224).
+- **Minimisation** : rien n'est collecté en dehors de ce que le MJ saisit ; les réglages d'affichage ne contiennent aucune donnée personnelle.
+
+Non fait : chiffrement de la base locale (protégée par la session du système d'exploitation ; un chiffrement exigerait un mot de passe à chaque ouverture, à décider avec le MJ).
+
+---
+
 ## Direction artistique « Codex à la chandelle » (2026-10-11)
 
 La référence est [CODEX-DA.md](CODEX-DA.md), produit par Claude Design à partir du cahier des charges. Les entrées ci-dessous notent seulement les écarts et les choix d'application.

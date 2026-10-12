@@ -14,9 +14,12 @@ import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules, type RulesCon
 import { db as defaultDb, type CodexDB } from './db'
 import { normalizeEntity } from './normalize'
 import {
+  ARCHIVE_EXPORT_FORMAT,
+  ARCHIVE_EXPORT_VERSION,
   CAMPAIGN_EXPORT_FORMAT,
   CAMPAIGN_EXPORT_VERSION,
   emptyLibrary,
+  type ArchiveExport,
   type Asset,
   type Campaign,
   type CampaignExport,
@@ -151,6 +154,27 @@ export function createCampaignRepository(db: CodexDB = defaultDb, now: () => num
         maps,
         assets,
       }
+    },
+
+    /** Every campaign with everything it owns, oldest first (GDPR portability). */
+    async exportAll(): Promise<ArchiveExport> {
+      const campaigns = await db.campaigns.toArray()
+      campaigns.sort((a, b) => a.createdAt - b.createdAt)
+      const exports: CampaignExport[] = []
+      for (const c of campaigns) exports.push(await this.exportCampaign(c.id))
+      return {
+        format: ARCHIVE_EXPORT_FORMAT,
+        version: ARCHIVE_EXPORT_VERSION,
+        exportedAt: new Date(now()).toISOString(),
+        campaigns: exports,
+      }
+    },
+
+    /** Right to erasure: empties every table of the local database. */
+    async eraseAll(): Promise<void> {
+      await db.transaction('rw', db.tables, async () => {
+        for (const table of db.tables) await table.clear()
+      })
     },
 
     /** Accepts raw file text or an already-parsed object. */
@@ -313,6 +337,27 @@ function isCampaignCore(
     typeof value.updatedAt === 'number' &&
     (value.lastOpenedAt === null || typeof value.lastOpenedAt === 'number')
   )
+}
+
+/**
+ * Splits an import file into campaign exports: the file itself for a single
+ * campaign, every campaign for an archive. Each one still goes through `parseExport`.
+ */
+export function splitImportFile(input: string | unknown): unknown[] {
+  let data: unknown = input
+  if (typeof input === 'string') {
+    try {
+      data = JSON.parse(input)
+    } catch {
+      throw new CampaignImportError('invalidJson')
+    }
+  }
+  if (!isRecord(data) || data.format !== ARCHIVE_EXPORT_FORMAT) return [data]
+  if (typeof data.version !== 'number') throw new CampaignImportError('unsupportedVersion')
+  if (data.version > ARCHIVE_EXPORT_VERSION)
+    throw new CampaignImportError('unsupportedVersion', data.version)
+  if (!Array.isArray(data.campaigns)) throw new CampaignImportError('wrongFormat')
+  return data.campaigns
 }
 
 /** Validates and upgrades an export file (v1 files have no rules and no entities). */

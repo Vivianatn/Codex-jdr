@@ -117,9 +117,9 @@
   --codex-ill-accent: #6d5bd0;
   --codex-ill-accent-soft: #ece8fa;
   --codex-ill-shadow: rgb(33 28 38 / 0.08);
-  --codex-font-display: 'Cinzel', 'Cormorant SC', Georgia, serif;
-  --codex-font-title: 'Fraunces Variable', 'Fraunces', Georgia, serif;
-  --codex-font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --codex-font-display: 'Alegreya SC', 'Alegreya Variable', Georgia, serif;
+  --codex-font-title: 'Alegreya Variable', 'Alegreya', Georgia, serif;
+  --codex-font-body: 'Source Sans 3 Variable', 'Source Sans 3', system-ui, sans-serif;
 }
 
 :root[data-theme='dark'],
@@ -234,9 +234,9 @@
   --codex-ill-accent: #b4a6f4;
   --codex-ill-accent-soft: #2c2540;
   --codex-ill-shadow: rgb(0 0 0 / 0.35);
-  --codex-font-display: 'Cinzel', 'Cormorant SC', Georgia, serif;
-  --codex-font-title: 'Fraunces Variable', 'Fraunces', Georgia, serif;
-  --codex-font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --codex-font-display: 'Alegreya SC', 'Alegreya Variable', Georgia, serif;
+  --codex-font-title: 'Alegreya Variable', 'Alegreya', Georgia, serif;
+  --codex-font-body: 'Source Sans 3 Variable', 'Source Sans 3', system-ui, sans-serif;
 }
 
 /* Older names still used by the code, kept as aliases. */

@@ -49,7 +49,14 @@ import { useResolvedTheme } from '@/app/usePreferences'
 import { useFxStore, type HpFx } from '@/stores/fxStore'
 import { useMapViewStore, type Camera } from '@/stores/mapViewStore'
 import { drawBoardIcon, type BoardIcon } from './boardIcons'
-import { BOARD_DARK, BOARD_LIGHT, BOARD_PLAYERS, DA_CELL, type BoardTheme } from './boardTheme'
+import {
+  BOARD_DARK,
+  BOARD_FONTS,
+  BOARD_LIGHT,
+  BOARD_PLAYERS,
+  DA_CELL,
+  type BoardTheme,
+} from './boardTheme'
 import { ENTITY_DRAG_TYPE } from './dragTypes'
 import { drawElement } from './drawElements'
 import { elementBox, fitCamera, MAX_SCALE, MIN_SCALE } from './mapGeometry'
@@ -1041,7 +1048,7 @@ function SmallLabel({
         text={text}
         width={width}
         align="center"
-        fontFamily="Inter Variable, Inter, sans-serif"
+        fontFamily={BOARD_FONTS.body}
         fontStyle="600"
         fontSize={size}
         padding={l.padY * u}
@@ -1445,7 +1452,7 @@ const TokenNode = memo(function TokenNode({
           height={inner * 2}
           align="center"
           verticalAlign="middle"
-          fontFamily="Inter Variable, Inter, sans-serif"
+          fontFamily={BOARD_FONTS.body}
           fontStyle="700"
           fontSize={inner * 0.8}
           fill="#FFFFFF"
@@ -1497,7 +1504,7 @@ const TokenNode = memo(function TokenNode({
           text={`+${more}`}
           x={r * 0.55}
           y={-r * 1.25}
-          fontFamily="Inter Variable, Inter, sans-serif"
+          fontFamily={BOARD_FONTS.body}
           fontStyle="700"
           fontSize={10 * u}
           fill={T.condition.stroke}
@@ -1640,7 +1647,7 @@ function MeasureNode({
         <Tag fill={m.bubble} cornerRadius={999} />
         <Text
           text={label(cells, meters)}
-          fontFamily="Inter Variable, Inter, sans-serif"
+          fontFamily={BOARD_FONTS.body}
           fontStyle="700"
           fontSize={m.font}
           padding={Math.round(m.font * 0.45)}
@@ -1798,7 +1805,7 @@ function DamageFx({ fx, at, cell, offset }: { fx: HpFx; at: Point; cell: number;
         y={at.y - cell * 0.6}
         offsetX={(label.length * size * 0.62) / 2}
         offsetY={size / 2}
-        fontFamily="Cinzel, serif"
+        fontFamily={BOARD_FONTS.display}
         fontStyle="700"
         fontSize={size}
         fill={color}

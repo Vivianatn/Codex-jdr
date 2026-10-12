@@ -37,8 +37,9 @@ Première exécution des tests e2e : `npx playwright install chromium`.
 - [Cahier des charges](docs/SPEC.md)
 - [Journal des décisions](docs/DECISIONS.md)
 - [Direction artistique](docs/CODEX-DA.md)
+- [Notice de confidentialité (RGPD)](docs/CONFIDENTIALITE.md)
 
 ## Crédits
 
-- Polices : [Inter](https://rsms.me/inter/) et [Cinzel](https://fonts.google.com/specimen/Cinzel) (SIL Open Font License).
+- Polices : [Alegreya et Alegreya SC](https://www.huertatipografica.com/en/fonts/alegreya-ht-pro) (Huerta Tipográfica) et [Source Sans 3](https://github.com/adobe-fonts/source-sans) (Adobe), SIL Open Font License, embarquées hors ligne.
 - Icônes d'interface : [Lucide](https://lucide.dev) (ISC).

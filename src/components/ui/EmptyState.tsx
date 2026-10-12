@@ -16,7 +16,7 @@ export interface EmptyStateProps {
 
 /**
  * Illustrated, actionable empty state (DA §8.13): illustration, gold eyebrow,
- * Fraunces title, two sentences at most, then the actions.
+ * Alegreya title, two sentences at most, then the actions.
  */
 export function EmptyState({
   icon,
