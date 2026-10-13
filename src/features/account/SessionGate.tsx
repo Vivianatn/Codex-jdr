@@ -22,6 +22,7 @@ export function RequireSession() {
 
 function UnlockedApp() {
   const accountId = useSessionStore((s) => s.account?.id)
+  const onlineUser = useSessionStore((s) => s.account?.online?.userId)
   const minutes = useSessionStore((s) => s.account?.autoLockMinutes ?? 0)
   const idle = useIdle(minutes * 60_000, minutes > 0)
 
@@ -38,6 +39,21 @@ function UnlockedApp() {
   useEffect(() => {
     if (idle) void lockSession()
   }, [idle])
+
+  // An account linked online connects to the server (D-262). Loaded on demand: the
+  // online code stays out of what the lock screen downloads (D-255).
+  useEffect(() => {
+    if (!onlineUser) return
+    let alive = true
+    void import('@/online/controller').then((online) => {
+      const account = useSessionStore.getState().account
+      if (alive && account?.online) void online.connectOnline(account)
+    })
+    return () => {
+      alive = false
+      void import('@/online/controller').then((online) => online.disconnectOnline())
+    }
+  }, [accountId, onlineUser])
 
   // One automatic snapshot a day, at unlock (D-242), once the first screen is up.
   useEffect(() => {

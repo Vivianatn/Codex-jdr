@@ -152,7 +152,7 @@ describe('personal data (GDPR, D-240)', () => {
 
 describe('schema', () => {
   it('opens at the current version with the expected tables', async () => {
-    expect(db.verno).toBe(10)
+    expect(db.verno).toBe(11)
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'activity',
       'assets',
@@ -162,10 +162,12 @@ describe('schema', () => {
       'entities',
       'itemLibrary',
       'maps',
+      'outbox',
       'rolls',
       'sessionRuns',
       'sessions',
       'skills',
+      'syncState',
     ])
   })
 })

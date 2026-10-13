@@ -27,7 +27,7 @@ export const SITE = {
   image: '/og-image.png',
   imageAlt: 'Codex, le grimoire du maître du jeu : fiches, dés, plateau et parties en ligne.',
   /** Date of the legal texts (shown as « Dernière mise à jour »). */
-  legalUpdated: '12 octobre 2026',
+  legalUpdated: '13 octobre 2026',
   publisher: {
     /** Name of the person or company publishing Codex. */
     name: env('CODEX_PUBLISHER_NAME') ?? TO_FILL,
@@ -66,7 +66,7 @@ export const PAGES: SitePage[] = [
     path: '/',
     title: 'Codex · le grimoire du maître du jeu pour tes parties de JDR',
     description:
-      'Fiches, dés, plateau à brouillard de guerre, tours par groupes et parties en ligne entre amis. Tes campagnes restent chiffrées de bout en bout.',
+      'Fiches, dés, plateau à brouillard de guerre, tours par groupes et parties en ligne avec tes joueurs. Tes campagnes restent chiffrées, sur ton appareil comme sur le serveur.',
     indexed: true,
     priority: 1,
   },
@@ -83,7 +83,7 @@ export const PAGES: SitePage[] = [
     file: 'cgu.html',
     path: '/cgu',
     title: 'Conditions générales d’utilisation · Codex',
-    description: 'Les règles d’utilisation de Codex, de ton compte et de la messagerie.',
+    description: 'Les règles d’utilisation de Codex, de ton compte et des parties en ligne.',
     indexed: true,
     priority: 0.3,
   },

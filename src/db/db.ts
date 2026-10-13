@@ -11,7 +11,7 @@ import {
   integrityMiddleware,
   type DbChange,
 } from './middleware'
-import type { Asset, Backup } from './types'
+import type { Asset, Backup, OutboxEntry, SyncState } from './types'
 import { starterConditions } from '@/domain/conditions'
 import { defaultRules, dropLegacyPhase2Defaults, withDefaultRules } from '@/rules'
 import { emptyLibrary, type Campaign } from './types'
@@ -116,6 +116,23 @@ export const SCHEMA = {
     sessionRuns: 'id, campaignId',
     activity: 'id, campaignId, [campaignId+at]',
   },
+  // v11 (D-262): changes waiting for the server, and how far each online campaign is synced.
+  11: {
+    campaigns: 'id',
+    entities: 'id, campaignId',
+    bestiary: 'id, campaignId',
+    rolls: 'id, campaignId, [campaignId+at]',
+    itemLibrary: 'id, campaignId',
+    skills: 'id, campaignId',
+    maps: 'id, campaignId',
+    assets: 'id, campaignId',
+    backups: 'id, createdAt',
+    sessions: 'id, campaignId',
+    sessionRuns: 'id, campaignId',
+    activity: 'id, campaignId, [campaignId+at]',
+    outbox: 'id, campaignId',
+    syncState: 'id',
+  },
 } as const
 
 /**
@@ -145,6 +162,10 @@ export class CodexDB extends Dexie {
   sessionRuns!: EntityTable<SessionRun, 'id'>
   /** Who did what, per campaign (D-247). */
   activity!: EntityTable<ActivityRecord, 'id'>
+  /** Local changes of online campaigns not yet accepted by the server (D-262). */
+  outbox!: EntityTable<OutboxEntry, 'id'>
+  /** Online campaigns of this account and the last revision pulled (D-262). */
+  syncState!: EntityTable<SyncState, 'id'>
 
   /**
    * @param options.key data key of the account: every record is then encrypted at rest (D-241).
@@ -250,6 +271,8 @@ export class CodexDB extends Dexie {
     this.version(9).stores(SCHEMA[9])
     // v10 (D-247): editors' activity log. New table only.
     this.version(10).stores(SCHEMA[10])
+    // v11 (D-262): outbox and sync state of the online campaigns. New tables only.
+    this.version(11).stores(SCHEMA[11])
   }
 
   /** Committed writes, local or received (D-245). Returns the unsubscribe. */

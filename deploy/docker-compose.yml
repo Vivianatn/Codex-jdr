@@ -1,4 +1,4 @@
-# Codex on the server (D-248). Start: `docker compose --env-file .env up -d` (see docs/DEPLOIEMENT.md).
+# Codex on the server (D-248, D-262). Start: `docker compose up -d --build` (see docs/DEPLOIEMENT.md).
 # Only Caddy is reachable from outside (ports 80/443); everything else stays on the internal network.
 
 services:
@@ -19,6 +19,62 @@ services:
       - caddy-config:/config
     depends_on:
       - umami
+      - server
+
+  # The online mode (D-262): accounts, campaigns, sync, live-game relay. Reached through Caddy at /api.
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgresql://codex:${CODEX_DB_PASSWORD:?CODEX_DB_PASSWORD manquant}@codex-db:5432/codex
+      CODEX_DATA_KEY: ${CODEX_DATA_KEY:?CODEX_DATA_KEY manquant}
+      CODEX_SITE_URL: https://${CODEX_DOMAIN}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    depends_on:
+      codex-db:
+        condition: service_healthy
+
+  codex-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: codex
+      POSTGRES_USER: codex
+      POSTGRES_PASSWORD: ${CODEX_DB_PASSWORD}
+    volumes:
+      - codex-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U codex -d codex']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # A dump of Codex's database every night, the last 14 kept in ./backups. The campaigns
+  # inside stay encrypted with CODEX_DATA_KEY: copy the dumps off the server now and then.
+  codex-backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${CODEX_DB_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          pg_dump -h codex-db -U codex -d codex -Fc -f /backups/codex-$$(date +%F).dump
+          find /backups -name 'codex-*.dump' -mtime +14 -delete
+          sleep 86400
+        done
+    depends_on:
+      codex-db:
+        condition: service_healthy
 
   umami:
     image: ghcr.io/umami-software/umami:postgresql-v2.19.0
@@ -74,3 +130,4 @@ volumes:
   caddy-data:
   caddy-config:
   umami-db:
+  codex-db:

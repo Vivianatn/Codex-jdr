@@ -57,7 +57,8 @@ export function createBackupService(db: () => CodexDB = activeDb, now: () => num
       const backup = await db().backups.get(id)
       if (!backup) throw new Error(`Backup ${id} not found`)
       await create('beforeRestore')
-      const tables = db().tables.filter((t) => t.name !== 'backups')
+      // The online bookkeeping stays: the restored campaigns then reach the server like any edit.
+      const tables = db().tables.filter((t) => !['backups', 'outbox', 'syncState'].includes(t.name))
       await db().transaction('rw', tables, async () => {
         for (const table of tables) await table.clear()
         for (const campaign of backup.archive.campaigns) await campaigns.importCampaign(campaign)

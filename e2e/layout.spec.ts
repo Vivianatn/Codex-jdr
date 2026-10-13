@@ -105,9 +105,10 @@ for (const viewport of VIEWPORTS) {
     await check('connexion')
     await createAccount(page)
     await check('campagnes')
-    await page.getByRole('button', { name: 'Rejoindre une partie' }).first().click()
-    await check('rejoindre une partie')
-    await page.keyboard.press('Escape')
+    const homeMode = page.getByRole('radiogroup', { name: 'Je joue en tant que' })
+    await homeMode.getByRole('radio', { name: 'Joueur' }).click()
+    await check('mes parties')
+    await homeMode.getByRole('radio', { name: 'MJ' }).click()
 
     await page
       .getByTestId('campaign-import-input')

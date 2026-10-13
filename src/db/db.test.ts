@@ -32,7 +32,7 @@ describe('schema migrations', () => {
 
     const db = new CodexDB(name)
     await db.open()
-    expect(db.verno).toBe(10)
+    expect(db.verno).toBe(11)
     expect((await db.campaigns.get('c1'))?.rules).toEqual(defaultRules())
     expect((await db.campaigns.get('c1'))?.library).toEqual({
       conditions: starterConditions(),
@@ -42,6 +42,8 @@ describe('schema migrations', () => {
     expect(await db.entities.count()).toBe(0)
     expect(await db.bestiary.count()).toBe(0)
     expect(await db.activity.count()).toBe(0)
+    expect(await db.outbox.count()).toBe(0)
+    expect(await db.syncState.count()).toBe(0)
     db.close()
   })
 
@@ -211,6 +213,30 @@ describe('schema migrations', () => {
     expect(enemy?.kind === 'enemy' && enemy.details.templateId).toBe(inB[0]!.id)
     expect(await db.itemLibrary.where('campaignId').equals('a').count()).toBe(1)
     expect(await db.itemLibrary.where('campaignId').equals('b').count()).toBe(1)
+    db.close()
+  })
+
+  it('v10 → v11 keeps every record and adds the online outbox and sync state', async () => {
+    const name = `codex-migration-${crypto.randomUUID()}`
+    names.push(name)
+    const v10 = new Dexie(name)
+    for (const v of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const) v10.version(v).stores(SCHEMA[v])
+    await v10.open()
+    await v10.table('sessions').add({ id: 's1', campaignId: 'c1' })
+    v10.close()
+
+    const db = new CodexDB(name)
+    await db.open()
+    expect(await db.sessions.get('s1')).toEqual({ id: 's1', campaignId: 'c1' })
+    await db.outbox.put({
+      id: 'sessions:s1',
+      campaignId: 'c1',
+      table: 'sessions',
+      recordId: 's1',
+      record: null,
+      version: 'v',
+    })
+    expect(await db.outbox.where('campaignId').equals('c1').count()).toBe(1)
     db.close()
   })
 })

@@ -4,6 +4,7 @@ import { Download, Ellipsis, Pencil, Trash } from 'lucide-react'
 import { Link } from 'react-router'
 import { IconButton } from '@/components/ui/Button'
 import type { Campaign } from '@/db/types'
+import type { CampaignSummary } from '@shared/sync'
 import { formatRelativeTime, useIntlLocale, useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 
@@ -17,11 +18,14 @@ const cardVariants = {
 
 export function CampaignCard({
   campaign,
+  online,
   onRename,
   onExport,
   onDelete,
 }: {
   campaign: Campaign
+  /** The server's view of this campaign, when it is online (D-262). */
+  online?: CampaignSummary
   onRename: () => void
   onExport: () => void
   onDelete: () => void
@@ -40,6 +44,18 @@ export function CampaignCard({
         </span>
         {campaign.description && (
           <span className="mt-1.5 line-clamp-2 text-sm text-ink-muted">{campaign.description}</span>
+        )}
+        {online && (
+          <span className="mt-2 flex flex-wrap gap-1.5 text-xs" data-testid="campaign-online">
+            <span className="rounded-full bg-heal-soft px-2 py-0.5 font-medium text-heal-text">
+              {online.role === 'editor' ? t.online.coGmOf(online.ownerName) : t.online.badgeOnline}
+            </span>
+            {online.pendingRequests > 0 && (
+              <span className="rounded-full bg-accent-soft px-2 py-0.5 font-medium text-accent-text">
+                {t.online.requestsBadge(online.pendingRequests)}
+              </span>
+            )}
+          </span>
         )}
         <span className="mt-auto flex items-center gap-2 pt-4 text-xs text-ink-muted">
           <span className="size-1 rotate-45 bg-gold" aria-hidden />
@@ -77,7 +93,7 @@ export function CampaignCard({
               className={cn(MENU_ITEM, 'text-hp-text [&>svg]:text-hp-text')}
               onSelect={onDelete}
             >
-              <Trash /> {t.common.delete}
+              <Trash /> {online?.role === 'editor' ? t.online.leaveCampaign : t.common.delete}
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { campaignRepository } from '@/db/campaigns'
 import { activeDb } from '@/db/db'
-import type { ActivityRecord } from '@/domain/activity'
 import { createEntity } from '@/domain/entity'
 import { newElement, newMap } from '@/domain/maps'
 import { newSessionPlan } from '@/domain/sessions'
@@ -13,10 +12,8 @@ import { useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
 import { GuestSession } from './guestSession'
 import { HostSession } from './hostSession'
-import { memoryLinkPair } from './link'
-import type { GuestRole } from './onlineStore'
+import { memoryLinkPair, relayLink } from './link'
 import type { RejectReason } from './protocol'
-import { decodeCode, encodeCode, InvalidCodeError } from './signaling'
 
 const t = getMessages()
 /** Sync goes through the host's 250 ms auto-save: leave room when the suite runs in parallel. */
@@ -76,16 +73,16 @@ async function world() {
     campaignName: campaign.name,
     hostName: 'MJ',
     t,
-    servers: [],
   })
   sessions.host = host
   return { campaign, host, lyra, gorak, goule, boss, map, plan }
 }
 
-function join(host: HostSession, role: GuestRole, name: string) {
+/** A player entering through the relay (D-262): the server says who they are. */
+function join(host: HostSession, name: string, characterId: string | null = null) {
   const rejected: RejectReason[] = []
   const [hostEnd, guestEnd] = memoryLinkPair()
-  host.attach(host.prepare(role), hostEnd)
+  host.admit({ id: `user-${name}`, name, characterId }, hostEnd)
   const guest = new GuestSession(guestEnd, name, { onRejected: (r) => rejected.push(r) }, false)
   sessions.guests.push(guest)
   return { guest, rejected }
@@ -97,116 +94,10 @@ const startGame = (mode: 'local' | 'online', operator = { id: HOST_ID, name: 'MJ
     'start',
   )
 
-describe('connection codes (D-245)', () => {
-  it('round-trip, survive chat formatting, and refuse anything else', async () => {
-    const invite = {
-      v: 1 as const,
-      kind: 'invite' as const,
-      peerId: 'p1',
-      role: 'player' as const,
-      campaignName: 'Ombreval',
-      hostName: 'MJ',
-      sdp: 'v=0\r\n'.repeat(200),
-    }
-    const code = await encodeCode(invite)
-    expect(code.length).toBeLessThan(600)
-    const chatty = code.replace(/(.{60})/g, '$1\n  ')
-    expect(await decodeCode(chatty)).toEqual(invite)
-    await expect(decodeCode('bonjour')).rejects.toThrow(InvalidCodeError)
-    await expect(decodeCode('CODEX1.' + code.slice(12))).rejects.toThrow(InvalidCodeError)
-  })
-})
-
-describe('editors co-edit live (D-245)', () => {
-  it('get the whole campaign, and their edits reach the host and the other editors', async () => {
-    const { host, lyra } = await world()
-    const a = join(host, 'editor', 'Agathe')
-    const b = join(host, 'editor', 'Bastien')
-    const welcome = await a.guest.ready
-    await b.guest.ready
-    expect(welcome).toMatchObject({ role: 'editor', hostName: 'MJ', campaignName: 'Ombreval' })
-    expect(await a.guest.copy.entities.count()).toBe(4)
-    expect((await a.guest.copy.sessions.toArray())[0]?.notes).toBe('Le boss se relève.')
-
-    const copy = (await a.guest.copy.entities.get(lyra.id))!
-    await a.guest.copy.entities.put({
-      ...copy,
-      identity: { ...copy.identity, pseudo: 'Lyra la Grise' },
-    })
-
-    await eventually(async () =>
-      expect((await activeDb().entities.get(lyra.id))?.identity.pseudo).toBe('Lyra la Grise'),
-    )
-    // The host's open campaign shows it without saving it again.
-    expect(store().entities[lyra.id]?.identity.pseudo).toBe('Lyra la Grise')
-    await eventually(async () =>
-      expect((await b.guest.copy.entities.get(lyra.id))?.identity.pseudo).toBe('Lyra la Grise'),
-    )
-  })
-
-  it('refuse writes outside the campaign, and table changes by a non-operator during a game', async () => {
-    const { host, lyra, campaign } = await world()
-    const other = await campaignRepository.create({ name: 'Autre' })
-    const intruder = createEntity('player', other.id, defaultRules())
-    await activeDb().entities.add(intruder)
-    const a = join(host, 'editor', 'Agathe')
-    await a.guest.ready
-
-    await a.guest.copy.entities.put({
-      ...intruder,
-      campaignId: campaign.id,
-      identity: { ...intruder.identity, pseudo: 'Volé' },
-    })
-    await eventually(() => expect(a.rejected).toContain('forbidden'))
-    expect((await activeDb().entities.get(intruder.id))?.campaignId).toBe(other.id)
-    // What the editor made up does not stay in its copy.
-    await eventually(async () =>
-      expect(await a.guest.copy.entities.get(intruder.id)).toBeUndefined(),
-    )
-
-    startGame('local')
-    await eventually(async () =>
-      expect((await a.guest.copy.campaigns.get(campaign.id))?.play?.live).toBeTruthy(),
-    )
-    const copy = (await a.guest.copy.entities.get(lyra.id))!
-    await a.guest.copy.entities.put({ ...copy, level: 9 })
-    await eventually(() => expect(a.rejected).toContain('notOperator'))
-    expect((await activeDb().entities.get(lyra.id))?.level).toBe(lyra.level)
-    // The host sends the truth back.
-    await eventually(async () =>
-      expect((await a.guest.copy.entities.get(lyra.id))?.level).toBe(lyra.level),
-    )
-  })
-
-  it('an editor can start the game as operator; when it leaves, the host takes the table back', async () => {
-    const { host, campaign } = await world()
-    const a = join(host, 'editor', 'Agathe')
-    const { selfId } = await a.guest.ready
-    const record = (await a.guest.copy.campaigns.get(campaign.id))!
-    await a.guest.copy.campaigns.put({
-      ...record,
-      play: {
-        ...record.play!,
-        live: {
-          runId: 'r2',
-          planId: null,
-          mode: 'online',
-          startedAt: 1,
-          operator: { id: selfId, name: 'Agathe' },
-        },
-      },
-    })
-    await eventually(() => expect(store().play.live?.operator.id).toBe(selfId))
-
-    await a.guest.leave()
-    await eventually(() => expect(store().play.live?.operator).toEqual({ id: HOST_ID, name: 'MJ' }))
-  })
-})
-
 describe('players (D-245)', () => {
   it('see only what is on the table, never the GM notes or hidden things', async () => {
     const { host, goule, boss } = await world()
-    const p = join(host, 'player', 'Chloé')
+    const p = join(host, 'Chloé')
     await p.guest.ready
     const copy = p.guest.copy
     expect(await copy.sessions.count()).toBe(0)
@@ -224,7 +115,7 @@ describe('players (D-245)', () => {
 
   it('move their own token and roll their own dice, only in an online game', async () => {
     const { host, lyra, map } = await world()
-    const p = join(host, 'player', 'Chloé')
+    const p = join(host, 'Chloé')
     await p.guest.ready
     p.guest.choose(lyra.id)
 
@@ -255,10 +146,31 @@ describe('players (D-245)', () => {
     await eventually(() => expect(p.rejected).toContain('invalid'))
   })
 
-  it('cannot take a character already chosen, nor write anything', async () => {
+  it('keep the character the GM gave them (D-257)', async () => {
+    const { host, lyra, gorak } = await world()
+    const p = join(host, 'Chloé', lyra.id)
+    const { selfId } = await p.guest.ready
+    p.guest.choose(gorak.id)
+    await eventually(() => expect(p.rejected).toContain('taken'))
+    startGame('online')
+    p.guest.intent({ type: 'roll', entityId: lyra.id, expression: '1d6' })
+    await eventually(async () => expect(await p.guest.copy.rolls.count()).toBe(1))
+    expect(selfId).toBe('user-Chloé')
+  })
+
+  it('a second connection of the same player replaces the first', async () => {
+    const { host } = await world()
+    const first = join(host, 'Chloé')
+    await first.guest.ready
+    const second = join(host, 'Chloé')
+    await second.guest.ready
+    await eventually(() => expect(first.guest.copy.isOpen()).toBe(false))
+  })
+
+  it('cannot take a character already chosen', async () => {
     const { host, lyra } = await world()
-    const p1 = join(host, 'player', 'Chloé')
-    const p2 = join(host, 'player', 'Dylan')
+    const p1 = join(host, 'Chloé')
+    const p2 = join(host, 'Dylan')
     await p1.guest.ready
     await p2.guest.ready
     p1.guest.choose(lyra.id)
@@ -269,46 +181,9 @@ describe('players (D-245)', () => {
 })
 
 describe('activity log (D-247)', () => {
-  const line = (campaignId: string, author: { id: string; name: string }): ActivityRecord => ({
-    id: crypto.randomUUID(),
-    campaignId,
-    at: Date.now(),
-    author,
-    kind: 'do',
-    label: 'Carte « Crypte » modifiée',
-    count: 1,
-  })
-
-  it('signs the host’s changes, takes editors’ lines signed by themselves only, hides them from players', async () => {
-    const { host, campaign, lyra } = await world()
-    store().updateEntity(lyra.id, (e) => ({ ...e, level: 2 }), 'Modification de Lyra')
-    await flushActivity()
-    expect(await activeDb().activity.toArray()).toMatchObject([
-      { author: { id: HOST_ID, name: 'MJ' }, label: 'Modification de Lyra', count: 1 },
-    ])
-
-    const a = join(host, 'editor', 'Agathe')
-    const { selfId } = await a.guest.ready
-    await eventually(async () => expect(await a.guest.copy.activity.count()).toBe(1))
-    const own = line(campaign.id, { id: selfId, name: 'Agathe' })
-    await a.guest.copy.activity.put(own)
-    await eventually(async () =>
-      expect((await activeDb().activity.get(own.id))?.author.name).toBe('Agathe'),
-    )
-
-    const forged = line(campaign.id, { id: HOST_ID, name: 'MJ' })
-    await a.guest.copy.activity.put(forged)
-    await eventually(() => expect(a.rejected).toContain('forbidden'))
-    expect(await activeDb().activity.get(forged.id)).toBeUndefined()
-
-    const p = join(host, 'player', 'Chloé')
-    await p.guest.ready
-    expect(await p.guest.copy.activity.count()).toBe(0)
-  })
-
   it('signs a player’s move with the player’s name', async () => {
     const { host, lyra, map } = await world()
-    const p = join(host, 'player', 'Chloé')
+    const p = join(host, 'Chloé')
     const { selfId } = await p.guest.ready
     p.guest.choose(lyra.id)
     startGame('online')
@@ -318,5 +193,39 @@ describe('activity log (D-247)', () => {
       const lines = await activeDb().activity.toArray()
       expect(lines.some((l) => l.author.id === selfId && l.author.name === 'Chloé')).toBe(true)
     })
+  })
+})
+
+describe('relayed link (D-262)', () => {
+  it('carries messages both ways and tells the server when this side leaves', () => {
+    const sent: unknown[] = []
+    const left = vi.fn()
+    const end = relayLink((m) => sent.push(m), left)
+    const received: unknown[] = []
+    const closed = vi.fn()
+    end.link.onMessage((m) => received.push(m))
+    end.link.onClose(closed)
+    end.link.send({ type: 'hello' })
+    end.deliver({ type: 'welcome' })
+    expect(sent).toEqual([{ type: 'hello' }])
+    expect(received).toEqual([{ type: 'welcome' }])
+    end.link.close()
+    expect(left).toHaveBeenCalledOnce()
+    expect(closed).toHaveBeenCalledOnce()
+    // Nothing goes out or comes in once closed.
+    end.link.send({ type: 'late' })
+    end.deliver({ type: 'late' })
+    expect(sent).toHaveLength(1)
+    expect(received).toHaveLength(1)
+  })
+
+  it('closes without telling the server when the other side left', () => {
+    const left = vi.fn()
+    const end = relayLink(() => {}, left)
+    const closed = vi.fn()
+    end.link.onClose(closed)
+    end.end()
+    expect(closed).toHaveBeenCalledOnce()
+    expect(left).not.toHaveBeenCalled()
   })
 })

@@ -12,7 +12,7 @@ import type { PlayMode } from '@/domain/sessions'
 import { createLiveActions } from '@/features/game/liveActions'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
-import { useOnlineStore } from '@/online/onlineStore'
+import { useIsOnlineCampaign } from '@/online/server/serverStore'
 
 const FREE = '__free__'
 
@@ -22,7 +22,8 @@ export function StartPlayPanel() {
   const campaign = useCampaign()
   const [params] = useSearchParams()
   const plans = useLiveQuery(() => sessionRepository.listPlans(campaign.id), [campaign.id])
-  const online = useOnlineStore((s) => s.role !== 'offline')
+  // Players enter through the server: the campaign must be online (D-262).
+  const online = useIsOnlineCampaign(campaign.id)
   const [planId, setPlanId] = useState<string>(params.get('session') ?? FREE)
   const [mode, setMode] = useState<PlayMode>(online ? 'online' : 'local')
   const [busy, setBusy] = useState(false)

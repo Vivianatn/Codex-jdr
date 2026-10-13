@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Code shared by the app and the online server (D-262)"
+}

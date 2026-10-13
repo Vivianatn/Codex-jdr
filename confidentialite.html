@@ -25,9 +25,9 @@
       <h2>En bref</h2>
       <ul>
         <li>
-          Tes campagnes, tes fiches, tes cartes et tes messages sont
-          <strong>chiffrés de bout en bout</strong> : la clé reste sur tes appareils, le serveur ne
-          peut pas les lire.
+          Tes campagnes restent sur ton appareil, chiffrées avec ton mot de passe. Avec un compte en
+          ligne, elles sont aussi gardées sur le serveur de Codex, <strong>chiffrées</strong> ; le
+          serveur peut techniquement les lire pour les synchroniser et contrôler qui y a accès.
         </li>
         <li>Pas de publicité, pas de revente, aucun traceur tiers, aucun cookie publicitaire.</li>
         <li>
@@ -56,31 +56,26 @@
         <tbody>
           <tr>
             <td>
-              Compte : nom d’utilisateur, preuve de mot de passe (jamais le mot de passe lui-même),
-              clés de chiffrement chiffrées, clés publiques
+              Compte en ligne : adresse e-mail, nom affiché, empreinte du mot de passe (jamais le
+              mot de passe lui-même), dates de création et de dernière connexion
             </td>
-            <td>Te connecter et partager des campagnes chiffrées</td>
-            <td>Exécution des conditions d’utilisation</td>
-          </tr>
-          <tr>
-            <td>Amis : demandes, liste d’amis, comptes bloqués</td>
-            <td>Inviter tes amis, les retrouver, te protéger des indésirables</td>
+            <td>Te connecter, te reconnaître auprès de ta table, réinitialiser ton mot de passe</td>
             <td>Exécution des conditions d’utilisation</td>
           </tr>
           <tr>
             <td>
-              Contenu chiffré : campagnes, fiches, cartes, images, messages et pièces jointes
-              (illisibles par le serveur)
+              Contenu des campagnes en ligne : fiches, cartes, images, sessions, jets de dés,
+              journal des modifications (chiffré sur le serveur)
             </td>
-            <td>Les synchroniser entre tes appareils et avec les membres de tes salons</td>
+            <td>Les synchroniser entre tes appareils et avec les membres de la campagne</td>
             <td>Exécution des conditions d’utilisation</td>
           </tr>
           <tr>
             <td>
-              Informations nécessaires à la synchronisation : membres et rôles d’un salon, dates,
-              tailles, présence en ligne, accusés de lecture
+              Informations de fonctionnement : nom et membres de chaque campagne, rôles, personnage
+              attribué, demandes pour rejoindre, lien d’invitation, présence en ligne
             </td>
-            <td>Faire fonctionner le temps réel et les droits d’accès</td>
+            <td>Faire fonctionner les droits d’accès, les invitations et le temps réel</td>
             <td>Exécution des conditions d’utilisation</td>
           </tr>
           <tr>
@@ -96,9 +91,10 @@
         </tbody>
       </table>
       <p>
-        Codex ne demande ni adresse e-mail, ni numéro de téléphone, ni date de naissance. Si une
-        fiche contient le pseudo ou le portrait d’un vrai joueur, c’est toi qui le saisis :
-        demande-lui son accord et retire-le s’il le souhaite.
+        Codex ne demande ni numéro de téléphone, ni date de naissance ; l’adresse e-mail n’est
+        demandée que pour un compte en ligne et ne sert qu’à la connexion et aux e-mails de
+        réinitialisation du mot de passe. Si une fiche contient le pseudo ou le portrait d’un vrai
+        joueur, c’est toi qui le saisis : demande-lui son accord et retire-le s’il le souhaite.
       </p>
 
       <h2 id="audience">Mesure d’audience</h2>
@@ -131,19 +127,22 @@
 
       <h2>Qui y a accès ?</h2>
       <p>
-        Personne d’autre que toi et les personnes avec qui tu partages une campagne ou une
-        conversation. Les données sont hébergées chez {{site.host.name}}, {{site.host.location}},
-        qui agit pour notre compte et ne peut pas lire le contenu chiffré. Aucune donnée n’est
-        transférée hors de l’Union européenne.
+        Les membres d’une campagne : le MJ et ses co-MJ voient toute la campagne ; un joueur ne
+        reçoit que ce qui est visible à la table, et seulement pendant une partie. Les données sont
+        hébergées chez {{site.host.name}}, {{site.host.location}}, qui agit pour notre compte.
+        L’administrateur du serveur peut techniquement accéder aux campagnes ; il ne le fait que si
+        la loi l’exige ou pour traiter un signalement. Aucune donnée n’est transférée hors de
+        l’Union européenne.
       </p>
 
       <h2>Combien de temps ?</h2>
       <ul>
         <li>Compte et contenu : jusqu’à ce que tu supprimes ton compte.</li>
         <li>
-          Après suppression : effacement immédiat, puis disparition des sauvegardes du serveur sous
-          30 jours.
+          Après suppression : effacement immédiat (avec les campagnes dont tu es le MJ), puis
+          disparition des sauvegardes du serveur sous 30 jours.
         </li>
+        <li>Lien de réinitialisation du mot de passe : une heure.</li>
         <li>Comptes inactifs depuis 3 ans : supprimés.</li>
         <li>Journaux techniques : 1 an, durée imposée aux hébergeurs.</li>
         <li>Mesure d’audience : statistiques conservées 13 mois au plus.</li>
@@ -165,10 +164,9 @@
 
       <h2>Sécurité</h2>
       <p>
-        Connexion toujours chiffrée (HTTPS), mot de passe jamais transmis en clair, chiffrement de
-        bout en bout du contenu, limitation des tentatives de connexion. Sans ton mot de passe ni
-        ton code de secours, personne — pas même l’éditeur de Codex — ne peut récupérer tes données
-        chiffrées.
+        Connexion toujours chiffrée (HTTPS), mots de passe conservés sous forme d’empreinte
+        (scrypt), campagnes chiffrées sur le serveur et sur ton appareil, limitation des tentatives
+        de connexion, cookie de session inaccessible aux scripts.
       </p>
 
       <h2>Mineurs</h2>

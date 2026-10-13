@@ -9,8 +9,10 @@ import { accounts, AUTO_LOCK_CHOICES, type AutoLockMinutes } from '@/security/ac
 import { MIN_PASSWORD_LENGTH } from '@/security/passwords'
 import { lockSession, updateSessionAccount, useSessionStore } from '@/security/session'
 import { clearLocalPreferences } from '@/features/campaigns/useCampaignActions'
+import { server } from '@/online/server/api'
 import { accountErrorMessage } from './accountErrors'
 import { PasswordField } from './PasswordField'
+import { OnlineAccountSection } from './OnlineAccountSection'
 import { RecoveryCodePanel } from './RecoveryCodePanel'
 
 type Pending = 'none' | 'password' | 'code' | 'delete'
@@ -74,6 +76,7 @@ export function AccountSection() {
         onClose={close}
       />
       <DeleteAccountDialog open={pending === 'delete'} accountId={account.id} onClose={close} />
+      <OnlineAccountSection />
     </section>
   )
 }
@@ -131,6 +134,11 @@ function ChangePasswordDialog({
             return
           }
           await accounts.changePassword(accountId, current, next)
+          // The online account keeps the same password (D-262).
+          if (useSessionStore.getState().account?.online)
+            await server
+              .changePassword(current, next)
+              .catch(() => toast.error(t.account.online.passwordNotChanged))
           toast.success(t.account.passwordChanged)
           reset()
         })}

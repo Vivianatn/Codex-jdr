@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { LockKeyhole, ShieldCheck } from 'lucide-react'
+import { Cloud, LockKeyhole, ShieldCheck } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { LogoMark, Ornament, Wordmark } from '@/components/Brand'
@@ -18,12 +18,16 @@ import { checkPassword, MIN_PASSWORD_LENGTH } from '@/security/passwords'
 import { startSession, useSessionStore } from '@/security/session'
 import { accountErrorMessage } from './accountErrors'
 import { PasswordField } from './PasswordField'
+import { ForgotOnlineForm, OnlineRegisterForm, OnlineSignInForm } from './OnlineSignIn'
 import { RecoveryCodePanel } from './RecoveryCodePanel'
 
 type Mode =
   | { kind: 'login' }
   | { kind: 'create' }
   | { kind: 'recover' }
+  | { kind: 'onlineSignIn' }
+  | { kind: 'onlineRegister' }
+  | { kind: 'onlineForgot' }
   | { kind: 'code'; code: string; account: AccountSummary; key: Uint8Array }
 
 /** Login, account creation and password recovery (D-241). Full page, before anything else. */
@@ -57,6 +61,69 @@ export function LockScreen() {
       </Frame>
     )
 
+  const back = (
+    <Button variant="ghost" className="w-full" onClick={() => setMode(null)}>
+      {t.account.backToLogin}
+    </Button>
+  )
+  const onlineButton = (
+    <Button
+      variant="secondary"
+      className="w-full"
+      icon={<Cloud />}
+      onClick={() => setMode({ kind: 'onlineSignIn' })}
+    >
+      {t.account.online.lockSignIn}
+    </Button>
+  )
+
+  if (current.kind === 'onlineSignIn')
+    return (
+      <Frame
+        title={t.account.online.lockSignInTitle}
+        subtitle={t.account.online.lockSignInSubtitle}
+      >
+        <OnlineSignInForm onEntered={enter} />
+        <div className="flex flex-wrap justify-between gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setMode({ kind: 'onlineForgot' })}>
+            {t.account.online.forgot}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setMode({ kind: 'onlineRegister' })}>
+            {t.account.online.wantNew}
+          </Button>
+        </div>
+        {back}
+      </Frame>
+    )
+
+  if (current.kind === 'onlineRegister')
+    return (
+      <Frame
+        title={t.account.online.lockRegisterTitle}
+        subtitle={t.account.online.lockRegisterSubtitle}
+      >
+        <OnlineRegisterForm
+          onEntered={enter}
+          newPassword={(props) => <NewPasswordFields label={t.account.password} {...props} />}
+        />
+        {back}
+      </Frame>
+    )
+
+  if (current.kind === 'onlineForgot')
+    return (
+      <Frame title={t.account.online.forgotTitle} subtitle={t.account.online.forgotSubtitle}>
+        <ForgotOnlineForm />
+        <Button
+          variant="ghost"
+          className="w-full"
+          onClick={() => setMode({ kind: 'onlineSignIn' })}
+        >
+          {t.common.back}
+        </Button>
+      </Frame>
+    )
+
   if (current.kind === 'create')
     return (
       <Frame
@@ -66,6 +133,7 @@ export function LockScreen() {
         <CreateForm
           onCreated={(code, account, key) => setMode({ kind: 'code', code, account, key })}
         />
+        {onlineButton}
         {list.length > 0 && (
           <Button variant="ghost" className="w-full" onClick={() => setMode({ kind: 'login' })}>
             {t.account.backToLogin}
@@ -90,6 +158,7 @@ export function LockScreen() {
   return (
     <Frame title={t.account.lockTitle} subtitle={t.account.lockSubtitle}>
       <LoginForm accounts={list} onUnlocked={enter} />
+      {onlineButton}
       <div className="flex flex-wrap justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={() => setMode({ kind: 'recover' })}>
           {t.account.forgot}

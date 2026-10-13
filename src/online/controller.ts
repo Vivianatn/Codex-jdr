@@ -1,121 +1,398 @@
 import { toast } from 'sonner'
 import { HOST_ID } from '@/domain/turns'
 import { getMessages } from '@/i18n'
-import { enterRemoteDb, leaveRemoteDb, onLock, useSessionStore } from '@/security/session'
+import { accounts, type AccountSummary, type OnlineLink } from '@/security/accounts'
+import {
+  accountDatabase,
+  enterRemoteDb,
+  leaveRemoteDb,
+  onLock,
+  updateSessionAccount,
+  useSessionStore,
+} from '@/security/session'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
-import { useSettingsStore } from '@/stores/settingsStore'
+import type { PublicUser, ServerFrame } from '@shared/sync'
 import { GuestSession, type Welcome } from './guestSession'
 import { HostSession } from './hostSession'
-import { channelLink } from './link'
-import { useOnlineStore, type GuestRole } from './onlineStore'
+import { relayLink, type RelayEnd } from './link'
+import { selfParticipant, useOnlineStore } from './onlineStore'
 import type { Intent } from './protocol'
-import { answerHostOffer, channelOpen, iceServers } from './rtc'
-import { decodeCode, encodeCode, InvalidCodeError, type InviteCode } from './signaling'
+import { ApiError, server } from './server/api'
+import { initialServerState, useServerStore } from './server/serverStore'
+import { ServerSocket } from './server/socket'
+import { linkOf } from './server/signIn'
+import { SyncEngine } from './server/sync'
 
 /**
- * The one online session of this device (D-245): hosting the open campaign, or
- * a guest in someone else's. Locking Codex ends it.
+ * The online side of this device (D-262): the WebSocket to the server, the
+ * sync engine of the online campaigns, and the live-game relay (serving the
+ * players as operator, or playing in someone else's game). Locking Codex
+ * disconnects everything.
  */
 
-let host: HostSession | null = null
-let guest: GuestSession | null = null
+let socket: ServerSocket | null = null
+let engine: SyncEngine | null = null
 let stopOnLock: (() => void) | null = null
 
-const servers = () => iceServers(useSettingsStore.getState().stunServer)
-const selfName = () => useSessionStore.getState().account?.username ?? 'MJ'
+interface Host {
+  campaignId: string
+  session: HostSession
+  links: Map<string, RelayEnd>
+  serving: boolean
+  retry: ReturnType<typeof setTimeout> | null
+}
+let host: Host | null = null
 
-function resetStore() {
-  useOnlineStore.setState({
-    role: 'offline',
-    campaignId: null,
-    selfId: HOST_ID,
-    guestRole: null,
-    hostName: null,
-    campaignName: null,
-    peers: [],
-  })
+interface Guest {
+  campaignId: string
+  session: GuestSession
+  end: RelayEnd
+}
+let guest: Guest | null = null
+let entering: {
+  campaignId: string
+  resolve: () => void
+  reject: (error: Error) => void
+} | null = null
+
+const t = () => getMessages()
+const selfName = () => selfParticipant().name
+
+// ---- connection --------------------------------------------------------------------
+
+function toUser(link: OnlineLink): PublicUser {
+  return { id: link.userId, email: link.email, displayName: link.displayName }
 }
 
-function endOnLock(end: () => void) {
-  stopOnLock?.()
-  stopOnLock = onLock(end)
+/** After unlocking: an account linked online connects to the server. */
+export async function connectOnline(account: AccountSummary): Promise<void> {
+  disconnectOnline()
+  if (!account.online) return
+  const user = toUser(account.online)
+  useServerStore.setState({ ...initialServerState, user, status: 'connecting' })
+  useOnlineStore.setState({ selfId: user.id })
+  const sync = new SyncEngine({
+    db: accountDatabase,
+    api: {
+      ...server,
+      campaigns: async () => (await server.campaigns()).campaigns,
+    },
+    self: selfParticipant,
+    onRefused: (reason, count) => toast.error(t().online.refused(reason, count)),
+    onPending: (pending) => useServerStore.setState({ pending }),
+    onSynced: (synced) => useServerStore.setState({ synced }),
+    onOffline: () => {
+      if (useServerStore.getState().status === 'online') socket?.retryNow()
+    },
+    onCampaigns: (campaigns) => useServerStore.setState({ campaigns }),
+  })
+  engine = sync
+  await sync.start()
+  if (engine !== sync) return
+  socket = new ServerSocket({ onOpen, onFrame, onDown })
+  socket.start()
+  stopOnLock = onLock(disconnectOnline)
+  window.addEventListener('online', retrySoon)
 }
 
-// ---- host ------------------------------------------------------------------
-
-export function startHosting(campaign: { id: string; name: string }): HostSession {
-  if (host) return host
-  host = new HostSession({
-    campaignId: campaign.id,
-    campaignName: campaign.name,
-    hostName: selfName(),
-    t: getMessages(),
-    servers: servers(),
-  })
-  useOnlineStore.setState({
-    role: 'host',
-    campaignId: campaign.id,
-    campaignName: campaign.name,
-    selfId: HOST_ID,
-    hostName: selfName(),
-  })
-  endOnLock(stopHosting)
-  return host
-}
-
-export function stopHosting(): void {
-  if (!host) return
-  host.stop()
-  host = null
+/** Stops everything online (lock, unlink). Local work goes on. */
+export function disconnectOnline(): void {
+  stopServing()
+  void leaveGuest()
+  engine?.stop()
+  engine = null
+  socket?.stop()
+  socket = null
   stopOnLock?.()
   stopOnLock = null
-  resetStore()
+  if (typeof window !== 'undefined') window.removeEventListener('online', retrySoon)
+  useServerStore.setState(initialServerState)
+  useOnlineStore.setState({ selfId: HOST_ID, peers: [] })
+}
+
+function retrySoon() {
+  socket?.retryNow()
+}
+
+function onOpen() {
+  useServerStore.setState({ status: 'online' })
+  engine?.setOnline(true)
+  void engine?.reconcile()
+  void refreshRequests()
+  if (host) socket?.send({ t: 'serve', campaignId: host.campaignId })
+}
+
+function onDown(reason: 'signedOut' | 'dropped') {
+  useServerStore.setState({
+    status: reason === 'signedOut' ? 'signedOut' : 'offline',
+    presence: {},
+  })
+  engine?.setOnline(false)
+  // The relay went with the socket.
+  if (host) {
+    host.serving = false
+    for (const end of host.links.values()) end.end()
+    host.links.clear()
+  }
+  guest?.end.end()
+}
+
+function onFrame(frame: ServerFrame) {
+  switch (frame.t) {
+    case 'changed':
+      return engine?.pullSoon(frame.campaignId)
+    case 'campaigns':
+      void engine?.reconcile()
+      void refreshRequests()
+      // A game that just started may now be served.
+      if (host && !host.serving) socket?.send({ t: 'serve', campaignId: host.campaignId })
+      return
+    case 'presence':
+      return useServerStore.setState((s) => ({
+        presence: { ...s.presence, [frame.campaignId]: frame.users },
+      }))
+    case 'serving':
+      return onServing(frame.campaignId, frame.ok)
+    case 'peer': {
+      if (host?.campaignId !== frame.campaignId) return
+      const { campaignId, peerId } = frame
+      host.links.get(peerId)?.end()
+      const end = relayLink(
+        (data) => socket?.send({ t: 'down', campaignId, peerId, data }),
+        () => socket?.send({ t: 'kick', campaignId, peerId }),
+      )
+      host.links.set(peerId, end)
+      host.session.admit({ id: peerId, name: frame.name, characterId: frame.characterId }, end.link)
+      return
+    }
+    case 'up':
+      if (host?.campaignId === frame.campaignId) host.links.get(frame.peerId)?.deliver(frame.data)
+      return
+    case 'peerGone':
+      if (host?.campaignId !== frame.campaignId) return
+      host.links.get(frame.peerId)?.end()
+      host.links.delete(frame.peerId)
+      return
+    case 'entered':
+      if (entering?.campaignId === frame.campaignId) entering.resolve()
+      return
+    case 'enterFailed':
+      if (entering?.campaignId === frame.campaignId) entering.reject(new EnterError(frame.reason))
+      return
+    case 'down':
+      return guest?.end.deliver(frame.data)
+    case 'hostGone':
+      return guest?.end.end()
+  }
+}
+
+async function refreshRequests(): Promise<void> {
+  try {
+    const { requests } = await server.myRequests()
+    useServerStore.setState({ requests })
+  } catch {
+    // Offline: the list stays as it was.
+  }
+}
+
+/** The server list of campaigns, now (after accepting someone, for instance). */
+export function refreshOnline(): void {
+  void engine?.reconcile()
+  void refreshRequests()
+}
+
+/** Is this campaign kept on the server by this device? */
+export function isOnlineCampaign(campaignId: string): boolean {
+  return engine?.isSynced(campaignId) ?? false
+}
+
+/** Puts a campaign online (the GM's « Mettre en ligne »). */
+export function uploadCampaign(campaignId: string): Promise<void> {
+  return engine?.upload(campaignId) ?? Promise.resolve()
+}
+
+// ---- linking accounts --------------------------------------------------------------
+
+/** Links the unlocked local account to a new or existing online account, then connects. */
+export async function linkAccount(
+  input:
+    | { mode: 'register'; email: string; password: string; displayName: string }
+    | { mode: 'login'; email: string; password: string },
+): Promise<void> {
+  const local = useSessionStore.getState().account
+  if (!local) throw new ApiError('unauthenticated')
+  const { user } =
+    input.mode === 'register'
+      ? await server.register({
+          email: input.email,
+          displayName: input.displayName,
+          password: input.password,
+        })
+      : await server.login(input.email, input.password)
+  const other = await accounts.findOnline(user.id)
+  if (other && other.id !== local.id) {
+    await server.logout().catch(() => null)
+    throw new LinkedElsewhereError(other.username)
+  }
+  const account = await accounts.setOnline(local.id, linkOf(user))
+  // The session gate connects as soon as the account says it is linked.
+  updateSessionAccount({ online: account.online })
+}
+
+/** Forgets the online account on this device (the campaigns stay here). */
+export async function unlinkAccount(): Promise<void> {
+  const local = useSessionStore.getState().account
+  if (!local) return
+  await server.logout().catch(() => null)
+  await forgetOnline(local.id)
+}
+
+/**
+ * This device stops following the server: the campaigns stay, as local ones;
+ * changes not sent yet are dropped (the account was unlinked or deleted).
+ */
+export async function forgetOnline(accountId: string): Promise<void> {
+  disconnectOnline()
+  const db = accountDatabase()
+  await db.transaction('rw', db.syncState, db.outbox, async () => {
+    await db.syncState.clear()
+    await db.outbox.clear()
+  })
+  await accounts.setOnline(accountId, null)
+  updateSessionAccount({ online: undefined })
+}
+
+/** Signs in again after the server closed the session (expired, new password elsewhere). */
+export async function reconnect(password: string): Promise<void> {
+  const local = useSessionStore.getState().account
+  if (!local?.online) return
+  const { user } = await server.login(local.online.email, password)
+  if (user.id !== local.online.userId) {
+    await server.logout().catch(() => null)
+    throw new ApiError('wrongCredentials')
+  }
+  const account = await accounts.setOnline(local.id, linkOf(user))
+  updateSessionAccount({ online: account.online })
+  await connectOnline(account)
+}
+
+/** The display name changed on the server. */
+export async function renameOnline(displayName: string): Promise<void> {
+  const local = useSessionStore.getState().account
+  if (!local?.online) return
+  const { user } = await server.rename(displayName)
+  const account = await accounts.setOnline(local.id, linkOf(user))
+  updateSessionAccount({ online: account.online })
+  useServerStore.setState({ user })
+}
+
+export class LinkedElsewhereError extends Error {
+  constructor(readonly username: string) {
+    super('Online account linked to another local account')
+    this.name = 'LinkedElsewhereError'
+  }
+}
+
+// ---- operator: serving the players -------------------------------------------------
+
+function onServing(campaignId: string, ok: boolean) {
+  if (host?.campaignId !== campaignId) return
+  host.serving = ok
+  if (ok || host.retry) return
+  // The server may not know about the game yet (its record is on the way): try again.
+  host.retry = setTimeout(() => {
+    if (!host) return
+    host.retry = null
+    if (!host.serving) socket?.send({ t: 'serve', campaignId: host.campaignId })
+  }, 2000)
+}
+
+/** The operator of a running online game serves its players while the campaign is open. */
+export function serveCampaign(campaign: { id: string; name: string }): void {
+  if (host?.campaignId === campaign.id) return
+  stopServing()
+  host = {
+    campaignId: campaign.id,
+    session: new HostSession({
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      hostName: selfName(),
+      t: t(),
+      db: accountDatabase,
+    }),
+    links: new Map(),
+    serving: false,
+    retry: null,
+  }
+  useOnlineStore.setState({ role: 'host', campaignId: campaign.id, campaignName: campaign.name })
+  socket?.send({ t: 'serve', campaignId: campaign.id })
+}
+
+export function stopServing(): void {
+  if (!host) return
+  const current = host
+  host = null
+  if (current.retry) clearTimeout(current.retry)
+  socket?.send({ t: 'unserve', campaignId: current.campaignId })
+  current.session.stop()
+  useOnlineStore.setState({ role: 'offline', campaignId: null, campaignName: null, peers: [] })
+}
+
+export function servingCampaign(): string | null {
+  return host?.campaignId ?? null
 }
 
 export function hostSession(): HostSession | null {
-  return host
+  return host?.session ?? null
 }
 
-// ---- guest -----------------------------------------------------------------
+// ---- player: in someone else's game ------------------------------------------------
 
-export interface PendingJoin {
-  invite: InviteCode
-  /** Code to send back to the host. */
-  replyCode: string
-  /** Resolves once connected and the campaign copied. */
-  joined: Promise<Welcome>
-  cancel: () => void
+export class EnterError extends Error {
+  constructor(readonly reason: 'notLive' | 'forbidden' | 'offline' | 'timeout') {
+    super(`Cannot enter: ${reason}`)
+    this.name = 'EnterError'
+  }
 }
 
-/** First step of joining: reads the invitation and prepares the reply code. */
-export async function prepareJoin(inviteText: string): Promise<PendingJoin> {
-  const invite = await decodeCode(inviteText)
-  if (invite.kind !== 'invite') throw new InvalidCodeError()
-  const answer = await answerHostOffer(invite.sdp, servers())
-  const replyCode = await encodeCode({
-    v: 1,
-    kind: 'reply',
-    peerId: invite.peerId,
-    name: selfName(),
-    sdp: answer.sdp,
-  })
-  let cancelled = false
-  const joined = (async () => {
-    const channel = await channelOpen(await answer.channel, 10 * 60_000)
-    if (cancelled) throw new Error('cancelled')
-    const t = getMessages()
-    const session = new GuestSession(channelLink(channel), selfName(), {
-      onPeers: (peers) => useOnlineStore.setState({ peers }),
-      onRejected: (reason) => toast.error(t.online.rejected[reason]),
-      onClosed: () => {
-        if (guest !== session) return
-        toast(t.online.hostClosed)
-        void leaveGuest()
+/** Enters the running game of a campaign as a player; resolves once its table is copied. */
+export async function enterGame(campaignId: string): Promise<Welcome> {
+  if (guest?.campaignId === campaignId) return guest.session.ready
+  await leaveGuest()
+  if (!socket?.send({ t: 'enter', campaignId })) throw new EnterError('offline')
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new EnterError('timeout')), 15_000)
+    entering = {
+      campaignId,
+      resolve: () => {
+        clearTimeout(timer)
+        resolve()
       },
-    })
+      reject: (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    }
+  }).finally(() => (entering = null))
+
+  const end = relayLink(
+    (data) => socket?.send({ t: 'up', data }),
+    () => socket?.send({ t: 'leave' }),
+  )
+  const session = new GuestSession(end.link, selfName(), {
+    onPeers: (peers) => useOnlineStore.setState({ peers }),
+    onRejected: (reason) => toast.error(t().online.rejected[reason]),
+    onClosed: () => {
+      if (guest?.session !== session) return
+      toast(t().online.hostClosed)
+      void leaveGuest()
+    },
+  })
+  guest = { campaignId, session, end }
+  const timeout = setTimeout(() => void session.leave(), 20_000)
+  try {
     const welcome = await session.ready
-    guest = session
     enterRemoteDb(session.copy)
     useOnlineStore.setState({
       role: 'guest',
@@ -125,47 +402,42 @@ export async function prepareJoin(inviteText: string): Promise<PendingJoin> {
       guestRole: welcome.role,
       hostName: welcome.hostName,
     })
-    endOnLock(() => void leaveGuest())
-    answer.pc.addEventListener('connectionstatechange', () => {
-      if (answer.pc.connectionState === 'failed') void session.leave()
-    })
     return welcome
-  })()
-  joined.catch(() => answer.pc.close())
-  return {
-    invite,
-    replyCode,
-    joined,
-    cancel: () => {
-      cancelled = true
-      answer.pc.close()
-    },
+  } catch {
+    throw new EnterError('timeout')
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
-/** Leaves the joined campaign: the copy is deleted, the account's data is back. */
+/** Leaves the game: the copy is deleted, the account's data is back. */
 export async function leaveGuest(): Promise<void> {
-  const session = guest
-  if (!session) return
+  const current = guest
+  if (!current) return
   guest = null
-  stopOnLock?.()
-  stopOnLock = null
-  await useCampaignStore.getState().unload()
-  useRollStore.setState({ campaignId: null, rolls: [] })
-  leaveRemoteDb()
-  resetStore()
-  await session.leave()
+  const wasIn = useOnlineStore.getState().role === 'guest'
+  if (wasIn) {
+    await useCampaignStore.getState().unload()
+    useRollStore.setState({ campaignId: null, rolls: [] })
+    leaveRemoteDb()
+  }
+  useOnlineStore.setState({
+    role: 'offline',
+    campaignId: null,
+    campaignName: null,
+    guestRole: null,
+    hostName: null,
+    peers: [],
+    selfId: useServerStore.getState().user?.id ?? HOST_ID,
+  })
+  await current.session.leave()
 }
 
-export function guestRole(): GuestRole | null {
-  return guest?.role ?? null
-}
-
-/** Players' moves and rolls, checked and played by the host. */
+/** Players' moves and rolls, checked and played by the operator. */
 export function sendIntent(intent: Intent): void {
-  guest?.intent(intent)
+  guest?.session.intent(intent)
 }
 
 export function chooseCharacter(characterId: string | null): void {
-  guest?.choose(characterId)
+  guest?.session.choose(characterId)
 }

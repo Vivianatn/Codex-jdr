@@ -93,6 +93,12 @@ export async function lockSession(): Promise<void> {
   }
 }
 
+/** The account's own database, even while a player works on a game's copy (D-262). */
+export function accountDatabase(): CodexDB {
+  if (!accountDb) throw new Error('No account is unlocked')
+  return accountDb
+}
+
 /** Prefix of the temporary databases holding a joined campaign (D-245). */
 export const REMOTE_DB_PREFIX = 'codex-remote-'
 

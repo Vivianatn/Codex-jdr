@@ -15,6 +15,8 @@ export default tseslint.config(
       'playwright-report',
       'test-results',
       'src-tauri/target',
+      'release',
+      'server/.data',
     ],
   },
   {

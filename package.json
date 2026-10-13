@@ -24,6 +24,9 @@
     "test:perf": "playwright test --grep @perf --workers 1",
     "launch:check": "vite build && node scripts/launch-check.ts && playwright test e2e/site.spec.ts",
     "brand:assets": "node scripts/brand-assets.ts",
+    "server:install": "npm --prefix server install",
+    "server:dev": "npm --prefix server run dev",
+    "deploy:bundle": "vite build && node scripts/deploy-bundle.ts",
     "prepare": "husky"
   },
   "dependencies": {

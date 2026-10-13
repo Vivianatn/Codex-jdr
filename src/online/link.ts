@@ -1,6 +1,6 @@
 /**
- * A two-way message pipe between the host and one guest (D-245): a WebRTC
- * data channel in the app, an in-memory pair in tests.
+ * A two-way message pipe between the operator's device and one player (D-245):
+ * the server's relay in the app (D-262), an in-memory pair in tests.
  */
 export interface Link {
   send(message: unknown): void
@@ -9,99 +9,39 @@ export interface Link {
   close(): void
 }
 
-/** Data channels deliver up to 256 KiB per message: bigger ones go in chunks. */
-const CHUNK = 16 * 1024
-/** A guest sending more than this in one message is cut off. */
-const MAX_MESSAGE = 64 * 1024 * 1024
-const HIGH_WATER = 4 * 1024 * 1024
-
-interface Chunk {
-  c: string
-  i: number
-  n: number
-  d: string
+/** One end of a relayed link: what arrives is `deliver`ed, `end` when the other side left. */
+export interface RelayEnd {
+  link: Link
+  deliver(message: unknown): void
+  end(): void
 }
 
-export function channelLink(channel: RTCDataChannel): Link {
+/**
+ * A link carried by the server's WebSocket. `send` puts a message on the
+ * socket; `onLocalClose` tells the server this side leaves.
+ */
+export function relayLink(send: (message: unknown) => void, onLocalClose: () => void): RelayEnd {
   const handlers: ((m: unknown) => void)[] = []
   const closers: (() => void)[] = []
-  const partial = new Map<string, { parts: string[]; size: number }>()
   let closed = false
-  let queue: Promise<void> = Promise.resolve()
-  channel.bufferedAmountLowThreshold = 1024 * 1024
-
-  const drained = () =>
-    channel.bufferedAmount < HIGH_WATER
-      ? Promise.resolve()
-      : new Promise<void>((resolve) =>
-          channel.addEventListener('bufferedamountlow', () => resolve(), { once: true }),
-        )
-
   const finish = () => {
     if (closed) return
     closed = true
     closers.forEach((c) => c())
   }
-  channel.addEventListener('close', finish)
-  channel.addEventListener('error', finish)
-
-  channel.addEventListener('message', (event: MessageEvent) => {
-    if (typeof event.data !== 'string') return
-    let data: unknown
-    try {
-      data = JSON.parse(event.data)
-    } catch {
-      return
-    }
-    const chunk = data as Partial<Chunk>
-    if (typeof chunk.c === 'string' && typeof chunk.i === 'number' && typeof chunk.d === 'string') {
-      const entry = partial.get(chunk.c) ?? { parts: [], size: 0 }
-      entry.parts[chunk.i] = chunk.d
-      entry.size += chunk.d.length
-      if (entry.size > MAX_MESSAGE) {
-        channel.close()
-        return
-      }
-      partial.set(chunk.c, entry)
-      if (entry.parts.filter((p) => p !== undefined).length === chunk.n) {
-        partial.delete(chunk.c)
-        try {
-          const whole: unknown = JSON.parse(entry.parts.join(''))
-          handlers.forEach((h) => h(whole))
-        } catch {
-          // A broken message is dropped.
-        }
-      }
-      return
-    }
-    handlers.forEach((h) => h(data))
-  })
-
   return {
-    send(message) {
-      if (closed) return
-      const text = JSON.stringify(message)
-      queue = queue.then(async () => {
-        if (closed || channel.readyState !== 'open') return
-        if (text.length <= CHUNK) {
-          channel.send(text)
-          return
-        }
-        const id = crypto.randomUUID()
-        const n = Math.ceil(text.length / CHUNK)
-        for (let i = 0; i < n; i++) {
-          await drained()
-          if (channel.readyState !== 'open') return
-          channel.send(JSON.stringify({ c: id, i, n, d: text.slice(i * CHUNK, (i + 1) * CHUNK) }))
-        }
-      })
+    link: {
+      send: (message) => !closed && send(message),
+      onMessage: (h) => void handlers.push(h),
+      onClose: (h) => void closers.push(h),
+      close() {
+        if (closed) return
+        onLocalClose()
+        finish()
+      },
     },
-    onMessage: (h) => void handlers.push(h),
-    onClose: (h) => void closers.push(h),
-    close() {
-      channel.close()
-      finish()
-    },
+    deliver: (message) => !closed && handlers.forEach((h) => h(message)),
+    end: finish,
   }
 }
 

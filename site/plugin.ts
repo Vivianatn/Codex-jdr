@@ -108,6 +108,8 @@ function prettyUrls(root: string): Connect.NextHandleFunction {
   return (req, res, next) => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     const path = decodeURIComponent(url.pathname)
+    // The online server's API and socket go on to the proxy (D-262).
+    if (path.startsWith('/api/')) return next()
     if (path === '/robots.txt' || path === '/sitemap.xml') {
       res.setHeader('Content-Type', path.endsWith('.xml') ? 'application/xml' : 'text/plain')
       res.end(path === '/robots.txt' ? robotsTxt() : sitemapXml())

@@ -1,21 +1,17 @@
 import { toast } from 'sonner'
 import { activeDb, type CodexDB } from '@/db/db'
-import { markRemote } from '@/db/middleware'
-import { isValidActivity, type ActivityRecord } from '@/domain/activity'
-import { isSafeImageDataUrl, safeImage } from '@/db/sanitize'
 import type { Campaign } from '@/db/types'
 import { blockingWall, inBounds, tokenCenter } from '@/domain/maps'
-import { HOST_ID, normalizePlayState, type LiveGame, type PlayState } from '@/domain/turns'
+import { normalizePlayState, type PlayState } from '@/domain/turns'
 import type { Entity } from '@/domain/types'
 import { createGameActions } from '@/features/game/gameActions'
 import { createMapActions } from '@/features/game/mapActions'
 import type { Messages } from '@/i18n/locales/fr'
 import { withDefaultRules } from '@/rules'
-import { applyExternalChanges, useCampaignStore } from '@/stores/campaignStore'
+import { useCampaignStore } from '@/stores/campaignStore'
 import { withActivityAuthor } from '@/stores/activityLog'
-import { applyExternalRolls } from '@/stores/rollStore'
-import { channelLink, type Link } from './link'
-import { useOnlineStore, type GuestRole, type PeerInfo } from './onlineStore'
+import type { Link } from './link'
+import { useOnlineStore, type PeerInfo } from './onlineStore'
 import { loadCampaignData, projectForPlayer, Replica, type CampaignData } from './projection'
 import {
   parseGuestMessage,
@@ -26,22 +22,17 @@ import {
   type Intent,
   type RejectReason,
   type SyncTable,
-  type TableChanges,
 } from './protocol'
-import { acceptGuestAnswer, channelOpen, createHostOffer } from './rtc'
-import { decodeCode, encodeCode, InvalidCodeError } from './signaling'
 
 interface Peer {
   info: PeerInfo
   link: Link | null
-  pc: RTCPeerConnection | null
-  channel: RTCDataChannel | null
   replica: Replica
   welcomed: boolean
+  /** The GM chose this player's character when accepting them (D-257): it cannot be changed. */
+  assigned: boolean
 }
 
-/** Tables only the operator may change while a game is running (D-244). */
-const OPERATOR_TABLES = new Set<SyncTable>(['entities', 'maps', 'rolls', 'skills'])
 const SYNC_DELAY = 50
 
 export interface HostOptions {
@@ -49,15 +40,15 @@ export interface HostOptions {
   campaignName: string
   hostName: string
   t: Messages
-  servers: RTCIceServer[]
   db?: () => CodexDB
 }
 
 /**
- * The GM's device sharing a campaign (D-245). It owns the data: guests get a
- * filtered copy (editors everything, players what they may see), editors'
- * writes are checked then applied, players' intents are checked then played
- * by the host itself. Every message is handled in order, one at a time.
+ * The operator's device running an online game (D-245, D-262). Players reach it
+ * through the server's relay: each gets a filtered copy of what they may see,
+ * and their intents (moves, rolls) are checked then played by this device. The
+ * operator's own edits reach the server like any other (sync engine). Every
+ * message is handled in order, one at a time.
  */
 export class HostSession {
   private readonly peers = new Map<string, Peer>()
@@ -83,77 +74,43 @@ export class HostSession {
     this.publish()
   }
 
-  // ---- invitations ----------------------------------------------------------
-
-  /** Registers a guest to come; the RTC part is separate so tests can plug a memory link. */
-  prepare(role: GuestRole): string {
-    const id = crypto.randomUUID()
-    this.peers.set(id, {
-      info: { id, name: '', role, status: 'inviting', characterIds: [] },
-      link: null,
-      pc: null,
-      channel: null,
+  /**
+   * A player entered the game (the server checked who they are). Their peer id
+   * is their account id; a second connection of the same player replaces the first.
+   */
+  admit(player: { id: string; name: string; characterId: string | null }, link: Link): void {
+    const previous = this.peers.get(player.id)
+    if (previous?.link) {
+      previous.link.close()
+      previous.link = null
+    }
+    const peer: Peer = {
+      info: {
+        id: player.id,
+        name: player.name,
+        role: 'player',
+        status: 'connected',
+        characterIds: player.characterId ? [player.characterId] : [],
+      },
+      link,
       replica: new Replica(),
       welcomed: false,
-    })
-    this.publish()
-    return id
-  }
-
-  /** Invitation code for one guest (single use). */
-  async invite(role: GuestRole): Promise<{ peerId: string; code: string }> {
-    const peerId = this.prepare(role)
-    const offer = await createHostOffer(this.options.servers)
-    const peer = this.peers.get(peerId)!
-    peer.pc = offer.pc
-    peer.channel = offer.channel
-    offer.pc.addEventListener('connectionstatechange', () => {
-      if (['failed', 'closed'].includes(offer.pc.connectionState)) this.drop(peerId)
-    })
-    const code = await encodeCode({
-      v: 1,
-      kind: 'invite',
-      peerId,
-      role,
-      campaignName: this.options.campaignName,
-      hostName: this.options.hostName,
-      sdp: offer.sdp,
-    })
-    return { peerId, code }
-  }
-
-  /** The guest's reply code: completes the connection. */
-  async accept(replyText: string): Promise<void> {
-    const reply = await decodeCode(replyText)
-    if (reply.kind !== 'reply') throw new InvalidCodeError()
-    const peer = this.peers.get(reply.peerId)
-    if (!peer?.pc || !peer.channel || peer.link) throw new InvalidCodeError()
-    await acceptGuestAnswer(peer.pc, reply.sdp)
-    const channel = await channelOpen(peer.channel)
-    this.attach(reply.peerId, channelLink(channel))
-  }
-
-  /** Plugs a connected link to a prepared guest. */
-  attach(peerId: string, link: Link): void {
-    const peer = this.peers.get(peerId)
-    if (!peer || peer.link) {
-      link.close()
-      return
+      assigned: player.characterId !== null,
     }
-    peer.link = link
+    this.peers.set(player.id, peer)
     link.onMessage((raw) => {
       const message = parseGuestMessage(raw)
       if (message) this.enqueue(() => this.handle(peer, message))
     })
-    link.onClose(() => this.drop(peerId))
+    link.onClose(() => this.drop(peer))
   }
 
-  /** Disconnects a guest (also used when one leaves). */
+  /** Puts a player out of the game. */
   remove(peerId: string): void {
     const peer = this.peers.get(peerId)
     if (!peer) return
     this.send(peer, { type: 'bye' })
-    this.drop(peerId)
+    this.drop(peer)
     this.peers.delete(peerId)
     this.publish()
     this.broadcastPeers()
@@ -165,11 +122,11 @@ export class HostSession {
     for (const peer of this.peers.values()) {
       this.send(peer, { type: 'bye' })
       peer.link?.close()
-      peer.pc?.close()
     }
     this.peers.clear()
     this.unsubscribe()
     if (this.timer) clearTimeout(this.timer)
+    useOnlineStore.setState({ peers: [] })
   }
 
   // ---- messages -------------------------------------------------------------
@@ -183,44 +140,34 @@ export class HostSession {
   }
 
   private async handle(peer: Peer, message: GuestMessage): Promise<void> {
-    if (this.stopped) return
-    if (message.type === 'hello') return this.welcome(peer, message.name, message.protocol)
+    if (this.stopped || this.peers.get(peer.info.id) !== peer) return
+    if (message.type === 'hello') return this.welcome(peer, message.protocol)
     if (!peer.welcomed) return
     switch (message.type) {
-      case 'write': {
-        const reason =
-          peer.info.role === 'editor' ? await this.checkWrite(peer, message.changes) : 'forbidden'
-        if (reason) return this.reject(peer, message.seq, reason, message.changes)
-        await this.applyWrite(message.changes)
-        this.send(peer, { type: 'ack', seq: message.seq })
-        return
-      }
       case 'choose':
         return this.choose(peer, message.characterId)
       case 'intent': {
-        const reason =
-          peer.info.role === 'player' ? await this.play(peer, message.intent) : 'forbidden'
+        const reason = await this.play(peer, message.intent)
         if (reason) {
           if (message.intent.type === 'move') peer.replica.forget('maps', [message.intent.mapId])
-          return this.reject(peer, message.seq, reason, [])
+          this.send(peer, { type: 'rejected', seq: message.seq, reason })
+          this.scheduleSync()
+          return
         }
         this.send(peer, { type: 'ack', seq: message.seq })
       }
     }
   }
 
-  private async welcome(peer: Peer, name: string, protocol: number): Promise<void> {
-    if (peer.welcomed || protocol !== PROTOCOL_VERSION) {
-      if (protocol !== PROTOCOL_VERSION) this.remove(peer.info.id)
-      return
-    }
+  private async welcome(peer: Peer, protocol: number): Promise<void> {
+    if (peer.welcomed) return
+    if (protocol !== PROTOCOL_VERSION) return this.remove(peer.info.id)
     peer.welcomed = true
-    peer.info = { ...peer.info, name, status: 'connected' }
     this.send(peer, {
       type: 'welcome',
       protocol: PROTOCOL_VERSION,
       selfId: peer.info.id,
-      role: peer.info.role,
+      role: 'player',
       campaignId: this.options.campaignId,
       campaignName: this.options.campaignName,
       hostName: this.options.hostName,
@@ -229,130 +176,26 @@ export class HostSession {
     this.send(peer, { type: 'sync', changes: peer.replica.diff(this.viewOf(peer)), initial: true })
     this.publish()
     this.broadcastPeers()
-    toast(this.options.t.online.joined(name))
-    await this.noteParticipant(name)
+    toast(this.options.t.online.joined(peer.info.name))
+    await this.noteParticipant(peer.info.name)
   }
 
-  private async reject(
-    peer: Peer,
-    seq: number,
-    reason: RejectReason,
-    changes: TableChanges[],
-  ): Promise<void> {
-    // The guest gets the truth back for what it tried to change…
-    for (const c of changes)
-      peer.replica.forget(c.table, [...c.put.map((r) => String(r.id)), ...c.del])
-    this.send(peer, { type: 'rejected', seq, reason })
-    // …and records it made up disappear from its copy (after "rejected", which
-    // ends their pending state on the guest).
-    await this.refresh()
-    const view = this.viewOf(peer)
-    const stray = changes
-      .map((c) => {
-        const known = new Set(
-          (view[c.table] as unknown as { id: string }[]).map((r) => String(r.id)),
-        )
-        return {
-          table: c.table,
-          put: [],
-          del: c.put.map((r) => String(r.id)).filter((id) => !known.has(id)),
-        }
-      })
-      .filter((c) => c.del.length)
-    if (stray.length) this.send(peer, { type: 'sync', changes: stray, initial: false })
-    this.scheduleSync()
-  }
-
-  // ---- editors' writes ------------------------------------------------------
+  // ---- players ---------------------------------------------------------------
 
   private async campaign(): Promise<Campaign | undefined> {
     return this.db().campaigns.get(this.options.campaignId)
   }
 
-  /** The host's open campaign is the truth (its auto-save lags behind); otherwise the database. */
+  /** The operator's open campaign is the truth (its auto-save lags behind); otherwise the database. */
   private async currentPlay(): Promise<PlayState> {
     const store = useCampaignStore.getState()
     if (store.campaignId === this.options.campaignId && store.status === 'ready') return store.play
     return normalizePlayState((await this.campaign())?.play)
   }
 
-  /** Why a write is refused, or null (D-245). Never trust a peer. */
-  private async checkWrite(peer: Peer, changes: TableChanges[]): Promise<RejectReason | null> {
-    const campaignId = this.options.campaignId
-    const campaign = await this.campaign()
-    if (!campaign) return 'forbidden'
-    const current = await this.currentPlay()
-    const live = current.live
-    const operating = live?.operator.id === peer.info.id
-    const author = { id: peer.info.id, name: peer.info.name }
-    for (const change of changes) {
-      const table = this.db().table(change.table)
-      if (live && !operating && OPERATOR_TABLES.has(change.table)) return 'notOperator'
-      if (change.table === 'activity') {
-        // An editor only writes lines signed with its own name, and never erases the log.
-        if (change.del.length) return 'forbidden'
-        for (const record of change.put) {
-          if (!isValidActivity(record, campaignId, author)) return 'forbidden'
-          const existing = (await table.get(String(record.id))) as ActivityRecord | undefined
-          if (existing && existing.author.id !== author.id) return 'forbidden'
-        }
-        continue
-      }
-      for (const record of change.put) {
-        const id = String(record.id)
-        if (change.table === 'campaigns') {
-          if (id !== campaignId) return 'forbidden'
-          const next = normalizePlayState(record.play)
-          if (!sameLive(live, next.live)) {
-            const allowed = live ? operating : next.live?.operator.id === peer.info.id
-            if (!allowed) return 'notOperator'
-          } else if (
-            live &&
-            !operating &&
-            JSON.stringify(normalizePlayState(record.play)) !== JSON.stringify(current)
-          )
-            return 'notOperator'
-          continue
-        }
-        if (record.campaignId !== campaignId) return 'forbidden'
-        const existing = (await table.get(id)) as Record<string, unknown> | undefined
-        if (existing && existing.campaignId !== campaignId) return 'forbidden'
-        if (change.table === 'assets' && !isSafeImageDataUrl(record.data)) return 'invalid'
-      }
-      for (const id of change.del) {
-        if (change.table === 'campaigns') return 'forbidden'
-        const existing = (await table.get(id)) as Record<string, unknown> | undefined
-        if (existing && existing.campaignId !== campaignId) return 'forbidden'
-      }
-    }
-    return null
-  }
-
-  private async applyWrite(changes: TableChanges[]): Promise<void> {
-    const clean = changes.map((c) => ({ ...c, put: c.put.map((r) => sanitize(c.table, r)) }))
-    const db = this.db()
-    await db.transaction(
-      'rw',
-      clean.map((c) => db.table(c.table)),
-      async (tx) => {
-        markRemote(tx.idbtrans)
-        for (const c of clean) {
-          if (c.put.length) await db.table(c.table).bulkPut(c.put)
-          if (c.del.length) await db.table(c.table).bulkDelete(c.del)
-        }
-      },
-    )
-    if (useCampaignStore.getState().campaignId === this.options.campaignId) {
-      applyExternalChanges(clean)
-      const rolls = clean.find((c) => c.table === 'rolls')
-      if (rolls) applyExternalRolls(rolls.put, rolls.del)
-    }
-  }
-
-  // ---- players ---------------------------------------------------------------
-
   private async choose(peer: Peer, characterId: string | null): Promise<void> {
-    if (peer.info.role !== 'player') return
+    const reject = () => this.send(peer, { type: 'rejected', seq: -1, reason: 'taken' })
+    if (peer.assigned) return reject()
     if (characterId) {
       const entity = (await this.db().entities.get(characterId)) as Entity | undefined
       const taken = [...this.peers.values()].some(
@@ -364,7 +207,7 @@ export class HostSession {
         entity.kind !== 'player' ||
         taken
       )
-        return this.reject(peer, -1, 'taken', [])
+        return reject()
     }
     peer.info = { ...peer.info, characterIds: characterId ? [characterId] : [] }
     this.publish()
@@ -372,7 +215,7 @@ export class HostSession {
     this.scheduleSync()
   }
 
-  /** Plays a player's intent as the host, or says why not. */
+  /** Plays a player's intent as the operator, or says why not. */
   private async play(peer: Peer, intent: Intent): Promise<RejectReason | null> {
     const record = await this.campaign()
     if (!record) return 'forbidden'
@@ -381,7 +224,7 @@ export class HostSession {
     const own = intent.type === 'move' ? null : intent.entityId
     if (own && !peer.info.characterIds.includes(own)) return 'notYours'
 
-    // Intents act through the host's own store, like the GM would.
+    // Intents act through the operator's own store, like the GM would.
     const store = useCampaignStore.getState()
     if (store.campaignId !== this.options.campaignId) await store.load(this.options.campaignId)
     const campaign: Campaign = { ...record, rules: withDefaultRules(record.rules) }
@@ -426,9 +269,7 @@ export class HostSession {
   // ---- synchronisation -------------------------------------------------------
 
   private viewOf(peer: Peer): CampaignData {
-    return peer.info.role === 'editor'
-      ? this.data!
-      : projectForPlayer(this.data!, peer.info.characterIds)
+    return projectForPlayer(this.data!, peer.info.characterIds)
   }
 
   private async refresh(): Promise<void> {
@@ -461,7 +302,7 @@ export class HostSession {
     }
   }
 
-  /** Lets every guest know who is there (handover, chosen characters). */
+  /** Lets every player know who is there and who plays whom. */
   private broadcastPeers(): void {
     const peers = this.list()
     for (const peer of this.peers.values())
@@ -477,35 +318,17 @@ export class HostSession {
     useOnlineStore.setState({ peers: this.list() })
   }
 
-  private drop(peerId: string): void {
-    const peer = this.peers.get(peerId)
-    if (!peer || peer.info.status === 'closed') return
-    const wasConnected = peer.info.status === 'connected'
-    peer.info = { ...peer.info, status: 'closed', characterIds: [] }
+  private drop(peer: Peer): void {
+    // A replaced connection of the same player: the new one stays.
+    if (this.peers.get(peer.info.id) !== peer || peer.info.status === 'closed') return
+    const wasConnected = peer.welcomed
+    peer.info = { ...peer.info, status: 'closed' }
     peer.link?.close()
-    peer.pc?.close()
     peer.link = null
     peer.welcomed = false
     this.publish()
     this.broadcastPeers()
-    if (wasConnected) toast(this.options.t.online.left(peer.info.name))
-    // An operator who leaves hands the table back to the host.
-    this.enqueue(async () => {
-      const live = (await this.currentPlay()).live
-      if (live?.operator.id !== peerId) return
-      const store = useCampaignStore.getState()
-      if (store.campaignId === this.options.campaignId)
-        store.updatePlay(
-          (play) =>
-            play.live
-              ? {
-                  ...play,
-                  live: { ...play.live, operator: { id: HOST_ID, name: this.options.hostName } },
-                }
-              : play,
-          this.options.t.sessions.handedOver(this.options.hostName),
-        )
-    })
+    if (wasConnected && !this.stopped) toast(this.options.t.online.left(peer.info.name))
   }
 
   private async noteParticipant(name: string): Promise<void> {
@@ -517,26 +340,4 @@ export class HostSession {
         await this.db().sessionRuns.put({ ...run, participants: [...run.participants, name] })
     })
   }
-}
-
-function sameLive(a: LiveGame | null, b: LiveGame | null): boolean {
-  return JSON.stringify(a) === JSON.stringify(b)
-}
-
-/** Pictures from a peer must be raster images (D-243). */
-function sanitize(table: SyncTable, record: Record<string, unknown>): Record<string, unknown> {
-  if (table === 'entities' || table === 'bestiary') {
-    const e = record as unknown as Entity
-    return {
-      ...record,
-      identity: {
-        ...e.identity,
-        portrait: safeImage(e.identity?.portrait),
-        body: safeImage(e.identity?.body),
-      },
-      inventory: (e.inventory ?? []).map((i) => ({ ...i, image: safeImage(i.image) })),
-    }
-  }
-  if (table === 'itemLibrary') return { ...record, image: safeImage(record.image) }
-  return record
 }

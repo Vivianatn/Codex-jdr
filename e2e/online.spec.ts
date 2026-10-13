@@ -1,15 +1,24 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import { disableAppAnimations, expectNoSeriousA11yViolations } from './support/a11y'
-import { createAccount, createCampaign, dumpTable, importCharacter, putRows } from './support/app'
+import {
+  createAccount,
+  createCampaign,
+  dumpTable,
+  E2E_PASSWORD,
+  importCharacter,
+  putRows,
+} from './support/app'
 
 /**
- * Online mode over real WebRTC (D-245): three browsers with their own storage
- * and account — the GM, a player and a co-GM — connected by pasted codes.
- * Same machine, no STUN; Chrome must not hide local addresses behind mDNS.
+ * Online mode through the server (D-262): three browsers with their own
+ * storage — the GM, a player and a co-GM — and the real server (in-memory
+ * PostgreSQL, started by Playwright). Each run uses fresh e-mail addresses.
  */
-test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } })
 
-async function device(browser: Browser, name: string): Promise<Page> {
+const run = Date.now().toString(36)
+const email = (name: string) => `${name.toLowerCase()}-${run}@exemple.fr`
+
+async function device(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ locale: 'fr-FR' })
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   const page = await context.newPage()
@@ -17,47 +26,47 @@ async function device(browser: Browser, name: string): Promise<Page> {
     if (!localStorage.getItem('codex.settings'))
       localStorage.setItem(
         'codex.settings',
-        JSON.stringify({
-          state: { theme: 'light', animations: 'off', stunServer: '' },
-          version: 1,
-        }),
+        JSON.stringify({ state: { theme: 'light', animations: 'off' }, version: 1 }),
       )
   })
   await disableAppAnimations(page)
   await page.setViewportSize({ width: 1400, height: 900 })
   await page.goto('/app/')
-  await createAccount(page, name)
   return page
 }
 
-/** GM side: one invitation, the guest's reply, connected. */
-async function invite(
-  gm: Page,
-  guest: Page,
-  role: 'Inviter un joueur' | 'Inviter un éditeur (co-MJ)',
-) {
-  await gm.getByTestId('online-button').click()
-  const panel = gm.getByTestId('online-panel')
-  await expectNoSeriousA11yViolations(gm)
-  await panel.getByRole('button', { name: role }).click()
-  const code = (await panel.getByTestId('invite-code').textContent())!
-
-  await guest.getByRole('button', { name: 'Rejoindre une partie' }).first().click()
-  await guest.getByLabel('Code d’invitation').fill(code)
-  await guest.getByRole('button', { name: 'Continuer' }).click()
-  const reply = (await guest.getByTestId('reply-code').textContent())!
-
-  await panel.getByLabel('Code de réponse reçu').fill(reply)
-  await panel.getByRole('button', { name: 'Connecter', exact: true }).click()
-  await expect(panel.getByTestId('invite')).toBeHidden({ timeout: 20_000 })
-  await gm.keyboard.press('Escape')
+/** Lock screen › « Créer un compte en ligne ». */
+async function registerOnline(page: Page, name: string) {
+  await expect(page.getByTestId('lock-screen')).toBeVisible()
+  await page.getByRole('button', { name: 'Se connecter avec un compte en ligne' }).click()
+  await page.getByRole('button', { name: 'Créer un compte en ligne' }).click()
+  await expectNoSeriousA11yViolations(page)
+  await page.getByLabel(/Adresse e-mail/).fill(email(name))
+  await page.getByLabel(/Nom affiché/).fill(name)
+  await page.getByLabel(/^Mot de passe/).fill(E2E_PASSWORD)
+  await page.getByLabel('Confirme le mot de passe').fill(E2E_PASSWORD)
+  await page.getByRole('button', { name: 'Créer mon compte en ligne' }).click()
+  await expect(page.getByTestId('lock-screen')).toBeHidden({ timeout: 20_000 })
 }
 
-test('a GM hosts, a player plays her character, a co-GM prepares a session', async ({
+/** Asks to join through the GM's invitation link. */
+async function requestToJoin(page: Page, link: string, message: string) {
+  await page.goto(link)
+  const form = page.getByTestId('join-request-form')
+  await expect(form).toContainText('Ombreval')
+  await form.getByLabel(/Un mot pour le MJ/).fill(message)
+  await form.getByRole('button', { name: 'Demander à rejoindre' }).click()
+  await expect(page.getByText('Demande envoyée : le MJ va te répondre.')).toBeVisible()
+}
+
+test('a GM puts a campaign online, a player plays her character, a co-GM prepares', async ({
   browser,
 }) => {
-  test.setTimeout(240_000)
-  const gm = await device(browser, 'MJ')
+  test.setTimeout(300_000)
+
+  // --- The GM: a local account, a campaign, then the account goes online --------
+  const gm = await device(browser)
+  await createAccount(gm, 'MJ')
   await createCampaign(gm, 'Ombreval')
   await importCharacter(gm, 'Joueurs', { name: 'Lyra', hp: 22 })
   await gm.getByRole('link', { name: 'Cartes', exact: true }).click()
@@ -66,8 +75,6 @@ test('a GM hosts, a player plays her character, a co-GM prepares a session', asy
   await dialog.getByLabel('Nom').fill('Crypte')
   await dialog.getByRole('button', { name: 'Nouvelle carte' }).click()
   await expect(gm.getByRole('heading', { level: 1, name: 'Crypte' })).toBeVisible()
-
-  // Lyra's token on the map, in play — written while the campaign is closed.
   await gm.getByRole('button', { name: 'Retour aux campagnes' }).click()
   const [lyra] = (await dumpTable(gm, 'entities')) as { id: string }[]
   const [map] = (await dumpTable(gm, 'maps')) as Record<string, unknown>[]
@@ -77,77 +84,143 @@ test('a GM hosts, a player plays her character, a co-GM prepares a session', asy
       tokens: [{ id: 'tk-lyra', entityId: lyra!.id, col: 2, row: 2, size: 1, hidden: false }],
     },
   ])
-  const [campaign] = (await dumpTable(gm, 'campaigns')) as Record<string, unknown>[]
+  const [record] = (await dumpTable(gm, 'campaigns')) as Record<string, unknown>[]
   await putRows(gm, 'campaigns', [
-    { ...campaign, play: { ...(campaign!.play as object), mapId: map!.id } },
+    { ...record, play: { ...(record!.play as object), mapId: map!.id } },
   ])
-  await gm.getByRole('link', { name: /Ombreval/ }).click()
-  await expect(gm.getByTestId('online-button')).toBeVisible()
 
-  // --- Open online, invite a player ----------------------------------------
-  await gm.getByTestId('online-button').click()
-  await gm
-    .getByTestId('online-panel')
-    .getByRole('button', { name: 'Ouvrir la campagne en ligne' })
-    .click()
+  await gm.getByRole('button', { name: 'Ouvrir les paramètres' }).click()
+  const account = gm.getByTestId('online-account')
+  await account.getByLabel(/Adresse e-mail/).fill(email('MJ'))
+  await account.getByLabel(/Mot de passe actuel/).fill(E2E_PASSWORD)
+  await account.getByRole('button', { name: 'Créer mon compte en ligne' }).click()
+  await expect(account.getByText('Connecté au serveur')).toBeVisible({ timeout: 20_000 })
+  await expectNoSeriousA11yViolations(gm)
   await gm.keyboard.press('Escape')
-  const player = await device(browser, 'Chloé')
-  await invite(gm, player, 'Inviter un joueur')
+  // The local campaign is taken over by the online account (D-257).
+  await expect(gm.getByTestId('campaign-online')).toHaveText('En ligne', { timeout: 20_000 })
 
-  // The player lands on her screen and picks Lyra.
-  await expect(player.getByRole('heading', { name: 'Choisis ton personnage' })).toBeVisible()
-  await expectNoSeriousA11yViolations(player)
-  await player.getByRole('button', { name: 'Jouer ce personnage' }).click()
-  const panel = player.getByTestId('player-panel')
-  await expect(panel.getByRole('heading', { name: 'Lyra' })).toBeVisible()
-  await expect(panel.getByText('La partie n’a pas commencé')).toBeVisible()
-  await expect(player.getByTestId('map-canvas')).toBeVisible()
-  await expectNoSeriousA11yViolations(player)
+  // --- An invitation link ------------------------------------------------------
+  await gm.getByRole('link', { name: /Ombreval/ }).click()
+  await gm.getByTestId('online-button').click()
+  const panel = gm.getByTestId('online-panel')
+  await panel.getByRole('button', { name: 'Créer un lien' }).click()
+  const link = (await panel.getByTestId('invite-link').textContent())!
+  expect(link).toMatch(/\/app\/#\/rejoindre\/[\w-]+$/)
+  await expectNoSeriousA11yViolations(gm)
+  await gm.keyboard.press('Escape')
 
-  // --- The GM starts an online game; the player rolls her own dice -----------
+  // --- The player asks to join; the GM accepts her with Lyra -------------------
+  const player = await device(browser)
+  await registerOnline(player, 'Chloé')
+  await requestToJoin(player, link, 'Je joue Lyra !')
+
+  await gm.getByTestId('online-button').click()
+  const request = panel.getByTestId('join-request')
+  await expect(request).toContainText('Chloé', { timeout: 20_000 })
+  await expect(request).toContainText('Je joue Lyra !')
+  await request.getByLabel('Personnage').selectOption({ label: 'Lyra' })
+  await request.getByRole('button', { name: 'Accepter' }).click()
+  await expect(panel.getByTestId('members')).toContainText('Chloé')
+
+  // --- A co-GM joins the same way --------------------------------------------
+  const cogm = await device(browser)
+  await registerOnline(cogm, 'Bastien')
+  await requestToJoin(cogm, link, '')
+  await expect(request).toContainText('Bastien', { timeout: 20_000 })
+  await request.getByLabel('Rôle').selectOption({ label: 'Co-MJ' })
+  await request.getByRole('button', { name: 'Accepter' }).click()
+  await expect(panel.getByTestId('members')).toContainText('Bastien')
+  await gm.keyboard.press('Escape')
+
+  // The co-GM gets the whole campaign on his device.
+  await cogm.goto('/app/#/')
+  await cogm
+    .getByRole('radiogroup', { name: 'Je joue en tant que' })
+    .getByRole('radio', { name: 'MJ' })
+    .click()
+  await expect(cogm.getByTestId('campaign-online')).toContainText('Co-MJ · campagne de MJ', {
+    timeout: 20_000,
+  })
+
+  // --- The GM starts an online game; the player enters and rolls her dice ------
   await gm.getByRole('radiogroup', { name: 'Mode' }).getByRole('radio', { name: 'En jeu' }).click()
   await gm.getByTestId('start-play').getByRole('radio', { name: 'En ligne' }).click()
   await gm.getByTestId('start-play').getByRole('button', { name: 'Démarrer la partie' }).click()
-  await expect(panel.getByText('Fais glisser ton jeton')).toBeVisible()
-  await panel.getByRole('button', { name: 'Tester Dextérité' }).click()
+
+  await player.goto('/app/#/')
+  await player
+    .getByRole('radiogroup', { name: 'Je joue en tant que' })
+    .getByRole('radio', { name: 'Joueur' })
+    .click()
+  const game = player.getByTestId('player-game')
+  await expect(game).toContainText('Partie en cours, menée par MJ', { timeout: 20_000 })
+  await expectNoSeriousA11yViolations(player)
+  await game.getByRole('button', { name: 'Entrer dans la partie' }).click()
+  const sheet = player.getByTestId('player-panel')
+  // The GM chose her character: straight to Lyra.
+  await expect(sheet.getByRole('heading', { name: 'Lyra' })).toBeVisible({ timeout: 20_000 })
+  await expect(sheet.getByText('Fais glisser ton jeton')).toBeVisible()
+  await expect(player.getByTestId('map-canvas')).toBeVisible()
+  await expectNoSeriousA11yViolations(player)
+  await sheet.getByRole('button', { name: 'Tester Dextérité' }).click()
   await expect(
     player.getByTestId('player-rolls').getByText(/Lyra · Test de Dextérité/),
   ).toBeVisible()
   await expect.poll(async () => (await dumpTable(gm, 'rolls')).length).toBe(1)
-
-  // --- A co-GM joins and prepares a session; the GM sees it ----------------
-  const editor = await device(browser, 'Bastien')
-  await invite(gm, editor, 'Inviter un éditeur (co-MJ)')
-  await expect(editor.getByTestId('guest-badge')).toBeVisible()
-  await editor.getByRole('link', { name: 'Sessions', exact: true }).click()
-  await editor.getByRole('button', { name: 'Nouvelle session' }).first().click()
-  await editor.getByLabel('Titre').fill('La crypte, deuxième partie')
-  await editor.getByLabel('Titre').blur()
+  // The roll reaches the co-GM through the server.
   await expect
-    .poll(async () =>
-      ((await dumpTable(gm, 'sessions')) as { title: string }[]).map((s) => s.title),
+    .poll(async () => (await dumpTable(cogm, 'rolls')).length, { timeout: 20_000 })
+    .toBe(1)
+
+  // --- The co-GM prepares the next session; the GM gets it ----------------------
+  await cogm.getByRole('link', { name: /Ombreval/ }).click()
+  await cogm.getByRole('link', { name: 'Sessions', exact: true }).click()
+  await cogm.getByRole('button', { name: 'Nouvelle session' }).first().click()
+  await cogm.getByLabel('Titre').fill('La crypte, deuxième partie')
+  await cogm.getByLabel('Titre').blur()
+  await expect
+    .poll(
+      async () => ((await dumpTable(gm, 'sessions')) as { title: string }[]).map((s) => s.title),
+      { timeout: 20_000 },
     )
     .toEqual(['La crypte, deuxième partie'])
-
   // While the GM runs the game, the co-GM only watches the table.
-  await editor
+  await cogm
     .getByRole('radiogroup', { name: 'Mode' })
     .getByRole('radio', { name: 'En jeu' })
     .click()
-  await expect(editor.getByTestId('spectator-bar')).toContainText('MJ mène la partie')
+  await expect(cogm.getByTestId('spectator-bar')).toContainText('MJ mène la partie')
 
-  // --- Locking Codex ends the online session for everyone ------------------
+  // --- Locking Codex closes the game for the players ---------------------------
   await gm.getByTestId('lock-button').click()
-  await expect(player.getByText('La session en ligne est terminée.')).toBeVisible({
+  await expect(player.getByText('La partie en ligne est terminée.')).toBeVisible({
     timeout: 20_000,
   })
-  await expect(player.getByRole('heading', { name: 'Tes campagnes' })).toBeVisible()
-  // The guest's copy is gone; her own (empty) campaigns are back.
-  await expect(player.getByText('Ta bibliothèque est vide')).toBeVisible()
+  await expect(player.getByTestId('player-games')).toBeVisible()
+  // The player's copy of the table is gone.
   expect(
     await player.evaluate(
       async () =>
         (await indexedDB.databases()).filter((d) => d.name?.startsWith('codex-remote-')).length,
     ),
   ).toBe(0)
+})
+
+test('an online account comes back on a new device, campaigns included', async ({ browser }) => {
+  test.setTimeout(180_000)
+  const first = await device(browser)
+  await registerOnline(first, 'Ysolde')
+  await createCampaign(first, 'Les Terres Brisées')
+  await first.getByRole('button', { name: 'Retour aux campagnes' }).click()
+  await expect(first.getByTestId('campaign-online')).toHaveText('En ligne', { timeout: 20_000 })
+
+  const second = await device(browser)
+  await second.getByRole('button', { name: 'Se connecter avec un compte en ligne' }).click()
+  await second.getByLabel(/Adresse e-mail/).fill(email('Ysolde'))
+  await second.getByLabel(/^Mot de passe/).fill(E2E_PASSWORD)
+  await second.getByRole('button', { name: 'Me connecter' }).click()
+  await expect(second.getByRole('link', { name: /Les Terres Brisées/ })).toBeVisible({
+    timeout: 20_000,
+  })
 })

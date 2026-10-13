@@ -1,0 +1,32 @@
+import { buildApp } from './app.ts'
+import { sweepInactive } from './auth.ts'
+import { loadConfig } from './config.ts'
+import { openDb } from './db.ts'
+import { createMailer } from './mailer.ts'
+
+/** Codex's online server (D-262). Settings: environment variables, see config.ts. */
+const config = loadConfig()
+const db = await openDb(config.databaseUrl)
+const mailer = createMailer(config)
+if (!mailer)
+  console.warn('SMTP_URL absent : la réinitialisation du mot de passe par e-mail est désactivée.')
+const app = await buildApp({ db, config, mailer, logger: true })
+
+// Once a day: accounts unused for three years go (privacy notice).
+const sweep = () =>
+  sweepInactive({ db, now: Date.now }).then(
+    (n) => n && app.log.info(`${n} compte(s) inactif(s) supprimé(s)`),
+    (error: unknown) => app.log.error(error),
+  )
+void sweep()
+setInterval(sweep, 86_400_000).unref()
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const)
+  process.once(signal, () => {
+    void app
+      .close()
+      .then(() => db.close())
+      .then(() => process.exit(0))
+  })
+
+await app.listen({ port: config.port, host: config.host })

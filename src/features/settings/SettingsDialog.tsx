@@ -2,12 +2,11 @@ import { Monitor, Moon, Settings, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { IconButton } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
-import { CheckboxField, CommitInput } from '@/components/ui/fields'
+import { CheckboxField } from '@/components/ui/fields'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { useT } from '@/i18n'
 import { useResolvedTheme } from '@/app/usePreferences'
 import {
-  DEFAULT_STUN,
   useSettingsStore,
   type AnimationLevel,
   type ThemePreference,
@@ -71,8 +70,6 @@ export function SettingsDialog({
     setPaperGrain,
     textSize,
     setTextSize,
-    stunServer,
-    setStunServer,
   } = useSettingsStore()
 
   return (
@@ -157,20 +154,6 @@ export function SettingsDialog({
             {t.settings.language}
           </h3>
           <p className="text-sm text-ink-muted">{t.settings.languageFrench}</p>
-        </section>
-
-        <section className="space-y-2">
-          <h3 className="font-sans text-sm font-medium tracking-normal text-ink">
-            {t.online.settingsTitle}
-          </h3>
-          <CommitInput
-            label={t.online.stun}
-            value={stunServer}
-            onCommit={setStunServer}
-            placeholder={DEFAULT_STUN}
-            spellCheck={false}
-          />
-          <p className="text-xs text-ink-muted">{t.online.stunHint}</p>
         </section>
 
         <AccountSection />

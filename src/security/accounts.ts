@@ -41,6 +41,13 @@ interface WrappedKey {
   sealed: string
 }
 
+/** The online account a local account is linked to (D-262). */
+export interface OnlineLink {
+  userId: string
+  email: string
+  displayName: string
+}
+
 export interface AccountRecord {
   id: string
   username: string
@@ -52,11 +59,13 @@ export interface AccountRecord {
   failedAttempts: number
   lockedUntil: number
   autoLockMinutes: AutoLockMinutes
+  /** Linked online account (D-262); absent for a local-only account. */
+  online?: OnlineLink
 }
 
 export type AccountSummary = Pick<
   AccountRecord,
-  'id' | 'username' | 'createdAt' | 'lastLoginAt' | 'autoLockMinutes'
+  'id' | 'username' | 'createdAt' | 'lastLoginAt' | 'autoLockMinutes' | 'online'
 >
 
 export type AccountErrorCode =
@@ -96,8 +105,8 @@ export interface Unlocked {
 }
 
 export function summarize(record: AccountRecord): AccountSummary {
-  const { id, username, createdAt, lastLoginAt, autoLockMinutes } = record
-  return { id, username, createdAt, lastLoginAt, autoLockMinutes }
+  const { id, username, createdAt, lastLoginAt, autoLockMinutes, online } = record
+  return { id, username, createdAt, lastLoginAt, autoLockMinutes, ...(online ? { online } : {}) }
 }
 
 function aad(accountId: string, purpose: 'password' | 'recovery') {
@@ -298,6 +307,42 @@ export function createAccountService(
     /** Re-authentication only (throttled like a login). */
     async verify(accountId: string, password: string): Promise<void> {
       wipe(await verifyPassword(accountId, password))
+    },
+
+    /** Links (or unlinks, with null) the online account (D-262). */
+    async setOnline(accountId: string, online: OnlineLink | null): Promise<AccountSummary> {
+      const record = await find(accountId)
+      const next = { ...record }
+      if (online) next.online = online
+      else delete next.online
+      await registry.accounts.put(next)
+      return summarize(next)
+    },
+
+    /** The local account linked to an online account on this device, if any. */
+    async findOnline(userId: string): Promise<AccountSummary | null> {
+      const all = await registry.accounts.toArray()
+      const record = all.find((a) => a.online?.userId === userId)
+      return record ? summarize(record) : null
+    },
+
+    /** A free local name close to `wanted` (« Ayla », « Ayla 2 »…). */
+    async freeUsername(wanted: string): Promise<string> {
+      const base = wanted.trim().replace(/\s+/g, ' ').slice(0, 36) || 'MJ'
+      for (let n = 1; ; n++) {
+        const name = n === 1 ? base : `${base} ${n}`
+        if (!(await registry.accounts.where('usernameKey').equals(usernameKey(name)).count()))
+          return name
+      }
+    },
+
+    async rename(accountId: string, username: string): Promise<void> {
+      const clean = username.trim().replace(/\s+/g, ' ')
+      if (checkUsername(clean)) throw new AccountError('usernameInvalid')
+      await registry.accounts.update(accountId, {
+        username: clean,
+        usernameKey: usernameKey(clean),
+      })
     },
 
     async setAutoLock(accountId: string, minutes: AutoLockMinutes): Promise<void> {

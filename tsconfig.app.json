@@ -11,7 +11,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "types": ["vite/client"],
-    "paths": { "@/*": ["./src/*"] },
+    "paths": { "@/*": ["./src/*"], "@shared/*": ["./shared/*"] },
 
     "strict": true,
     "noUnusedLocals": true,
@@ -21,5 +21,5 @@
     "noImplicitOverride": true,
     "skipLibCheck": true
   },
-  "include": ["src", "site/site.ts"]
+  "include": ["src", "shared", "site/site.ts", "server/src/appSync.test.ts"]
 }

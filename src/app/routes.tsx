@@ -5,12 +5,14 @@ import {
   CampaignLayout,
   CampaignsPage,
   EntitySheetPage,
+  InvitePage,
   MapEditorPage,
   PlayerScreen,
   PlayerView,
   PlayLayout,
   PrepLayout,
   PrepSectionPage,
+  ResetPasswordPage,
   SessionEditor,
   TemplateSheetPage,
 } from './screens'
@@ -22,6 +24,8 @@ export const routes: RouteObject[] = [
     errorElement: <RouteError />,
     children: [
       { path: '/', element: <CampaignsPage />, errorElement: <RouteError /> },
+      // An invitation link of an online campaign (D-262).
+      { path: '/rejoindre/:code', element: <InvitePage />, errorElement: <RouteError /> },
       // A player in someone else's game (D-245).
       { path: '/c/:campaignId/player', element: <PlayerScreen />, errorElement: <RouteError /> },
       {
@@ -54,6 +58,12 @@ export const routes: RouteObject[] = [
     element: <RequirePlayersSession />,
     errorElement: <RouteError />,
     children: [{ index: true, element: <PlayerView /> }],
+  },
+  {
+    // The link of a password-reset e-mail: no local account needs to be open (D-262).
+    path: '/reinitialiser/:token',
+    element: <ResetPasswordPage />,
+    errorElement: <RouteError />,
   },
   { path: '*', element: <Navigate to="/" replace /> },
 ]

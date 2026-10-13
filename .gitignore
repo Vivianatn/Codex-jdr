@@ -15,3 +15,6 @@ src-tauri/target
 # Server secrets (deploy/.env.example is the template)
 deploy/.env
 deploy/site
+# Online server: local development database, release folder for the server (D-262)
+server/.data
+release

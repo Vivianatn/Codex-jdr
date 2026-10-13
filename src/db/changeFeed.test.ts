@@ -42,7 +42,7 @@ describe('change feed (D-245)', () => {
         del: [],
         remote: false,
       },
-      { table: 'campaigns', put: [], del: ['c1'], remote: false },
+      { table: 'campaigns', put: [], del: ['c1'], delCampaigns: [null], remote: false },
     ])
     db.close()
   })
@@ -55,7 +55,13 @@ describe('change feed (D-245)', () => {
     })
     await db.campaigns.clear()
     expect(seen[0]).toMatchObject({ table: 'campaigns', remote: true })
-    expect(seen[1]).toEqual({ table: 'campaigns', put: [], del: ['a', 'b'], remote: false })
+    expect(seen[1]).toEqual({
+      table: 'campaigns',
+      put: [],
+      del: ['a', 'b'],
+      delCampaigns: [null, null],
+      remote: false,
+    })
     db.close()
   })
 
@@ -69,6 +75,21 @@ describe('change feed (D-245)', () => {
     ).rejects.toThrow('abort')
     await new Promise((r) => setTimeout(r, 20))
     expect(seen).toEqual([])
+    db.close()
+  })
+
+  it('tells which campaign each deleted record belonged to (D-262)', async () => {
+    const { db, seen } = await open()
+    await db.sessions.bulkPut([
+      { id: 's1', campaignId: 'c1' },
+      { id: 's2', campaignId: 'c2' },
+    ] as never)
+    await db.sessions.delete('s1')
+    await db.sessions.where('campaignId').equals('c2').delete()
+    expect(seen.slice(1)).toEqual([
+      { table: 'sessions', put: [], del: ['s1'], delCampaigns: ['c1'], remote: false },
+      { table: 'sessions', put: [], del: ['s2'], delCampaigns: ['c2'], remote: false },
+    ])
     db.close()
   })
 })

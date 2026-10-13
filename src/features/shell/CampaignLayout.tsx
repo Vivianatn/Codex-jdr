@@ -3,7 +3,6 @@ import { ArrowLeft, Hammer } from 'lucide-react'
 import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useMemo } from 'react'
 import { Link, Navigate, Outlet, useMatch, useNavigate, useParams } from 'react-router'
-import { toast } from 'sonner'
 import { LogoMark } from '@/components/Brand'
 import { IconButton } from '@/components/ui/Button'
 import { buttonClasses } from '@/components/ui/buttonStyles'
@@ -12,8 +11,8 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { campaignRepository } from '@/db/campaigns'
 import { GuestBadge } from '@/features/online/JoinDialog'
 import { OnlinePanel } from '@/features/online/OnlinePanel'
-import { getMessages, useT } from '@/i18n'
-import { stopHosting } from '@/online/controller'
+import { useLiveRelay } from '@/features/online/useLiveRelay'
+import { useT } from '@/i18n'
 import { useOnlineStore } from '@/online/onlineStore'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
@@ -49,14 +48,6 @@ export function CampaignLayout() {
     if (useOnlineStore.getState().role !== 'guest') void campaignRepository.markOpened(campaignId)
     void useCampaignStore.getState().load(campaignId)
     void useRollStore.getState().load(campaignId)
-    return () => {
-      // The online session lives while the GM stays in the shared campaign (D-245).
-      const state = useOnlineStore.getState()
-      if (state.role === 'host' && state.campaignId === campaignId) {
-        stopHosting()
-        toast(getMessages().online.stopped)
-      }
-    }
   }, [campaignId])
 
   // Older records may miss newer rule keys; normalise once per change.
@@ -72,7 +63,14 @@ export function CampaignLayout() {
     [campaign],
   )
 
-  // Players have their own screen; the prep screens are for editors (D-245).
+  // The players of a running online game are served while the operator stays here (D-262).
+  const relayed = useMemo(
+    () => ({ id: campaignId, name: campaign?.name ?? '' }),
+    [campaignId, campaign?.name],
+  )
+  useLiveRelay(relayed)
+
+  // Players have their own screen; the prep screens are for GMs (D-245).
   if (guestRole === 'player') return <Navigate to={`/c/${campaignId}/player`} replace />
   if (campaign === undefined || (campaign && !ready)) return null
 

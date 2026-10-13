@@ -21,7 +21,12 @@ export function isPrepSection(value: string | undefined): value is PrepSection {
   return (PREP_SECTIONS as readonly string[]).includes(value ?? '')
 }
 
+/** The campaign list as a GM (own campaigns) or as a player (games joined) (D-257). */
+export type HomeMode = 'gm' | 'player'
+
 interface UiState {
+  homeMode: HomeMode
+  setHomeMode: (mode: HomeMode) => void
   /** Last visited prep section per campaign, so the mode switch returns where you left off. */
   lastPrepSection: Record<string, PrepSection>
   rememberPrepSection: (campaignId: string, section: PrepSection) => void
@@ -41,6 +46,8 @@ export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       lastPrepSection: {},
+      homeMode: 'gm',
+      setHomeMode: (homeMode) => set({ homeMode }),
       diceOpen: false,
       setDiceOpen: (diceOpen) => set({ diceOpen }),
       playSheetId: null,
@@ -63,7 +70,7 @@ export const useUiStore = create<UiState>()(
       name: 'codex.ui',
       version: 1,
       storage: createJSONStorage(() => localStorage),
-      partialize: ({ lastPrepSection }) => ({ lastPrepSection }),
+      partialize: ({ lastPrepSection, homeMode }) => ({ lastPrepSection, homeMode }),
     },
   ),
 )

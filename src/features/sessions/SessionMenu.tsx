@@ -30,7 +30,7 @@ export function SessionMenu() {
     async () => (live ? ((await sessionRepository.getRun(live.runId)) ?? null) : null),
     [live?.runId],
   )
-  const editors = useEditors()
+  const editors = useEditors(campaign.id)
   const [ending, setEnding] = useState(false)
   if (!live) return null
 

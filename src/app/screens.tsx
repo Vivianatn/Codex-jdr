@@ -33,6 +33,12 @@ function screen<P extends object>(load: () => Promise<ComponentType<P>>) {
 export const CampaignsPage = screen(() =>
   import('@/features/campaigns/CampaignsPage').then((m) => m.CampaignsPage),
 )
+export const InvitePage = screen(() =>
+  import('@/features/online/InvitePage').then((m) => m.InvitePage),
+)
+export const ResetPasswordPage = screen(() =>
+  import('@/features/account/ResetPasswordPage').then((m) => m.ResetPasswordPage),
+)
 export const PlayerScreen = screen(() =>
   import('@/features/online/PlayerScreen').then((m) => m.PlayerScreen),
 )

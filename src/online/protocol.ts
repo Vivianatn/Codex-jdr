@@ -3,36 +3,18 @@ import type { StatKey } from '@/domain/types'
 import { STAT_KEYS } from '@/domain/types'
 import type { GuestRole, PeerInfo } from './onlineStore'
 import { isRecord } from '@/lib/guards'
+import { isSyncTable, parseChanges, type TableChanges } from '@shared/sync'
 
 /**
- * Messages between the host and its guests (D-245). The host owns the data:
- * it sends each guest what that guest may see, editors send their writes,
- * players send intents the host checks and performs.
+ * Messages of a live online game between the operator's device and each player
+ * (D-245, D-262), relayed by the server. The operator owns the game: it sends
+ * each player what they may see, players send intents it checks and performs.
  */
 
-export const PROTOCOL_VERSION = 2
+/** 3: through the server's relay, players only (co-GMs sync through the server). */
+export const PROTOCOL_VERSION = 3
 
-/** Tables shared online (backups stay on the host). */
-export const SYNC_TABLES = [
-  'campaigns',
-  'entities',
-  'skills',
-  'maps',
-  'rolls',
-  'bestiary',
-  'itemLibrary',
-  'sessions',
-  'sessionRuns',
-  'assets',
-  'activity',
-] as const
-export type SyncTable = (typeof SYNC_TABLES)[number]
-
-export interface TableChanges {
-  table: SyncTable
-  put: Record<string, unknown>[]
-  del: string[]
-}
+export { SYNC_TABLES, type SyncTable, type TableChanges } from '@shared/sync'
 
 export type Intent =
   | { type: 'move'; mapId: string; tokenId: string; col: number; row: number }
@@ -57,34 +39,14 @@ export type HostMessage =
 
 export type GuestMessage =
   | { type: 'hello'; protocol: number; name: string }
-  | { type: 'write'; seq: number; changes: TableChanges[] }
   | { type: 'choose'; characterId: string | null }
   | { type: 'intent'; seq: number; intent: Intent }
 
 export type RejectReason =
   'forbidden' | 'notOperator' | 'notOnline' | 'notYours' | 'invalid' | 'blocked' | 'taken'
 
-const isTable = (v: unknown): v is SyncTable => (SYNC_TABLES as readonly unknown[]).includes(v)
 const id = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 100
 const int = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v)
-
-/** Writes larger than this are refused (a whole campaign is far smaller). */
-const MAX_RECORDS = 5000
-
-function changesOf(v: unknown): TableChanges[] | null {
-  if (!Array.isArray(v)) return null
-  let total = 0
-  const out: TableChanges[] = []
-  for (const c of v) {
-    if (!isRecord(c) || !isTable(c.table) || !Array.isArray(c.put) || !Array.isArray(c.del))
-      return null
-    if (!c.put.every(isRecord) || !c.del.every(id)) return null
-    total += c.put.length + c.del.length
-    if (total > MAX_RECORDS) return null
-    out.push({ table: c.table, put: c.put as Record<string, unknown>[], del: c.del as string[] })
-  }
-  return out
-}
 
 function intentOf(v: unknown): Intent | null {
   if (!isRecord(v)) return null
@@ -115,10 +77,6 @@ export function parseGuestMessage(v: unknown): GuestMessage | null {
       return int(v.protocol) && typeof v.name === 'string' && v.name.trim() && v.name.length <= 80
         ? { type: 'hello', protocol: v.protocol, name: v.name.trim() }
         : null
-    case 'write': {
-      const changes = changesOf(v.changes)
-      return int(v.seq) && changes ? { type: 'write', seq: v.seq, changes } : null
-    }
     case 'choose':
       return v.characterId === null || id(v.characterId)
         ? { type: 'choose', characterId: v.characterId }
@@ -146,12 +104,13 @@ export function parseHostMessage(v: unknown): HostMessage | null {
         ? (v as HostMessage)
         : null
     case 'sync': {
-      const changes = Array.isArray(v.changes) ? changesOf(v.changes) : null
+      const changes = parseChanges(v.changes)
       // The initial sync of a big campaign may exceed the write limit: check the shape only.
       const loose =
         Array.isArray(v.changes) &&
         v.changes.every(
-          (c) => isRecord(c) && isTable(c.table) && Array.isArray(c.put) && Array.isArray(c.del),
+          (c) =>
+            isRecord(c) && isSyncTable(c.table) && Array.isArray(c.put) && Array.isArray(c.del),
         )
       return changes || loose
         ? { type: 'sync', changes: v.changes as TableChanges[], initial: v.initial === true }

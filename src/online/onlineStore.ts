@@ -1,33 +1,38 @@
 import { create } from 'zustand'
 import { HOST_ID, type Participant } from '@/domain/turns'
 import { useSessionStore } from '@/security/session'
+import { useServerStore } from './server/serverStore'
 
-/** What this device is in the online game (D-245). */
+/**
+ * What this device is in a live online game (D-262): serving the players of
+ * its running game (`host`), a player in someone else's (`guest`), or neither.
+ */
 export type OnlineRole = 'offline' | 'host' | 'guest'
 
-/** Editors prepare and may run the game; players act through their own character. */
-export type GuestRole = 'editor' | 'player'
+/** Only players enter a game through the relay; co-GMs work on their own synced copy. */
+export type GuestRole = 'player'
 
 export interface PeerInfo {
+  /** The player's online account id. */
   id: string
   name: string
   role: GuestRole
-  status: 'inviting' | 'connected' | 'closed'
-  /** Characters a player has chosen. */
+  status: 'connected' | 'closed'
+  /** Character this player acts through. */
   characterIds: string[]
 }
 
 interface OnlineState {
   role: OnlineRole
-  /** Campaign shared (host) or joined (guest). */
+  /** Campaign served (host) or entered (guest). */
   campaignId: string | null
-  /** This device's participant id: HOST_ID unless joined as a guest. */
+  /** This device's participant id: the online account's id, HOST_ID for a local-only account. */
   selfId: string
   /** Guest only. */
   guestRole: GuestRole | null
   hostName: string | null
   campaignName: string | null
-  /** Host: everyone invited or connected. Guest: the others, as told by the host. */
+  /** Host: the players in the game. Guest: the others, as told by the operator. */
   peers: PeerInfo[]
 }
 
@@ -41,15 +46,18 @@ export const useOnlineStore = create<OnlineState>()(() => ({
   peers: [],
 }))
 
-/** Who acts from this device. */
+/** Who acts from this device: the online account when there is one, else the local one. */
 export function selfParticipant(): Participant {
   return {
     id: useOnlineStore.getState().selfId,
-    name: useSessionStore.getState().account?.username ?? 'MJ',
+    name:
+      useServerStore.getState().user?.displayName ??
+      useSessionStore.getState().account?.username ??
+      'MJ',
   }
 }
 
-/** True for the device that owns the campaign (offline or hosting). */
+/** False on a player's device, which only shows someone else's game. */
 export function isHostDevice(): boolean {
   return useOnlineStore.getState().role !== 'guest'
 }

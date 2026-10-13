@@ -99,3 +99,29 @@ export interface Backup {
   campaignCount: number
   archive: ArchiveExport
 }
+
+/** One local change of an online campaign waiting for the server (D-262), one per record. */
+export interface OutboxEntry {
+  /** `table:recordId`: a newer change of the same record replaces the older one. */
+  id: string
+  campaignId: string
+  table: string
+  recordId: string
+  /** The record to write, or null to delete it. */
+  record: Record<string, unknown> | null
+  /** Changes on every write: an entry is removed only if it was not rewritten while being sent. */
+  version: string
+}
+
+/** An online campaign of this account (D-262). */
+export interface SyncState {
+  /** The campaign's id. */
+  id: string
+  /** Last server revision pulled. */
+  rev: number
+  role: 'owner' | 'editor'
+  /** Owner: the campaign vanished from the server (deleted from another device). Kept here, off line. */
+  detached?: boolean
+  /** Deleted (owner) or left (co-GM) on this device: the server is told as soon as it can be. */
+  leaving?: boolean
+}

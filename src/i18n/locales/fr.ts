@@ -1281,61 +1281,146 @@ export const fr = {
   },
   online: {
     button: 'En ligne',
-    title: 'Partie en ligne',
-    hostIntro:
-      'Invite tes joueurs et tes co-MJ. Chaque personne reçoit un code à coller dans Codex et te renvoie le sien : la connexion se fait directement entre vos appareils, sans serveur, chiffrée.',
-    start: 'Ouvrir la campagne en ligne',
-    starting: 'Ouverture…',
-    stop: 'Fermer la session en ligne',
-    stopped: 'Session en ligne fermée.',
-    stayHint:
-      'La session reste ouverte tant que tu restes dans cette campagne avec Codex déverrouillé. Recharger la page la ferme.',
-    inviteEditor: 'Inviter un éditeur (co-MJ)',
-    invitePlayer: 'Inviter un joueur',
-    inviteFor: (role: string) => `Invitation : ${role}`,
-    inviteStep: 'Envoie ce code à la personne invitée (Discord, message…). Il ne sert qu’une fois.',
-    preparing: 'Préparation du code…',
-    copy: 'Copier le code',
-    copied: 'Code copié.',
-    replyLabel: 'Code de réponse reçu',
-    connect: 'Connecter',
-    connecting: 'Connexion…',
-    cancelInvite: 'Annuler l’invitation',
-    invalidCode: 'Ce n’est pas un code Codex valide.',
-    failed:
-      'La connexion a échoué. Réessayez sur le même réseau, ou vérifiez le serveur STUN dans les Paramètres.',
-    participants: 'Participants',
-    you: 'Toi (hôte)',
-    roleEditor: 'Éditeur',
+    title: 'Campagne en ligne',
+    // Not online yet
+    notLinkedTitle: 'Ton compte n’est pas encore en ligne',
+    notLinkedBody:
+      'Relie-le à un compte en ligne (Paramètres › Compte) : tes campagnes seront gardées sur le serveur de Codex, tu prépareras à plusieurs et tes joueurs te rejoindront.',
+    openAccount: 'Relier mon compte',
+    localOnly: 'Cette campagne n’existe que sur cet appareil.',
+    detached:
+      'Cette campagne a été retirée du serveur depuis un autre appareil. Elle reste ici, hors ligne.',
+    putOnline: 'Mettre la campagne en ligne',
+    puttingOnline: 'Mise en ligne…',
+    putOnlineDone: 'Campagne en ligne.',
+    coGmOnly: 'Seul le MJ de la campagne gère les invitations et les membres.',
+    // Connection
+    status: {
+      off: 'Hors ligne',
+      connecting: 'Connexion au serveur…',
+      online: 'Connecté au serveur',
+      offline: 'Serveur injoignable : tu travailles hors ligne, tout partira au retour du réseau.',
+      signedOut: 'Le serveur t’a déconnecté : reconnecte-toi dans Paramètres › Compte.',
+    },
+    pending: (n: number) =>
+      n === 1 ? '1 modification en attente d’envoi' : `${n} modifications en attente d’envoi`,
+    refused: (reason: string, count: number) =>
+      reason === 'notOperator'
+        ? 'Une partie est en cours : seul celui qui la mène modifie la table. Ta modification est annulée.'
+        : reason === 'conflict'
+          ? 'Cette campagne appartient déjà à un autre compte en ligne : elle reste sur cet appareil.'
+          : reason === 'tooLarge'
+            ? 'Une image est trop lourde pour le serveur : elle reste sur cet appareil.'
+            : count === 1
+              ? 'Le serveur a refusé une modification : elle est annulée.'
+              : `Le serveur a refusé ${count} modifications : elles sont annulées.`,
+    // Invitation link and listing
+    inviteTitle: 'Lien d’invitation',
+    inviteHint:
+      'Envoie-le à tes joueurs : ils demandent à rejoindre, tu acceptes et choisis leur personnage.',
+    noLink: 'Aucun lien actif : personne ne peut demander à rejoindre par lien.',
+    createLink: 'Créer un lien',
+    copyLink: 'Copier le lien',
+    copied: 'Lien copié.',
+    newLink: 'Nouveau lien',
+    newLinkDone: 'Nouveau lien créé : l’ancien ne marche plus.',
+    disableLink: 'Désactiver le lien',
+    listed: 'Visible dans la recherche',
+    listedHint: 'Les joueurs peuvent trouver la campagne par son nom et demander à la rejoindre.',
+    // Requests
+    requestsTitle: 'Demandes pour rejoindre',
+    noRequests: 'Personne n’attend à la porte.',
+    requestMessage: (message: string) => `« ${message} »`,
+    role: 'Rôle',
+    character: 'Personnage',
+    noCharacter: 'Il le choisira lui-même',
+    accept: 'Accepter',
+    decline: 'Refuser',
+    accepted: (name: string) => `${name} fait partie de la campagne.`,
+    declined: (name: string) => `Demande de ${name} refusée.`,
+    // Members
+    membersTitle: 'Membres',
+    roleOwner: 'MJ',
+    roleEditor: 'Co-MJ',
     rolePlayer: 'Joueur',
-    status: { inviting: 'invité', connected: 'connecté', closed: 'déconnecté' },
+    you: 'toi',
+    connected: 'connecté',
+    characterOf: (name: string) => `Personnage de ${name}`,
+    removeMember: (name: string) => `Retirer ${name} de la campagne`,
+    removed: (name: string) => `${name} ne fait plus partie de la campagne.`,
     playsAs: (name: string) => `joue ${name}`,
     operating: 'mène la partie',
-    removePeer: (name: string) => `Déconnecter ${name || 'cette invitation'}`,
-    joined: (name: string) => `${name} a rejoint la partie.`,
+    // Live game
+    liveTitle: 'Partie en cours',
+    serving: 'Tes joueurs peuvent entrer dans la partie depuis leur écran « Mes parties ».',
+    servingWaiting: 'Ouverture de la partie aux joueurs…',
+    inGame: 'Dans la partie',
+    nobodyInGame: 'Aucun joueur n’est encore entré.',
+    kick: (name: string) => `Faire sortir ${name} de la partie`,
+    joined: (name: string) => `${name} est entré dans la partie.`,
     left: (name: string) => `${name} a quitté la partie.`,
-    // Guests
-    join: 'Rejoindre une partie',
-    joinHint: 'Avec le code d’invitation de ton MJ',
-    joinIntro:
-      'Colle le code d’invitation reçu de ton MJ. Tu pourras être joueur ou co-MJ, selon ce qu’il a choisi.',
-    inviteLabel: 'Code d’invitation',
-    next: 'Continuer',
-    joinAs: (campaign: string, host: string, role: string) =>
-      `Tu rejoins « ${campaign} » chez ${host}, en tant que ${role}.`,
-    replyStep:
-      'Renvoie ce code à ton MJ, puis patiente : la partie s’ouvrira toute seule dès qu’il l’aura collé.',
-    waiting: 'En attente du MJ…',
-    guestBar: (host: string, role: string) => `En ligne chez ${host} · ${role}`,
+    // Campaign list: GM / player
+    modeLabel: 'Je joue en tant que',
+    modeGm: 'MJ',
+    modePlayer: 'Joueur',
+    badgeOnline: 'En ligne',
+    coGmOf: (owner: string) => `Co-MJ · campagne de ${owner}`,
+    requestsBadge: (n: number) => (n === 1 ? '1 demande' : `${n} demandes`),
+    myGames: 'Mes parties',
+    myGamesHint: 'Les campagnes où tu joues un personnage.',
+    myGamesEmptyTitle: 'Aucune table ne t’attend encore',
+    myGamesEmptyBody: 'Demande à ton MJ son lien d’invitation, ou cherche sa campagne par son nom.',
+    liveBy: (name: string) => `Partie en cours, menée par ${name}`,
+    noLive: 'Pas de partie en cours',
+    playingAs: (name: string) => `Tu joues ${name}`,
+    enter: 'Entrer dans la partie',
+    entering: 'Entrée…',
+    leaveCampaign: 'Quitter la campagne',
+    leaveCampaignTitle: 'Quitter cette campagne ?',
+    leaveCampaignBody: (name: string) =>
+      `Tu ne verras plus « ${name} ». Pour revenir, il faudra redemander au MJ.`,
+    enterFailed: {
+      notLive: 'Le MJ n’a pas encore ouvert la partie : réessaie dans un instant.',
+      forbidden: 'Tu n’es pas joueur dans cette campagne.',
+      offline: 'Le serveur est injoignable.',
+      timeout: 'Le MJ ne répond pas : réessaie dans un instant.',
+    },
+    notLinkedPlayer:
+      'Pour jouer en ligne, relie d’abord ton compte à un compte en ligne (Paramètres › Compte).',
+    // Joining
+    join: 'Rejoindre une campagne',
+    joinHint: 'Avec le lien de ton MJ, ou par son nom',
+    joinIntro: 'Colle le lien d’invitation de ton MJ, ou cherche sa campagne par son nom.',
+    inviteLabel: 'Lien ou code d’invitation',
+    lookUp: 'Voir l’invitation',
+    searchLabel: 'Nom de la campagne',
+    search: 'Chercher',
+    searching: 'Recherche…',
+    noResults: 'Aucune campagne visible sous ce nom.',
+    campaignBy: (campaign: string, owner: string) => `« ${campaign} », menée par ${owner}`,
+    messageLabel: 'Un mot pour le MJ (facultatif)',
+    messagePlaceholder: 'Je joue Lyra, la rôdeuse.',
+    request: 'Demander à rejoindre',
+    requestSent: 'Demande envoyée : le MJ va te répondre.',
+    alreadyMember: 'Tu fais déjà partie de cette campagne.',
+    alreadyRequested: 'Ta demande attend la réponse du MJ.',
+    myRequests: 'Mes demandes en attente',
+    withdraw: 'Retirer la demande',
+    withdrawn: 'Demande retirée.',
+    invalidInvite: 'Ce lien d’invitation ne marche pas (ou plus) : demande-en un nouveau au MJ.',
+    invitePageTitle: 'Invitation à une campagne',
+    goToCampaigns: 'Aller à mes campagnes',
+    // Player in a game
+    guestBar: (host: string) => `Partie de ${host}`,
     leave: 'Quitter la partie',
     leftSession: 'Tu as quitté la partie.',
-    hostClosed: 'La session en ligne est terminée.',
+    hostClosed: 'La partie en ligne est terminée.',
     rejected: {
-      forbidden: 'Modification refusée par l’hôte.',
-      notOperator: 'Une partie est en cours : seul l’opérateur modifie la table.',
+      forbidden: 'Action refusée par le MJ.',
+      notOperator: 'Une partie est en cours : seul celui qui la mène modifie la table.',
       notOnline: 'Le MJ mène cette partie seul : attends qu’il passe en mode en ligne.',
       notYours: 'Ce n’est pas ton personnage.',
-      invalid: 'Action refusée par l’hôte.',
+      invalid: 'Action refusée par le MJ.',
       blocked: 'Un mur bloque le passage.',
       taken: 'Ce personnage est déjà pris.',
     },
@@ -1360,11 +1445,25 @@ export const fr = {
     rolls: 'Derniers jets',
     noRolls: 'Les dés n’ont pas encore roulé.',
     dragHint: 'Fais glisser ton jeton pour le déplacer.',
-    // Settings
-    settingsTitle: 'Mode en ligne',
-    stun: 'Serveur STUN',
-    stunHint:
-      'Aide deux appareils sur des réseaux différents à se trouver. Il voit vos adresses IP, jamais vos données. Vide : même réseau uniquement.',
+    errors: {
+      invalid: 'Vérifie ce que tu as saisi.',
+      unauthenticated: 'Le serveur t’a déconnecté : reconnecte-toi.',
+      forbidden: 'Tu n’as pas le droit de faire ça.',
+      notFound: 'Introuvable : cela n’existe plus ou ne t’est pas accessible.',
+      emailTaken: 'Un compte en ligne utilise déjà cette adresse.',
+      wrongCredentials: 'Adresse ou mot de passe incorrect.',
+      throttled: 'Trop d’essais : patiente quelques minutes.',
+      weakPassword: 'Ce mot de passe est trop simple.',
+      tokenExpired: 'Ce lien a expiré ou a déjà servi : redemande-en un.',
+      mailUnavailable: 'Le serveur ne peut pas envoyer d’e-mail pour l’instant.',
+      notOperator: 'Une partie est en cours : seul celui qui la mène modifie la table.',
+      conflict: 'Cette campagne appartient déjà à un autre compte.',
+      tooLarge: 'C’est trop lourd pour le serveur.',
+      server: 'Le serveur a rencontré un problème : réessaie plus tard.',
+      offline: 'Le serveur est injoignable : vérifie ta connexion.',
+      linkedElsewhere: (name: string) =>
+        `Ce compte en ligne est déjà relié au compte « ${name} » de cet appareil.`,
+    },
   },
   sessions: {
     title: 'Sessions',
@@ -1473,7 +1572,7 @@ export const fr = {
     modeOnline: 'En ligne',
     modeOnlineHint:
       'Les joueurs connectés déplacent leur jeton et lancent leurs dés ; tu gardes la main sur le reste.',
-    modeOnlineNeedsHost: 'Ouvre d’abord la campagne en ligne (bouton « En ligne » en haut).',
+    modeOnlineNeedsHost: 'Mets d’abord la campagne en ligne (bouton « En ligne » en haut).',
     start: 'Démarrer la partie',
     starting: 'Démarrage…',
     end: 'Terminer la partie',
@@ -1727,13 +1826,13 @@ export const fr = {
   privacy: {
     title: 'Données et confidentialité',
     summary:
-      'Tes campagnes, fiches, cartes et images restent sur cet appareil, chiffrées avec ton mot de passe. Aucun cookie ; la mesure d’audience, quand elle est active, est anonyme et sans cookie. Seul le mode en ligne relie directement ton appareil à ceux que tu invites.',
+      'Tes campagnes, fiches, cartes et images restent sur cet appareil, chiffrées avec ton mot de passe. Avec un compte en ligne, elles sont aussi gardées, chiffrées, sur le serveur de Codex. La mesure d’audience, quand elle est active, est anonyme et sans cookie.',
     noticeToggle: 'Lire la notice de confidentialité',
     notice: [
       'Responsable des données : toi. Codex n’a pas de serveur et son éditeur ne reçoit aucune donnée.',
       'Données conservées : ton nom de compte, et ce que tu saisis (campagnes, personnages, notes, jets, cartes, images), chiffré dans la base locale du navigateur (IndexedDB). Les réglages d’affichage restent en clair (localStorage) : ils ne contiennent rien de personnel.',
       'Si tu y notes des informations sur de vraies personnes (prénoms, pseudos Discord, portraits), informe-les et n’en garde que le nécessaire.',
-      'Mode en ligne : les appareils se connectent directement entre eux, chiffrés. Ils voient leurs adresses IP respectives (comme le serveur STUN, réglable plus haut). Les joueurs ne reçoivent que ce qui est visible à la table ; la copie d’un invité est effacée quand il part.',
+      'Compte en ligne : ton adresse e-mail, ton nom affiché et tes campagnes sont gardés sur le serveur de Codex, chiffrés. Tes co-MJ voient toute la campagne ; les joueurs ne reçoivent que ce qui est visible à la table, et leur copie est effacée quand ils quittent la partie. Supprimer ton compte en ligne efface aussi ses campagnes du serveur.',
       'Durée : les données restent tant que tu ne les supprimes pas. Supprimer une campagne efface tout ce qui lui appartient.',
       'Tes droits : accès et portabilité avec « Tout exporter » (fichier JSON lisible), effacement avec « Tout effacer » ou « Supprimer le compte ».',
       'Les fichiers exportés ne sont pas chiffrés : ils quittent la protection de Codex, range-les en lieu sûr.',
@@ -1821,6 +1920,60 @@ export const fr = {
       'Un enregistrement illisible ou modifié hors de Codex a été ignoré. Restaure une sauvegarde si quelque chose manque.',
     viewWaiting: 'En attente de la fenêtre du MJ',
     viewWaitingHint: 'Déverrouille Codex dans la fenêtre du MJ : cette vue s’ouvrira toute seule.',
+    online: {
+      title: 'Compte en ligne',
+      intro:
+        'Avec un compte en ligne, tes campagnes sont gardées sur le serveur de Codex (chiffrées), tu les retrouves sur tes autres appareils, tu prépares à plusieurs et tes joueurs te rejoignent. Tu peux toujours travailler sans réseau : tout part au retour de la connexion.',
+      email: 'Adresse e-mail',
+      emailHint: 'pour te connecter et retrouver ton mot de passe',
+      displayName: 'Nom affiché',
+      displayNameHint: 'ce que voient tes joueurs',
+      create: 'Créer mon compte en ligne',
+      creating: 'Création…',
+      haveOne: 'J’ai déjà un compte en ligne',
+      wantNew: 'Créer un compte en ligne',
+      signIn: 'Me connecter',
+      signingIn: 'Connexion…',
+      samePassword: 'Ton compte en ligne prend le même mot de passe que ce compte.',
+      linked: 'Compte relié : tes campagnes partent sur le serveur.',
+      passwordNotChanged:
+        'Le mot de passe de ton compte en ligne n’a pas pu changer (serveur injoignable) : il garde l’ancien.',
+      linkedAs: (name: string, email: string) => `${name} · ${email}`,
+      rename: 'Changer le nom affiché',
+      renamed: 'Nom affiché changé.',
+      reconnect: 'Me reconnecter',
+      unlink: 'Ne plus relier ce compte',
+      unlinkHint:
+        'Cet appareil se déconnecte du serveur. Tes campagnes y restent ; celles du serveur aussi.',
+      unlinked: 'Compte délié : tu travailles hors ligne.',
+      deleteOnline: 'Supprimer mon compte en ligne',
+      deleteOnlineHint:
+        'Supprime ton compte du serveur, avec les campagnes dont tu es le MJ, pour tout le monde. Les copies de cet appareil restent.',
+      deleteOnlineBody:
+        'Ton compte en ligne et les campagnes dont tu es le MJ seront supprimés du serveur, pour toi et pour tes joueurs. Confirme avec ton mot de passe.',
+      deletedOnline: 'Compte en ligne supprimé.',
+      oldCopyKept:
+        'Ton mot de passe a changé en ligne : l’ancienne copie de cet appareil est gardée sous un autre nom, une nouvelle arrive du serveur.',
+      // Lock screen
+      lockSignIn: 'Se connecter avec un compte en ligne',
+      lockSignInTitle: 'Compte en ligne',
+      lockSignInSubtitle:
+        'Connecte-toi avec ton adresse e-mail : tes campagnes reviennent du serveur sur cet appareil, chiffrées avec ton mot de passe.',
+      lockRegisterTitle: 'Créer un compte en ligne',
+      lockRegisterSubtitle:
+        'Pour jouer avec d’autres et retrouver tes campagnes partout. Elles restent aussi sur cet appareil, chiffrées avec ton mot de passe.',
+      forgot: 'Mot de passe oublié ?',
+      forgotTitle: 'Mot de passe oublié',
+      forgotSubtitle:
+        'Indique ton adresse : un lien pour choisir un nouveau mot de passe va partir.',
+      sendLink: 'Envoyer le lien',
+      linkSent:
+        'Si un compte en ligne existe avec cette adresse, le lien vient de partir. Il marche une heure.',
+      resetTitle: 'Nouveau mot de passe',
+      resetSubtitle: 'Choisis le nouveau mot de passe de ton compte en ligne.',
+      resetSave: 'Enregistrer le mot de passe',
+      resetDone: 'Mot de passe changé : connecte-toi avec lui.',
+    },
     errors: {
       notFound: 'Ce compte n’existe plus sur cet appareil.',
       usernameTaken: 'Ce nom de compte existe déjà sur cet appareil.',

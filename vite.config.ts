@@ -46,19 +46,37 @@ function contentSecurityPolicy(): Plugin {
   }
 }
 
+/** The online server (D-262) behind /api, as Caddy does in production. */
+const apiProxy = {
+  '/api': { target: process.env.CODEX_API ?? 'http://127.0.0.1:3000', ws: true },
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss(), sitePlugin(), contentSecurityPolicy()],
   // Several pages (D-248): the public site at /, the app at /app/. No SPA fallback:
   // unknown paths get the 404 page.
   appType: 'mpa',
   server: {
+    proxy: apiProxy,
     // Build outputs and test reports are not sources: watching them also locks them on Windows.
     watch: {
-      ignored: ['**/dist/**', '**/dist-e2e/**', '**/test-results/**', '**/playwright-report/**'],
+      ignored: [
+        '**/dist/**',
+        '**/dist-e2e/**',
+        '**/test-results/**',
+        '**/playwright-report/**',
+        '**/release/**',
+        '**/server/.data/**',
+      ],
     },
   },
+  preview: { proxy: apiProxy },
   resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Code shared with the online server (D-262).
+      '@shared': fileURLToPath(new URL('./shared', import.meta.url)),
+    },
   },
   // Absolute paths so the 404 page works at any depth. A desktop shell would build with CODEX_BASE=./
   base: process.env.CODEX_BASE ?? '/',
@@ -72,18 +90,36 @@ export default defineConfig({
     sourcemap: false,
   },
   test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
-    css: false,
     restoreMocks: true,
-    // Full-app component tests type into many fields; the whole suite runs them in parallel.
-    testTimeout: 40_000,
     // Each jsdom worker is heavy: more than two starve each other (full-app tests time out) and run slower.
     maxWorkers: 2,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'app',
+          environment: 'jsdom',
+          setupFiles: ['./src/test/setup.ts'],
+          include: ['src/**/*.test.{ts,tsx}', 'shared/**/*.test.ts'],
+          css: false,
+          // Full-app component tests type into many fields; the whole suite runs them in parallel.
+          testTimeout: 40_000,
+        },
+      },
+      {
+        // The online server (D-262): Node, a PostgreSQL in memory per test file.
+        extends: true,
+        test: {
+          name: 'server',
+          environment: 'node',
+          include: ['server/src/**/*.test.ts'],
+          testTimeout: 30_000,
+        },
+      },
+    ],
     coverage: {
       provider: 'v8',
-      include: ['src/**/*.{ts,tsx}'],
+      include: ['src/**/*.{ts,tsx}', 'server/src/**/*.ts', 'shared/**/*.ts'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx'],
     },
   },

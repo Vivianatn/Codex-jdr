@@ -187,6 +187,8 @@ export interface DbChange {
   put: Record<string, unknown>[]
   /** Primary keys deleted. */
   del: string[]
+  /** Campaign of each deleted record (same order as `del`), when it had one (D-262). */
+  delCampaigns?: (string | null)[]
   /** True when the write came from the network (applied with `markRemote`). */
   remote: boolean
 }
@@ -235,15 +237,32 @@ export function changeFeedMiddleware(emit: (changes: DbChange[]) => void): Middl
           ...table,
           mutate: async (req) => {
             let deleted: string[] = []
+            let campaigns: (string | null)[] = []
+            // The online mode needs to know whose records are deleted: read them first.
+            const campaignOf = (v: unknown) =>
+              typeof (v as { campaignId?: unknown } | undefined)?.campaignId === 'string'
+                ? (v as { campaignId: string }).campaignId
+                : null
             if (req.type === 'deleteRange') {
-              // Range deletes (clear, prefix) carry no keys: read them first.
-              const res = await table.query({
+              // Range deletes (clear, prefix) carry no keys.
+              const keys = await table.query({
                 trans: req.trans,
                 values: false,
                 query: { index: table.schema.primaryKey, range: req.range },
               })
-              deleted = res.result.map(String)
-            } else if (req.type === 'delete') deleted = req.keys.map(String)
+              const values = await table.query({
+                trans: req.trans,
+                values: true,
+                query: { index: table.schema.primaryKey, range: req.range },
+              })
+              deleted = keys.result.map(String)
+              campaigns = values.result.map(campaignOf)
+            } else if (req.type === 'delete') {
+              deleted = req.keys.map(String)
+              campaigns = (await table.getMany({ trans: req.trans, keys: req.keys })).map(
+                campaignOf,
+              )
+            }
             const result = await table.mutate(req)
             if (req.type === 'add' || req.type === 'put')
               collect(req.trans, {
@@ -251,7 +270,8 @@ export function changeFeedMiddleware(emit: (changes: DbChange[]) => void): Middl
                 put: req.values as Record<string, unknown>[],
                 del: [],
               })
-            else if (deleted.length) collect(req.trans, { table: name, put: [], del: deleted })
+            else if (deleted.length)
+              collect(req.trans, { table: name, put: [], del: deleted, delCampaigns: campaigns })
             return result
           },
         }
