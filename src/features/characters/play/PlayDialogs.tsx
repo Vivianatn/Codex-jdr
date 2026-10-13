@@ -24,6 +24,7 @@ import { parseNumber } from '@/lib/numbers'
 import { hpMaxAt, skillMilestonesReached } from '@/rules'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
+import { compareText } from '@/lib/text'
 
 /** Everyone in the campaign except `excludeId`, sorted by name. */
 function useOthers(excludeId: string, kinds?: Entity['kind'][]) {
@@ -31,7 +32,7 @@ function useOthers(excludeId: string, kinds?: Entity['kind'][]) {
     useShallow((s) =>
       Object.values(s.entities)
         .filter((e) => e.id !== excludeId && (!kinds || kinds.includes(e.kind)))
-        .sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr')),
+        .sort((a, b) => compareText(entityName(a), entityName(b))),
     ),
   )
 }
@@ -480,7 +481,7 @@ export function SkillLaunchDialog({
   const skill = entity.skills.find((s) => s.id === skillId)
   const everyone = useCampaignStore(useShallow((s) => Object.values(s.entities)))
   const sorted = useMemo(
-    () => [...everyone].sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr')),
+    () => [...everyone].sort((a, b) => compareText(entityName(a), entityName(b))),
     [everyone],
   )
   const needsTargets = skill?.effect.kind !== 'none'

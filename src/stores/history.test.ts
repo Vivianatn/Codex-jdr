@@ -1,7 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { create } from 'zustand'
-import { createHistory, shallowEqual, withHistory } from './history'
+import { createHistory, withHistory } from './history'
 
 interface Snapshot {
   hp: Record<string, number>
@@ -156,14 +156,5 @@ describe('history middleware', () => {
         },
       ),
     )
-  })
-})
-
-describe('shallowEqual', () => {
-  it('compares own keys by reference', () => {
-    const inner = { a: 1 }
-    expect(shallowEqual({ x: inner }, { x: inner })).toBe(true)
-    expect(shallowEqual({ x: inner }, { x: { a: 1 } })).toBe(false)
-    expect(shallowEqual({ x: 1 }, { x: 1, y: 2 })).toBe(false)
   })
 })

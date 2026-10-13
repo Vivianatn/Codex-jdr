@@ -1,4 +1,5 @@
 import type { EntityKind } from '@/domain/types'
+import { isRecord } from '@/lib/guards'
 
 /**
  * Every house rule lives here and is configurable per campaign
@@ -158,10 +159,6 @@ export const DEFAULT_RULES: RulesConfig = {
 
 export function defaultRules(): RulesConfig {
   return structuredClone(DEFAULT_RULES)
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /**

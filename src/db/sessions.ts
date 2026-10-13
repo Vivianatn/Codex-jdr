@@ -1,5 +1,8 @@
-import type { SessionPlan, SessionRun } from '@/domain/sessions'
+import { normalizeSessionPlan, type SessionPlan, type SessionRun } from '@/domain/sessions'
 import { activeDb, type CodexDB } from './db'
+
+/** Plans saved by older versions get their missing fields (D-258: one map → an ordered list). */
+const upgrade = (plan: SessionPlan) => normalizeSessionPlan(plan, plan.campaignId) ?? plan
 
 /** Session plans and the games played (D-244). */
 export function createSessionRepository(
@@ -9,10 +12,11 @@ export function createSessionRepository(
   return {
     async listPlans(campaignId: string): Promise<SessionPlan[]> {
       const all = await db().sessions.where('campaignId').equals(campaignId).toArray()
-      return all.sort((a, b) => a.createdAt - b.createdAt)
+      return all.map(upgrade).sort((a, b) => a.createdAt - b.createdAt)
     },
-    getPlan(id: string): Promise<SessionPlan | undefined> {
-      return db().sessions.get(id)
+    async getPlan(id: string): Promise<SessionPlan | undefined> {
+      const plan = await db().sessions.get(id)
+      return plan && upgrade(plan)
     },
     async savePlan(plan: SessionPlan): Promise<void> {
       await db().sessions.put({ ...plan, updatedAt: now() })

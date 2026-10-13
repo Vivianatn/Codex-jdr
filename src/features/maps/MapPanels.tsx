@@ -1,4 +1,16 @@
-import { ArrowRight, Gift, ImagePlus, Plus, RotateCw, Trash, X } from 'lucide-react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Eye,
+  Gift,
+  ImagePlus,
+  Map as MapIcon,
+  Plus,
+  RotateCw,
+  Trash,
+  X,
+} from 'lucide-react'
 import { useContext, useRef, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { Button, IconButton } from '@/components/ui/Button'
@@ -18,18 +30,23 @@ import { entityName, withJournal } from '@/domain/entity'
 import { newItem } from '@/domain/items'
 import {
   fillFog,
+  withReturnPassage,
   type AreaShape,
   type GameMap,
   type GridType,
   type MapElement,
+  type Token,
   type Wall,
 } from '@/domain/maps'
+import { moveSessionMap } from '@/domain/sessions'
+import { galleryPosition, showGallery, stepGallery, type PlayerDisplay } from '@/domain/turns'
 import { STAT_KEYS, type Item, type StatKey } from '@/domain/types'
 import { ItemDialog } from '@/features/characters/ItemDialog'
 import { diceErrorMessage } from '@/features/game/diceErrors'
 import { useMapActions } from '@/features/game/useMapActions'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
+import { cn } from '@/lib/cn'
 import { fitImage, imageFromFile } from '@/lib/images'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
 import { useMapViewStore } from '@/stores/mapViewStore'
@@ -64,7 +81,7 @@ export function MapPanel({
         </h2>
         {onClose && <IconButton size="sm" label={t.common.close} icon={<X />} onClick={onClose} />}
       </div>
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">{children}</div>
+      <div className="relative flex-1 space-y-4 overflow-y-auto p-3">{children}</div>
     </aside>
   )
 }
@@ -414,6 +431,13 @@ export function ElementPanel({
       }),
       l,
     )
+  const remove = () => {
+    onChange(
+      (m) => ({ ...m, elements: m.elements.filter((e) => e.id !== element.id) }),
+      t.maps.elementDeleted,
+    )
+    close()
+  }
 
   return (
     <MapPanel title={element.label || t.maps.kinds[element.kind]} onClose={close}>
@@ -455,18 +479,7 @@ export function ElementPanel({
             >
               {t.maps.rotate}
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={<Trash />}
-              onClick={() => {
-                onChange(
-                  (m) => ({ ...m, elements: m.elements.filter((e) => e.id !== element.id) }),
-                  t.maps.elementDeleted,
-                )
-                close()
-              }}
-            >
+            <Button size="sm" variant="ghost" icon={<Trash />} onClick={remove}>
               {t.maps.deleteElement}
             </Button>
           </div>
@@ -496,6 +509,7 @@ export function ElementPanel({
         </Button>
       )}
       {element.link && <LinkSection map={map} element={element} mode={mode} patch={patch} />}
+      {element.gallery && <GallerySection element={element} mode={mode} patch={patch} />}
       {element.npc && <NpcSection element={element} mode={mode} patch={patch} />}
       {element.note && (
         <CommitTextArea
@@ -503,6 +517,12 @@ export function ElementPanel({
           value={element.note.text}
           onCommit={(text) => patch({ note: { text } })}
         />
+      )}
+      {/* In play too (D-260): the GM may clear the board as the story goes; it undoes. */}
+      {mode === 'play' && (
+        <Button size="sm" variant="ghost" icon={<Trash />} onClick={remove}>
+          {t.maps.deleteElement}
+        </Button>
       )}
     </MapPanel>
   )
@@ -756,13 +776,28 @@ function LinkSection({
   const t = useT()
   const maps = useCampaignStore((s) => s.maps)
   const updatePlay = useCampaignStore((s) => s.updatePlay)
+  const updateMap = useCampaignStore((s) => s.updateMap)
   const target = element.link!.mapId ? maps[element.link!.mapId] : undefined
+  // A door has two sides (D-259): the target gets its way back at once, in the same undo step.
+  const retarget = (mapId: string) => {
+    const next = mapId ? maps[mapId] : undefined
+    const label = next ? t.maps.linkedBothWays(map.name, next.name) : t.maps.elementChanged
+    campaignHistory.getState().transaction(label, () => {
+      patch({ link: { mapId: next?.id ?? null } }, label)
+      if (next)
+        updateMap(
+          next.id,
+          (m) => withReturnPassage(m, map, element, t.sessions.doorDefaultLabel(map.name)),
+          label,
+        )
+    })
+  }
   return (
     <Section title={t.maps.linkTarget}>
       <SelectField<string>
         label={t.maps.linkTarget}
         value={element.link!.mapId ?? ''}
-        onChange={(mapId) => patch({ link: { mapId: mapId || null } })}
+        onChange={retarget}
         options={[
           { value: '', label: t.maps.noTarget },
           ...Object.values(maps)
@@ -783,6 +818,198 @@ function LinkSection({
         </Button>
       )}
     </Section>
+  )
+}
+
+/** Pictures of a picture zone (D-259): added in the editor, shown to the players in play. */
+function GallerySection({
+  element,
+  mode,
+  patch,
+}: {
+  element: MapElement
+  mode: 'edit' | 'play'
+  patch: (p: Partial<MapElement>, label?: string) => void
+}) {
+  const t = useT()
+  const campaign = useCampaign()
+  const display = useCampaignStore((s) => s.play.display)
+  const updatePlay = useCampaignStore((s) => s.updatePlay)
+  const file = useRef<HTMLInputElement>(null)
+  const ids = element.gallery!.assetIds
+  const setIds = (assetIds: string[], label: string) => patch({ gallery: { assetIds } }, label)
+  const showing =
+    display.mode === 'image' && display.imageAssetId !== null && ids.includes(display.imageAssetId)
+  const position = showing ? galleryPosition(display) : null
+  const setDisplay = (next: PlayerDisplay, label: string) =>
+    updatePlay((p) => ({ ...p, display: next }), label)
+
+  async function addImages(files: FileList | null) {
+    const added: string[] = []
+    for (const f of Array.from(files ?? [])) {
+      if (f.size > 15 * 1024 * 1024) {
+        toast.error(t.maps.imageTooBig)
+        continue
+      }
+      try {
+        const data = fitImage(await imageFromFile(f), 3840, 2160)
+        added.push((await assetRepository.add(campaign.id, data, f.name)).id)
+      } catch {
+        toast.error(t.identity.invalidImage)
+      }
+    }
+    if (added.length) setIds([...ids, ...added], t.maps.galleryAdded(added.length))
+  }
+
+  return (
+    <Section title={t.maps.gallery}>
+      {ids.length === 0 ? (
+        <p className="text-xs text-ink-muted">{t.maps.galleryEmpty}</p>
+      ) : (
+        <ol className="grid grid-cols-3 gap-2" aria-label={t.maps.gallery}>
+          {ids.map((id, i) => (
+            <li key={id} className="space-y-1">
+              <GalleryThumb
+                assetId={id}
+                label={t.maps.galleryImage(i + 1)}
+                current={showing && display.imageAssetId === id}
+              />
+              {mode === 'edit' ? (
+                <div className="flex flex-wrap justify-center">
+                  <IconButton
+                    size="sm"
+                    label={t.maps.galleryEarlier(i + 1)}
+                    icon={<ArrowLeft />}
+                    disabled={i === 0}
+                    onClick={() => setIds(moveSessionMap(ids, i, i - 1), t.maps.galleryMoved)}
+                  />
+                  <IconButton
+                    size="sm"
+                    label={t.maps.galleryLater(i + 1)}
+                    icon={<ArrowRight />}
+                    disabled={i === ids.length - 1}
+                    onClick={() => setIds(moveSessionMap(ids, i, i + 1), t.maps.galleryMoved)}
+                  />
+                  <IconButton
+                    size="sm"
+                    label={t.maps.galleryRemove(i + 1)}
+                    icon={<X />}
+                    onClick={() =>
+                      setIds(
+                        ids.filter((x) => x !== id),
+                        t.maps.galleryRemoved,
+                      )
+                    }
+                  />
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setDisplay(showGallery(ids, i), t.maps.galleryShown)}
+                >
+                  {t.maps.galleryShowThis(i + 1)}
+                </Button>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+      {mode === 'edit' && (
+        <>
+          <input
+            ref={file}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            className="sr-only"
+            tabIndex={-1}
+            aria-label={t.maps.galleryAdd}
+            data-testid="gallery-file"
+            onChange={(e) => {
+              void addImages(e.target.files)
+              e.target.value = ''
+            }}
+          />
+          <Button size="sm" icon={<ImagePlus />} onClick={() => file.current?.click()}>
+            {t.maps.galleryAdd}
+          </Button>
+        </>
+      )}
+      {mode === 'play' && ids.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {!showing ? (
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<Eye />}
+              onClick={() => setDisplay(showGallery(ids), t.maps.galleryShown)}
+            >
+              {t.maps.galleryShow}
+            </Button>
+          ) : (
+            <>
+              {position && (
+                <>
+                  <IconButton
+                    size="sm"
+                    label={t.maps.galleryPrevious}
+                    icon={<ArrowLeft />}
+                    disabled={position.index === 0}
+                    onClick={() => setDisplay(stepGallery(display, -1), t.maps.galleryShown)}
+                  />
+                  <span className="text-sm text-ink tabular-nums">
+                    {position.index + 1} / {position.total}
+                  </span>
+                  <IconButton
+                    size="sm"
+                    label={t.maps.galleryNext}
+                    icon={<ArrowRight />}
+                    disabled={position.index === position.total - 1}
+                    onClick={() => setDisplay(stepGallery(display, 1), t.maps.galleryShown)}
+                  />
+                </>
+              )}
+              <Button
+                size="sm"
+                icon={<MapIcon />}
+                onClick={() =>
+                  setDisplay({ ...display, mode: 'map', gallery: [] }, t.maps.galleryBackToMap)
+                }
+              >
+                {t.maps.galleryBackToMap}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+    </Section>
+  )
+}
+
+function GalleryThumb({
+  assetId,
+  label,
+  current,
+}: {
+  assetId: string
+  label: string
+  current: boolean
+}) {
+  const src = useLiveQuery(
+    async () => (await assetRepository.get(assetId))?.data ?? null,
+    [assetId],
+  )
+  return (
+    <div
+      className={cn(
+        'aspect-square overflow-hidden rounded-md border bg-surface-2',
+        current ? 'border-accent ring-2 ring-accent' : 'border-line',
+      )}
+    >
+      {src && <img src={src} alt={label} className="size-full object-cover" />}
+    </div>
   )
 }
 
@@ -825,6 +1052,67 @@ function NpcSection({
 // ---------------------------------------------------------------------------
 // Walls & doors
 // ---------------------------------------------------------------------------
+
+/** Selected tokens in the map editor (D-259): size, visibility, removal. */
+export function TokensPanel({
+  map,
+  ids,
+  onChange,
+  onRemove,
+}: {
+  map: GameMap
+  ids: readonly string[]
+  onChange: MapChange
+  onRemove: (ids: readonly string[]) => void
+}) {
+  const t = useT()
+  const entities = useCampaignStore((s) => s.entities)
+  const tokens = map.tokens.filter((tk) => ids.includes(tk.id))
+  const update = (id: string, patch: Partial<Pick<Token, 'size' | 'hidden'>>) =>
+    onChange(
+      (m) => ({ ...m, tokens: m.tokens.map((tk) => (tk.id === id ? { ...tk, ...patch } : tk)) }),
+      t.maps.elementChanged,
+    )
+  if (tokens.length === 0) return null
+  return (
+    <MapPanel
+      title={t.maps.token}
+      onClose={() => useMapViewStore.getState().select({ type: 'none' })}
+    >
+      {tokens.map((tk) => {
+        const e = entities[tk.entityId]
+        const name = e ? entityName(e) : '?'
+        return (
+          <Section key={tk.id} title={name}>
+            <SelectField<string>
+              label={t.maps.tokenSize}
+              value={String(tk.size)}
+              onChange={(v) => update(tk.id, { size: Number(v) })}
+              options={[1, 2, 3, 4].map((n) => ({ value: String(n), label: `${n} × ${n}` }))}
+            />
+            <CheckboxField
+              label={t.maps.hidden}
+              checked={tk.hidden}
+              onChange={(hidden) => update(tk.id, { hidden })}
+            />
+            <Button size="sm" variant="ghost" icon={<Trash />} onClick={() => onRemove([tk.id])}>
+              {t.maps.removeFromMap}
+            </Button>
+          </Section>
+        )
+      })}
+      {tokens.length > 1 && (
+        <Button
+          variant="danger"
+          icon={<Trash />}
+          onClick={() => onRemove(tokens.map((tk) => tk.id))}
+        >
+          {t.maps.tokensDeleted(tokens.length)}
+        </Button>
+      )}
+    </MapPanel>
+  )
+}
 
 export function WallPanel({
   map,
@@ -895,22 +1183,21 @@ export function WallPanel({
           )}
         </>
       )}
-      {mode === 'edit' && (
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={<Trash />}
-          onClick={() => {
-            onChange(
-              (m) => ({ ...m, walls: m.walls.filter((w) => w.id !== wall.id) }),
-              t.maps.wallDeleted,
-            )
-            close()
-          }}
-        >
-          {t.maps.deleteWall}
-        </Button>
-      )}
+      {/* Editor and play alike (D-260). */}
+      <Button
+        size="sm"
+        variant="ghost"
+        icon={<Trash />}
+        onClick={() => {
+          onChange(
+            (m) => ({ ...m, walls: m.walls.filter((w) => w.id !== wall.id) }),
+            t.maps.wallDeleted,
+          )
+          close()
+        }}
+      >
+        {t.maps.deleteWall}
+      </Button>
     </MapPanel>
   )
 }

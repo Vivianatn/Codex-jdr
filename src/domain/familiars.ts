@@ -1,5 +1,6 @@
 import { entityName } from './entity'
 import type { Entity, EntityKind, EntityOfKind } from './types'
+import { compareText } from '@/lib/text'
 
 /** Who can have familiars: players, enemies and allies. */
 export const FAMILIAR_OWNER_KINDS = [
@@ -24,7 +25,7 @@ export function ownerOptions(entities: readonly Entity[]): OwnerOption[] {
   return entities
     .filter(canOwnFamiliars)
     .map((e) => ({ id: e.id, name: entityName(e), kind: e.kind }))
-    .sort((a, b) => order[a.kind]! - order[b.kind]! || a.name.localeCompare(b.name, 'fr'))
+    .sort((a, b) => order[a.kind]! - order[b.kind]! || compareText(a.name, b.name))
 }
 
 export function isFamiliar(entity: Entity): entity is EntityOfKind<'familiar'> {

@@ -45,7 +45,7 @@ import { SkillList } from '../sheet/SkillsTab'
 import { STAT_STYLES } from '../statStyles'
 import { StatPill } from '../StatPill'
 import { useCharacterActions } from '../useCharacterActions'
-import { parseNumber } from '@/lib/numbers'
+import { parseNumber, clamp } from '@/lib/numbers'
 
 const STEPS = ['identity', 'stats', 'hp', 'skills', 'recap'] as const
 type Step = (typeof STEPS)[number]
@@ -177,7 +177,7 @@ function Wizard({ kind, ownerId }: { kind: EntityKind; ownerId: string | null })
 
   const go = (delta: number) => {
     setDirection(delta)
-    setStep((s) => Math.min(STEPS.length - 1, Math.max(0, s + delta)))
+    setStep((s) => clamp(s + delta, 0, STEPS.length - 1))
   }
 
   const blockedBy = blocker[current]

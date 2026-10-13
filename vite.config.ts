@@ -79,6 +79,8 @@ export default defineConfig({
     restoreMocks: true,
     // Full-app component tests type into many fields; the whole suite runs them in parallel.
     testTimeout: 40_000,
+    // Each jsdom worker is heavy: more than two starve each other (full-app tests time out) and run slower.
+    maxWorkers: 2,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

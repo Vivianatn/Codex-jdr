@@ -1,3 +1,4 @@
+import { clamp } from '../numbers'
 /**
  * Audio engine (D-251): one AudioContext for the whole app, two buses
  * (sound effects, music) with their own volume. Everything is synthesised
@@ -61,7 +62,7 @@ export function audio(bus: Bus): { ctx: AudioContext; out: GainNode } | null {
 
 /** 0–1. Applied smoothly to sounds already playing. */
 export function setVolume(bus: Bus, value: number): void {
-  volumes[bus] = Math.min(1, Math.max(0, value))
+  volumes[bus] = clamp(value, 0, 1)
   if (!engine) return
   engine.buses[bus].gain.setTargetAtTime(volumes[bus], engine.ctx.currentTime, 0.05)
 }

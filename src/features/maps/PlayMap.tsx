@@ -18,10 +18,12 @@ import { useMapViewStore, type MapTool } from '@/stores/mapViewStore'
 import { useUiStore } from '@/stores/uiStore'
 import { cameraControls } from './cameraControls'
 import { MapCanvas, type MapChange } from './MapCanvas'
+import { MapTreeMenu } from './MapTree'
 import { AreaPanel, ElementPanel, WallPanel } from './MapPanels'
 import { LayersMenu, MapToolbar, ToolOptions, ZoomControl, type ToolItem } from './MapToolbar'
 import { TokenSheets } from './TokenSheets'
 import { useCanvasLabels } from './useCanvasLabels'
+import { useMapKeys } from './useMapKeys'
 import { openViewChannel } from './viewChannel'
 
 const PLAY_TOOLS: ToolItem[] = ['select', 'measure', 'area', 'fog', 'ping', 'annotate']
@@ -55,7 +57,6 @@ export function PlayMap() {
   )
   const entities = useCampaignStore((s) => s.entities)
   const updateMap = useCampaignStore((s) => s.updateMap)
-  const updatePlay = useCampaignStore((s) => s.updatePlay)
   const pinSheets = useMapViewStore((s) => s.pinPlayerSheets)
   const selection = useMapViewStore((s) => s.selection)
   const area = useMapViewStore((s) => s.area)
@@ -65,7 +66,7 @@ export function PlayMap() {
   const map = play.mapId ? maps[play.mapId] : undefined
   const channel = useRef<ReturnType<typeof openViewChannel> | null>(null)
   const activeEntityId = play.turn.status === 'playing' ? play.turn.memberId : null
-  const mapList = Object.values(maps).sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  const hasMaps = Object.keys(maps).length > 0
 
   useEffect(() => {
     channel.current = openViewChannel(campaign.id)
@@ -111,32 +112,9 @@ export function PlayMap() {
     },
     [mapId, updateMap],
   )
+  // Same shortcuts as in the editor: Delete removes the selection, R turns an element (D-260).
+  useMapKeys(mapId ? onChange : null, { tokens: false })
   const setDiceOpen = useUiStore((s) => s.setDiceOpen)
-
-  const mapSelect = (
-    <label className="flex items-center gap-1.5 text-xs text-ink-muted">
-      <MapIcon className="size-4" aria-hidden />
-      <span className="sr-only">{t.maps.chooseMap}</span>
-      <select
-        className="h-9 max-w-44 rounded-lg border border-line-strong bg-surface px-2 text-sm text-ink"
-        value={play.mapId ?? ''}
-        onChange={(e) => {
-          const id = e.target.value || null
-          updatePlay(
-            (p) => ({ ...p, mapId: id }),
-            id ? t.maps.wentTo(maps[id]!.name) : t.maps.noMap,
-          )
-        }}
-      >
-        <option value="">{t.maps.noMap}</option>
-        {mapList.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.name}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
 
   if (!map)
     return (
@@ -145,10 +123,10 @@ export function PlayMap() {
           <EmptyState
             icon={<MapIcon />}
             title={t.play.noMapTitle}
-            body={mapList.length ? t.maps.noMapBody : t.play.noMapBody}
+            body={hasMaps ? t.maps.noMapBody : t.play.noMapBody}
             actions={
-              mapList.length ? (
-                mapSelect
+              hasMaps ? (
+                <MapTreeMenu />
               ) : (
                 <Link to={`/c/${campaign.id}/prep/maps`} className={buttonClasses('secondary')}>
                   {t.play.goToMaps}
@@ -198,7 +176,7 @@ export function PlayMap() {
 
       {/* Map controls, top right (DA §10.6: everything floats over the board). */}
       <div className="codex-glass absolute top-4 right-4 z-10 flex flex-wrap items-center gap-0.5 !rounded-xl p-1 pl-2">
-        {mapSelect}
+        <MapTreeMenu />
         <label className={toggle}>
           <input
             type="checkbox"

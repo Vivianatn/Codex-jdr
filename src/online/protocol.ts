@@ -2,6 +2,7 @@ import type { RollMode } from '@/domain/checks'
 import type { StatKey } from '@/domain/types'
 import { STAT_KEYS } from '@/domain/types'
 import type { GuestRole, PeerInfo } from './onlineStore'
+import { isRecord } from '@/lib/guards'
 
 /**
  * Messages between the host and its guests (D-245). The host owns the data:
@@ -63,8 +64,6 @@ export type GuestMessage =
 export type RejectReason =
   'forbidden' | 'notOperator' | 'notOnline' | 'notYours' | 'invalid' | 'blocked' | 'taken'
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null && !Array.isArray(v)
 const isTable = (v: unknown): v is SyncTable => (SYNC_TABLES as readonly unknown[]).includes(v)
 const id = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 100
 const int = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v)

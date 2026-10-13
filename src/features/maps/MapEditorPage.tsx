@@ -3,16 +3,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
+import { entityName } from '@/domain/entity'
+import { withToken, type Cell } from '@/domain/maps'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useMapViewStore } from '@/stores/mapViewStore'
 import { MapCanvas, type MapChange } from './MapCanvas'
-import { ElementPanel, MapSettingsPanel, WallPanel } from './MapPanels'
+import { ElementPanel, MapSettingsPanel, TokensPanel, WallPanel } from './MapPanels'
 import { PanelDock } from './panelDock'
 import { MapPalette, PaletteMenu } from './MapPalette'
 import { MapToolbar, ToolOptions, ZoomControl, type ToolItem } from './MapToolbar'
 import { useCanvasLabels } from './useCanvasLabels'
+import { useMapKeys } from './useMapKeys'
 
 const EDIT_TOOLS: ToolItem[] = ['select', 'wall', 'door', 'calibrate', 'fog', 'annotate', 'measure']
 
@@ -48,46 +51,29 @@ export function MapEditorPage() {
     [mapId, updateMap],
   )
 
+  // Characters are placed in the editor too (D-259): any kind, dragged or clicked.
+  const place = useCallback(
+    (entityId: string, at?: Cell) => {
+      const e = entities[entityId]
+      if (!e || !mapId) return
+      updateMap(mapId, (m) => withToken(m, e, at), t.maps.placed(entityName(e)))
+    },
+    [entities, mapId, updateMap, t],
+  )
+  const removeTokens = useCallback(
+    (ids: readonly string[]) => {
+      if (!ids.length) return
+      onChange(
+        (m) => ({ ...m, tokens: m.tokens.filter((tk) => !ids.includes(tk.id)) }),
+        t.maps.tokensDeleted(ids.length),
+      )
+      useMapViewStore.getState().select({ type: 'none' })
+    },
+    [onChange, t],
+  )
+
   // Delete removes the selection, R rotates the selected element.
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null
-      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))
-        return
-      const sel = useMapViewStore.getState().selection
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (sel.type === 'element')
-          onChange(
-            (m) => ({ ...m, elements: m.elements.filter((x) => x.id !== sel.id) }),
-            t.maps.elementDeleted,
-          )
-        else if (sel.type === 'wall')
-          onChange(
-            (m) => ({ ...m, walls: m.walls.filter((x) => x.id !== sel.id) }),
-            t.maps.wallDeleted,
-          )
-        else return
-        useMapViewStore.getState().select({ type: 'none' })
-      } else if (
-        (e.key === 'r' || e.key === 'R') &&
-        sel.type === 'element' &&
-        !e.ctrlKey &&
-        !e.metaKey
-      ) {
-        onChange(
-          (m) => ({
-            ...m,
-            elements: m.elements.map((x) =>
-              x.id === sel.id ? { ...x, rotation: (x.rotation + 90) % 360 } : x,
-            ),
-          }),
-          t.maps.elementChanged,
-        )
-      }
-    }
-    window.addEventListener('keydown', down)
-    return () => window.removeEventListener('keydown', down)
-  }, [onChange, t])
+  useMapKeys(onChange)
 
   if (!map) return <Navigate to={`/c/${campaign.id}/prep/maps`} replace />
 
@@ -130,9 +116,9 @@ export function MapEditorPage() {
       </header>
       <div className="flex min-h-0 flex-1">
         <MapToolbar tools={EDIT_TOOLS} orientation="rail">
-          <PaletteMenu />
+          <PaletteMenu map={map} onPlace={(id) => place(id)} />
         </MapToolbar>
-        <MapPalette />
+        <MapPalette map={map} onPlace={(id) => place(id)} />
         <section aria-label={t.maps.canvas(map.name)} className="relative min-w-0 flex-1">
           <MapCanvas
             map={map}
@@ -143,6 +129,16 @@ export function MapEditorPage() {
             labels={labels}
             mapNames={mapNames}
             onChange={onChange}
+            onDropEntity={place}
+            onTokenMove={(tokenId, cell) =>
+              onChange(
+                (m) => ({
+                  ...m,
+                  tokens: m.tokens.map((tk) => (tk.id === tokenId ? { ...tk, ...cell } : tk)),
+                }),
+                t.maps.elementMoved,
+              )
+            }
             onBlocked={(m) => toast(m)}
             calibrateCells={calibrateCells}
           />
@@ -160,6 +156,13 @@ export function MapEditorPage() {
             />
           ) : wall ? (
             <WallPanel key={wall.id} map={map} wall={wall} mode="edit" onChange={onChange} />
+          ) : selection.type === 'tokens' && selection.ids.length > 0 ? (
+            <TokensPanel
+              map={map}
+              ids={selection.ids}
+              onChange={onChange}
+              onRemove={removeTokens}
+            />
           ) : (
             <MapSettingsPanel
               map={map}

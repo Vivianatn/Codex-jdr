@@ -2,7 +2,7 @@ import { bestiaryRepository } from '@/db/bestiary'
 import { sessionRepository } from '@/db/sessions'
 import type { Campaign } from '@/db/types'
 import { instantiateTemplate } from '@/domain/entity'
-import type { PlayMode, SessionRun } from '@/domain/sessions'
+import { startMapId, type PlayMode, type SessionRun } from '@/domain/sessions'
 import type { Entity } from '@/domain/types'
 import { addGroup, addMember, stopTurns, type Participant } from '@/domain/turns'
 import type { Messages } from '@/i18n/locales/fr'
@@ -80,7 +80,7 @@ export function createLiveActions(t: Messages, campaign: Campaign) {
       store().updatePlay(
         (play) => ({
           ...stopTurns(play),
-          mapId: plan?.mapId ?? play.mapId,
+          mapId: startMapId(plan) ?? play.mapId,
           live: {
             runId: run.id,
             planId: run.planId,

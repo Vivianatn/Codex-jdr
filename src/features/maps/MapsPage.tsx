@@ -14,6 +14,7 @@ import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
 import { useCampaignStore } from '@/stores/campaignStore'
+import { compareText } from '@/lib/text'
 
 /** Préparation › Cartes: the campaign's boards (D-228). */
 export function MapsPage() {
@@ -27,7 +28,7 @@ export function MapsPage() {
   const updatePlay = useCampaignStore((s) => s.updatePlay)
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState<GameMap | null>(null)
-  const list = Object.values(maps).sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  const list = Object.values(maps).sort((a, b) => compareText(a.name, b.name))
   const editorPath = (id: string) => `/c/${campaign.id}/prep/maps/m/${id}`
 
   const newButton = (

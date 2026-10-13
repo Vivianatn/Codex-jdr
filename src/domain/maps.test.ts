@@ -1,6 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import {
+  arrivalCell,
   autoRevealFog,
   blockingWall,
   calibrateGrid,
@@ -8,11 +9,16 @@ import {
   cellCenter,
   cellDistance,
   cellsInCircle,
+  entityMapId,
   fillFog,
+  freeCellNear,
   isRevealed,
+  mapTree,
   newElement,
   newMap,
   normalizeMap,
+  passageAt,
+  passagesTo,
   pointInArea,
   segmentsIntersect,
   setFog,
@@ -20,6 +26,7 @@ import {
   tokensInArea,
   visibleCells,
   visibleToPlayers,
+  withPassage,
   type GameMap,
   type Wall,
 } from './maps'
@@ -208,5 +215,110 @@ describe('objects', () => {
     ).toBe(true)
     expect(visibleToPlayers(newElement('note', { col: 0, row: 0 }))).toBe(false)
     expect(visibleToPlayers(newElement('tree', { col: 0, row: 0 }))).toBe(true)
+  })
+})
+
+describe('passages between maps (D-256)', () => {
+  const linked = () => {
+    const hall = square()
+    const cellar = { ...square(), id: 'cellar', name: 'Cave' }
+    const stairs = newElement('link', { col: 4, row: 3 }, { link: { mapId: cellar.id } })
+    const back = newElement('link', { col: 1, row: 1 }, { link: { mapId: hall.id } })
+    return { hall: { ...hall, elements: [stairs] }, cellar: { ...cellar, elements: [back] } }
+  }
+
+  it('a token touches a passage when one of its cells lies under it', () => {
+    const { hall } = linked()
+    expect(passageAt(hall, { col: 4, row: 3 })?.link?.mapId).toBe('cellar')
+    expect(passageAt(hall, { col: 5, row: 3 })).toBeUndefined()
+    // A large token (2×2) touches it from the cell up-left.
+    expect(passageAt(hall, { col: 3, row: 2 }, 2)).toBeDefined()
+  })
+
+  it('hidden links, links without a target and links to the same map are not passages', () => {
+    const { hall } = linked()
+    const [stairs] = hall.elements
+    const variants = [{ hidden: true }, { link: { mapId: null } }, { link: { mapId: hall.id } }]
+    for (const patch of variants)
+      expect(passageAt({ ...hall, elements: [{ ...stairs!, ...patch }] }, { col: 4, row: 3 })).toBe(
+        undefined,
+      )
+  })
+
+  it('a rotated passage covers its rotated cells', () => {
+    const map = square()
+    const bridge = newElement('link', { col: 2, row: 2 }, { w: 3, h: 1, link: { mapId: 'x' } })
+    expect(passageAt({ ...map, elements: [bridge] }, { col: 3, row: 3 })).toBeUndefined()
+    const turned = { ...bridge, rotation: 90 }
+    expect(passageAt({ ...map, elements: [turned] }, { col: 3, row: 3 })).toBeDefined()
+    expect(passageAt({ ...map, elements: [turned] }, { col: 2, row: 2 })).toBeUndefined()
+  })
+
+  it('arrives beside the passage leading back, never on it, else in the middle', () => {
+    const { hall, cellar } = linked()
+    const cell = arrivalCell(cellar, hall.id)
+    expect(passageAt(cellar, cell)).toBeUndefined()
+    expect(Math.max(Math.abs(cell.col - 1), Math.abs(cell.row - 1))).toBe(1)
+    expect(arrivalCell({ ...cellar, elements: [] }, hall.id)).toEqual({ col: 5, row: 4 })
+  })
+
+  it('never lands on another token', () => {
+    const map = square()
+    const busy = {
+      ...map,
+      tokens: [{ id: 't', entityId: 'e', col: 5, row: 4, size: 1, hidden: false }],
+    }
+    expect(freeCellNear(busy, { col: 5, row: 4 })).not.toEqual({ col: 5, row: 4 })
+    expect(freeCellNear(busy, { col: 5, row: 4 }, { ignoreEntityId: 'e' })).toEqual({
+      col: 5,
+      row: 4,
+    })
+  })
+
+  it('finds the map a character stands on, preferring the one in play', () => {
+    const { hall, cellar } = linked()
+    const token = { id: 't', entityId: 'ayla', col: 0, row: 0, size: 1, hidden: false }
+    const maps = [
+      { ...hall, tokens: [token] },
+      { ...cellar, tokens: [token] },
+    ]
+    expect(entityMapId(maps, 'ayla')).toBe(hall.id)
+    expect(entityMapId(maps, 'ayla', cellar.id)).toBe(cellar.id)
+    expect(entityMapId(maps, 'nobody')).toBeNull()
+  })
+
+  it('lays maps out as a tree from the session map, each map once', () => {
+    const { hall, cellar } = linked()
+    const crypt = { ...square(), id: 'crypt', name: 'Crypte' }
+    const lone = { ...square(), id: 'lone', name: 'Auberge' }
+    const deeper = {
+      ...cellar,
+      elements: [
+        ...cellar.elements,
+        newElement('link', { col: 6, row: 6 }, { link: { mapId: crypt.id } }),
+      ],
+    }
+    const maps = { [hall.id]: hall, [deeper.id]: deeper, [crypt.id]: crypt, [lone.id]: lone }
+    const { tree, rest } = mapTree(maps, [hall.id, null, hall.id])
+    expect(tree).toHaveLength(1)
+    expect(tree[0]!.children.map((c) => c.map.id)).toEqual(['cellar'])
+    expect(tree[0]!.children[0]!.children.map((c) => c.map.id)).toEqual(['crypt'])
+    expect(rest.map((m) => m.id)).toEqual(['lone'])
+  })
+})
+
+describe('doors placed from the session editor (D-258)', () => {
+  it('adds a passage on the cell, or retargets the one already there', () => {
+    const map = square()
+    const once = withPassage(map, { col: 2, row: 3 }, 'cellar', 'Porte vers Cave')
+    expect(once.elements).toHaveLength(1)
+    expect(once.elements[0]).toMatchObject({ kind: 'link', x: 2, y: 3, label: 'Porte vers Cave' })
+    expect(passagesTo(once, 'cellar')).toHaveLength(1)
+    const again = withPassage(once, { col: 2, row: 3 }, 'crypt', 'Porte vers Crypte')
+    expect(again.elements).toHaveLength(1)
+    expect(passagesTo(again, 'cellar')).toHaveLength(0)
+    expect(passagesTo(again, 'crypt')).toHaveLength(1)
+    // And a token stepping on it travels.
+    expect(passageAt(again, { col: 2, row: 3 })?.link?.mapId).toBe('crypt')
   })
 })

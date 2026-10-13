@@ -19,6 +19,7 @@ import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { ChestIllustration } from '@/components/illustrations'
 import { recordActivity } from '@/stores/activityLog'
+import { compareText } from '@/lib/text'
 
 const MENU_ITEM =
   'flex min-h-9 cursor-pointer items-center rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-2'
@@ -30,7 +31,7 @@ export function ItemsPage() {
   const items = useLiveQuery(() => itemLibrary.list(campaign.id), [campaign.id])
   const characters = useCampaignStore(
     useShallow((s) =>
-      Object.values(s.entities).sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr')),
+      Object.values(s.entities).sort((a, b) => compareText(entityName(a), entityName(b))),
     ),
   )
   const [editing, setEditing] = useState<Item | null>(null)

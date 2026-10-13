@@ -22,7 +22,7 @@ export function PrepLayout() {
     <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       <nav
         aria-label={t.nav.prepSections}
-        className="shrink-0 border-b border-line md:w-60 md:border-r md:border-b-0"
+        className="shrink-0 border-b border-line md:w-60 md:overflow-y-auto md:border-r md:border-b-0"
       >
         {/* Narrow screens: every section in view, on several lines — never a sideways scroll. */}
         <ul className="flex flex-wrap gap-1 p-2 md:flex-col md:flex-nowrap md:p-3">

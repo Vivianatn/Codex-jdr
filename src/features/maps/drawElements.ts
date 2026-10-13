@@ -224,6 +224,20 @@ const DRAWERS: Record<ElementKind, Drawer> = {
     zone(ctx, d, w, h, o.passage, o.passageFill)
     drawBoardIcon(ctx, 'passage', w / 2, h / 2, 28 * u, o.passage)
   },
+  image(ctx, w, h, el, d) {
+    const u = d.cell / DA_CELL
+    const o = d.theme.objects
+    zone(ctx, d, w, h, o.image, o.imageFill)
+    drawBoardIcon(ctx, 'images', w / 2, h / 2, 28 * u, o.image)
+    const count = el.gallery?.assetIds.length ?? 0
+    if (count > 1) {
+      ctx.fillStyle = o.image
+      ctx.font = `bold ${Math.round(12 * u)}px sans-serif`
+      ctx.textAlign = 'right'
+      ctx.textBaseline = 'bottom'
+      ctx.fillText(String(count), w - 6 * u, h - 4 * u)
+    }
+  },
   npc(ctx, w, h, _el, d) {
     const r = Math.min(w, h) * 0.43
     ctx.beginPath()

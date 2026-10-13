@@ -1,4 +1,6 @@
 import type { Item, StatKey } from './types'
+import { clamp } from '@/lib/numbers'
+import { compareText } from '@/lib/text'
 
 /**
  * Battle maps (SPEC §5, D-228). Pure data and geometry: no rendering here.
@@ -51,7 +53,7 @@ export const DECOR_KINDS = [
 ] as const
 export type DecorKind = (typeof DECOR_KINDS)[number]
 
-export const OBJECT_KINDS = ['chest', 'trap', 'lever', 'link', 'npc', 'note'] as const
+export const OBJECT_KINDS = ['chest', 'trap', 'lever', 'link', 'image', 'npc', 'note'] as const
 export type ObjectKind = (typeof OBJECT_KINDS)[number]
 
 export type ElementKind = DecorKind | ObjectKind
@@ -85,6 +87,8 @@ export interface MapElement {
   trap?: TrapData
   lever?: { on: boolean }
   link?: { mapId: string | null }
+  /** Pictures the GM shows the players when clicking the zone, in order (D-259). */
+  gallery?: { assetIds: string[] }
   npc?: { entityId: string | null }
   note?: { text: string }
 }
@@ -217,7 +221,7 @@ export function normalizeMap(raw: GameMap): GameMap {
 }
 
 function clampInt(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, Math.round(value)))
+  return clamp(Math.round(value), min, max)
 }
 
 // ---------------------------------------------------------------------------
@@ -595,7 +599,8 @@ export function newElement(
   const base: MapElement = {
     id: crypto.randomUUID(),
     kind,
-    layer: kind === 'note' ? 'gm' : object ? 'objects' : 'decor',
+    // Notes and picture zones are the GM's tools: players never see them on the board.
+    layer: kind === 'note' || kind === 'image' ? 'gm' : object ? 'objects' : 'decor',
     x: at.col,
     y: at.row,
     w: 1,
@@ -614,6 +619,7 @@ export function newElement(
     }
   if (kind === 'lever') base.lever = { on: false }
   if (kind === 'link') base.link = { mapId: null }
+  if (kind === 'image') Object.assign(base, { w: 2, h: 2, gallery: { assetIds: [] } })
   if (kind === 'npc') base.npc = { entityId: null }
   if (kind === 'note') base.note = { text: '' }
   return { ...base, ...input }
@@ -628,3 +634,232 @@ export function visibleToPlayers(element: MapElement): boolean {
 
 /** The perception check of a trap uses Wisdom (SPEC §4.8). */
 export const PERCEPTION_STAT: StatKey = 'wisdom'
+
+/** Box of an element in map pixels, before its rotation (around the box centre). */
+export function elementBox(map: Pick<GameMap, 'grid'>, el: MapElement) {
+  const { grid } = map
+  if (grid.type === 'square')
+    return {
+      x: grid.offsetX + el.x * grid.size,
+      y: grid.offsetY + el.y * grid.size,
+      w: el.w * grid.size,
+      h: el.h * grid.size,
+    }
+  const c = cellCenter(grid, { col: Math.round(el.x), row: Math.round(el.y) })
+  return {
+    x: c.x - grid.size / 2,
+    y: c.y - grid.size / 2,
+    w: el.w * grid.size,
+    h: el.h * grid.size,
+  }
+}
+
+function elementContains(map: Pick<GameMap, 'grid'>, el: MapElement, p: Point): boolean {
+  const box = elementBox(map, el)
+  const angle = (-el.rotation * Math.PI) / 180
+  const dx = p.x - (box.x + box.w / 2)
+  const dy = p.y - (box.y + box.h / 2)
+  const x = dx * Math.cos(angle) - dy * Math.sin(angle)
+  const y = dx * Math.sin(angle) + dy * Math.cos(angle)
+  return Math.abs(x) <= box.w / 2 && Math.abs(y) <= box.h / 2
+}
+
+function coveredCells(at: Cell, size: number): Cell[] {
+  const cells: Cell[] = []
+  for (let dr = 0; dr < Math.max(1, size); dr++)
+    for (let dc = 0; dc < Math.max(1, size); dc++)
+      cells.push({ col: at.col + dc, row: at.row + dr })
+  return cells
+}
+
+// ---------------------------------------------------------------------------
+// Passages between maps (D-256)
+// ---------------------------------------------------------------------------
+
+/** A link the players can take: it leads to another map and is not hidden. */
+export function isPassage(el: MapElement, fromMapId: string): boolean {
+  return Boolean(el.link?.mapId) && el.link!.mapId !== fromMapId && !el.hidden
+}
+
+/** The passage a token of `size` touches when it stands at `at`, if any. */
+export function passageAt(map: GameMap, at: Cell, size = 1): MapElement | undefined {
+  const centres = coveredCells(at, size).map((c) => cellCenter(map.grid, c))
+  return map.elements.find(
+    (el) => isPassage(el, map.id) && centres.some((p) => elementContains(map, el, p)),
+  )
+}
+
+/** Nearest free cell from `start`, spiralling out; tokens never stack, `avoid` cells are skipped. */
+export function freeCellNear(
+  map: GameMap,
+  start: Cell,
+  options: { ignoreEntityId?: string; avoid?: (cell: Cell) => boolean } = {},
+): Cell {
+  const taken = new Set(
+    map.tokens
+      .filter((tk) => tk.entityId !== options.ignoreEntityId)
+      .map((tk) => `${tk.col},${tk.row}`),
+  )
+  const free = (cell: Cell) =>
+    inBounds(map, cell) && !taken.has(`${cell.col},${cell.row}`) && !options.avoid?.(cell)
+  for (let ring = 0; ring < Math.max(map.cols, map.rows); ring++)
+    for (let dr = -ring; dr <= ring; dr++)
+      for (let dc = -ring; dc <= ring; dc++) {
+        if (Math.max(Math.abs(dr), Math.abs(dc)) !== ring) continue
+        const cell = { col: start.col + dc, row: start.row + dr }
+        if (free(cell)) return cell
+      }
+  return start
+}
+
+/**
+ * Where a token coming from `fromMapId` lands on `target`: beside the passage
+ * leading back (a door has two sides), otherwise in the middle of the map.
+ * Never on a passage, or the next step would send it straight back.
+ */
+export function arrivalCell(target: GameMap, fromMapId: string, entityId?: string): Cell {
+  const back = target.elements.find((el) => el.link?.mapId === fromMapId)
+  const start = back
+    ? (() => {
+        const box = elementBox(target, back)
+        const cell = cellAt(target.grid, { x: box.x + box.w / 2, y: box.y + box.h / 2 })
+        return {
+          col: clamp(cell.col, 0, target.cols - 1),
+          row: clamp(cell.row, 0, target.rows - 1),
+        }
+      })()
+    : { col: Math.floor(target.cols / 2), row: Math.floor(target.rows / 2) }
+  return freeCellNear(target, start, {
+    ignoreEntityId: entityId,
+    avoid: (cell) => passageAt(target, cell) !== undefined,
+  })
+}
+
+/** Map where a character's token stands; `preferred` wins when it has one there. */
+export function entityMapId(
+  maps: Iterable<GameMap>,
+  entityId: string,
+  preferred?: string | null,
+): string | null {
+  let found: string | null = null
+  for (const map of maps) {
+    if (!map.tokens.some((tk) => tk.entityId === entityId)) continue
+    if (map.id === preferred) return map.id
+    found ??= map.id
+  }
+  return found
+}
+
+export interface MapTreeNode {
+  map: GameMap
+  /** Maps reached through this map's passages, each map listed once in the whole tree. */
+  children: MapTreeNode[]
+}
+
+/**
+ * Maps reachable from `rootIds` through passages, breadth first so each map
+ * sits at its shortest path; `rest` holds the maps no passage leads to.
+ */
+export function mapTree(
+  maps: Record<string, GameMap>,
+  rootIds: readonly (string | null | undefined)[],
+): { tree: MapTreeNode[]; rest: GameMap[] } {
+  const seen = new Set<string>()
+  const node = (map: GameMap): MapTreeNode => ({ map, children: [] })
+  const tree: MapTreeNode[] = []
+  const queue: MapTreeNode[] = []
+  for (const id of rootIds) {
+    const map = id ? maps[id] : undefined
+    if (!map || seen.has(map.id)) continue
+    seen.add(map.id)
+    const root = node(map)
+    tree.push(root)
+    queue.push(root)
+  }
+  while (queue.length) {
+    const parent = queue.shift()!
+    for (const el of parent.map.elements) {
+      const target = el.link?.mapId ? maps[el.link.mapId] : undefined
+      if (!target || seen.has(target.id)) continue
+      seen.add(target.id)
+      const child = node(target)
+      parent.children.push(child)
+      queue.push(child)
+    }
+  }
+  const rest = Object.values(maps)
+    .filter((m) => !seen.has(m.id))
+    .sort((a, b) => compareText(a.name, b.name))
+  return { tree, rest }
+}
+
+/** The map with a passage to `targetId` on `cell` (D-258); one already there is retargeted. */
+export function withPassage(map: GameMap, cell: Cell, targetId: string, label: string): GameMap {
+  const existing = map.elements.find(
+    (el) => el.kind === 'link' && Math.round(el.x) === cell.col && Math.round(el.y) === cell.row,
+  )
+  if (existing)
+    return {
+      ...map,
+      elements: map.elements.map((el) =>
+        el.id === existing.id ? { ...el, link: { mapId: targetId }, label } : el,
+      ),
+    }
+  return {
+    ...map,
+    elements: [...map.elements, newElement('link', cell, { link: { mapId: targetId }, label })],
+  }
+}
+
+/** Passages of `map` that lead to `targetId`. */
+export function passagesTo(map: GameMap, targetId: string): MapElement[] {
+  return map.elements.filter((el) => el.link?.mapId === targetId)
+}
+
+/**
+ * A door has two sides (D-259): `target` gets a passage back to `from` unless
+ * it already has one. It stands where the door stands on `from` (kept inside
+ * the target), on the nearest cell that is neither a passage nor a token.
+ */
+export function withReturnPassage(
+  target: GameMap,
+  from: Pick<GameMap, 'id'>,
+  door: Pick<MapElement, 'x' | 'y'>,
+  label: string,
+): GameMap {
+  if (target.id === from.id || passagesTo(target, from.id).length > 0) return target
+  const start = {
+    col: clamp(Math.round(door.x), 0, target.cols - 1),
+    row: clamp(Math.round(door.y), 0, target.rows - 1),
+  }
+  const cell = freeCellNear(target, start, { avoid: (c) => passageAt(target, c) !== undefined })
+  return withPassage(target, cell, from.id, label)
+}
+
+/**
+ * The map with `entity`'s token on it (D-259): placed at `at` (or the middle)
+ * on the nearest free cell, or moved there when it already stands on the map.
+ * Enemies start hidden under the fog of war.
+ */
+export function withToken(map: GameMap, entity: { id: string; kind: string }, at?: Cell): GameMap {
+  const centre = { col: Math.floor(map.cols / 2), row: Math.floor(map.rows / 2) }
+  const cell = freeCellNear(map, at && inBounds(map, at) ? at : centre, {
+    ignoreEntityId: entity.id,
+  })
+  const existing = map.tokens.find((tk) => tk.entityId === entity.id)
+  return {
+    ...map,
+    tokens: existing
+      ? map.tokens.map((tk) => (tk.id === existing.id ? { ...tk, ...cell } : tk))
+      : [
+          ...map.tokens,
+          {
+            id: crypto.randomUUID(),
+            entityId: entity.id,
+            ...cell,
+            size: 1,
+            hidden: entity.kind === 'enemy' && map.fog.enabled,
+          },
+        ],
+  }
+}

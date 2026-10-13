@@ -145,7 +145,8 @@ test('maps: editor, walls and doors, fog, tokens, areas and the players’ view'
   // --- Play the map --------------------------------------------------------
   await page.getByRole('button', { name: 'Jouer cette carte' }).click()
   await startGame(page)
-  await expect(page.getByRole('combobox', { name: 'Carte en jeu' })).toHaveValue(/.+/)
+  // The map tree (D-256) shows the map in play.
+  await expect(page.getByTestId('map-tree')).not.toContainText('Aucune carte en jeu')
   await page.getByLabel('Nouveau groupe').fill('Groupe')
   await page.getByRole('button', { name: 'Créer le groupe' }).click()
   const card = page.getByRole('region', { name: 'Groupe' })

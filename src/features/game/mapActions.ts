@@ -3,13 +3,16 @@ import type { Campaign } from '@/db/types'
 import type { Rng } from '@/dice'
 import { entityName } from '@/domain/entity'
 import {
+  arrivalCell,
   autoRevealFog,
   cellCenter,
   inBounds,
   isBlocking,
+  passageAt,
   PERCEPTION_STAT,
   tokenCenter,
   tokensInArea,
+  withToken,
   type AreaShape,
   type Cell,
   type GameMap,
@@ -39,49 +42,43 @@ export function createMapActions(t: Messages, campaign: Campaign, game: GameActi
     return revealed === map.fog.revealed ? map : { ...map, fog: { ...map.fog, revealed } }
   }
 
-  /** First free cell spiralling out from `start` (tokens never stack on placement). */
-  const freeCell = (map: GameMap, start: Cell): Cell => {
-    const taken = new Set(map.tokens.map((tk) => `${tk.col},${tk.row}`))
-    for (let ring = 0; ring < Math.max(map.cols, map.rows); ring++)
-      for (let dr = -ring; dr <= ring; dr++)
-        for (let dc = -ring; dc <= ring; dc++) {
-          if (Math.max(Math.abs(dr), Math.abs(dc)) !== ring) continue
-          const cell = { col: start.col + dc, row: start.row + dr }
-          if (inBounds(map, cell) && !taken.has(`${cell.col},${cell.row}`)) return cell
-        }
-    return start
+  /**
+   * A token that steps on a passage goes alone to the other map (D-256): the
+   * board in play stays where it is. One undoable step for both maps.
+   */
+  const travel = (from: GameMap, token: Token, to: GameMap, name: string) => {
+    const cell = arrivalCell(to, from.id, token.entityId)
+    const label = t.maps.wentThrough(name, to.name)
+    campaignHistory.getState().transaction(label, () => {
+      store().updateMap(
+        from.id,
+        (m) => withAutoReveal({ ...m, tokens: m.tokens.filter((tk) => tk.id !== token.id) }),
+        label,
+      )
+      store().updateMap(
+        to.id,
+        (m) =>
+          withAutoReveal({
+            ...m,
+            tokens: [
+              ...m.tokens.filter((tk) => tk.entityId !== token.entityId),
+              { ...token, ...cell },
+            ],
+          }),
+        label,
+      )
+    })
+    toast(label)
   }
 
   const actions = {
     /** Puts a character on the map (or moves its token there). */
     placeToken(mapId: string, entityId: string, at?: Cell) {
-      const map = mapOf(mapId)
       const e = entity(entityId)
-      if (!map || !e) return
-      const centre = { col: Math.floor(map.cols / 2), row: Math.floor(map.rows / 2) }
-      const existing = map.tokens.find((tk) => tk.entityId === entityId)
-      const cell = freeCell(
-        { ...map, tokens: map.tokens.filter((tk) => tk.entityId !== entityId) },
-        at && inBounds(map, at) ? at : centre,
-      )
+      if (!mapOf(mapId) || !e) return
       store().updateMap(
         mapId,
-        (m) =>
-          withAutoReveal({
-            ...m,
-            tokens: existing
-              ? m.tokens.map((tk) => (tk.id === existing.id ? { ...tk, ...cell } : tk))
-              : [
-                  ...m.tokens,
-                  {
-                    id: crypto.randomUUID(),
-                    entityId,
-                    ...cell,
-                    size: 1,
-                    hidden: e.kind === 'enemy' && m.fog.enabled,
-                  },
-                ],
-          }),
+        (m) => withAutoReveal(withToken(m, e, at)),
         t.maps.placed(entityName(e)),
       )
     },
@@ -94,6 +91,9 @@ export function createMapActions(t: Messages, campaign: Campaign, game: GameActi
       const name = entityName(
         entity(token.entityId) ?? ({ identity: { pseudo: '', discordName: '' } } as never),
       )
+      const passage = passageAt(map, cell, token.size)
+      const target = passage?.link?.mapId ? mapOf(passage.link.mapId) : undefined
+      if (target) return travel(map, token, target, name)
       store().updateMap(
         mapId,
         (m) =>

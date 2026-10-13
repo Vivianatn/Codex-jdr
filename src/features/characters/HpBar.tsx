@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn'
 import { hpBand, type HpBand, type RulesConfig } from '@/rules'
 import { useShallow } from 'zustand/react/shallow'
 import { useFxStore, type HpFx } from '@/stores/fxStore'
+import { clamp } from '@/lib/numbers'
 
 const BAND_COLORS: Record<HpBand, string> = {
   healthy: 'bg-heal',
@@ -55,7 +56,7 @@ export function HpBar({
 }) {
   const t = useT()
   const band = hpBand(current, max, thresholds)
-  const ratio = max > 0 ? Math.min(1, Math.max(0, current / max)) : 0
+  const ratio = max > 0 ? clamp(current / max, 0, 1) : 0
   const label = t.sheet.hpLabel(current, max)
 
   // Ghost trail: lags behind on damage, follows immediately on healing.

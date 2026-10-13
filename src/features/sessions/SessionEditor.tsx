@@ -12,10 +12,8 @@ import type { SessionPlan } from '@/domain/sessions'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
-import { useCampaignStore } from '@/stores/campaignStore'
 import { recordActivity } from '@/stores/activityLog'
-
-const NO_MAP = '__none__'
+import { SessionRoute } from './SessionRoute'
 
 /** Préparation › Sessions › one plan. Every change is saved at once (D-244). */
 export function SessionEditor() {
@@ -29,7 +27,6 @@ export function SessionEditor() {
     [sessionId],
   )
   const templates = useLiveQuery(() => bestiaryRepository.list(campaign.id), [campaign.id])
-  const maps = useCampaignStore((s) => s.maps)
   const [objective, setObjective] = useState('')
   const [templateId, setTemplateId] = useState('')
   const listPath = `/c/${campaign.id}/prep/sessions`
@@ -51,7 +48,7 @@ export function SessionEditor() {
   const chosenTemplate = templateId || templates?.[0]?.id || ''
 
   return (
-    <PageTransition className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-8">
+    <PageTransition className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button variant="ghost" size="sm" icon={<ArrowLeft />} onClick={() => navigate(listPath)}>
           {t.sessions.back}
@@ -80,6 +77,14 @@ export function SessionEditor() {
             value={plan.summary}
             onCommit={(summary) => void save({ summary })}
           />
+        </section>
+
+        <section className="space-y-3">
+          <div>
+            <h2 className="type-section text-ink">{t.sessions.route}</h2>
+            <p className="mt-1 text-xs text-ink-muted">{t.sessions.routeHint}</p>
+          </div>
+          <SessionRoute plan={plan} save={save} />
         </section>
 
         <section className="space-y-3">
@@ -144,22 +149,6 @@ export function SessionEditor() {
             label={t.sessions.rewardItems}
             value={plan.rewards.items}
             onCommit={(items) => void save({ rewards: { ...plan.rewards, items } })}
-          />
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="type-section text-ink">{t.sessions.map}</h2>
-          <SelectField<string>
-            label={t.sessions.map}
-            hideLabel
-            value={plan.mapId ?? NO_MAP}
-            onChange={(v) => void save({ mapId: v === NO_MAP ? null : v })}
-            options={[
-              { value: NO_MAP, label: t.sessions.noMap },
-              ...Object.values(maps)
-                .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-                .map((m) => ({ value: m.id, label: m.name })),
-            ]}
           />
         </section>
 

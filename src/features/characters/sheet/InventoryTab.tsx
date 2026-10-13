@@ -54,6 +54,7 @@ import { ItemArt } from '../ItemTile'
 import { IdentifyDialog } from '../play/PlayDialogs'
 import { Portrait } from '../Portrait'
 import type { SheetEditor } from '../useSheetEditor'
+import { compareText } from '@/lib/text'
 
 const DRAG_TYPE = 'application/x-codex-item'
 const BAG_COLUMNS = 6
@@ -88,7 +89,7 @@ export function InventoryTab({ entity, editor }: { entity: Entity; editor: Sheet
     useShallow((s) =>
       Object.values(s.entities)
         .filter((e) => e.id !== entity.id)
-        .sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr')),
+        .sort((a, b) => compareText(entityName(a), entityName(b))),
     ),
   )
 

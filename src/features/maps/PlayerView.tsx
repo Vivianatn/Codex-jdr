@@ -8,7 +8,7 @@ import { activeDb } from '@/db/db'
 import { CandleOrnament, Ornament } from '@/components/Brand'
 import { entityName, normalizeEntityShape } from '@/domain/entity'
 import { normalizeMap } from '@/domain/maps'
-import { normalizePlayState } from '@/domain/turns'
+import { galleryPosition, normalizePlayState } from '@/domain/turns'
 import type { Entity } from '@/domain/types'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
@@ -85,6 +85,7 @@ export function PlayerView() {
   }, [follow, gm, map, viewport])
 
   const mode = play.display.mode
+  const gallery = galleryPosition(play.display)
 
   const turn = play.turn
   const active = turn.status === 'playing' ? entities[turn.memberId] : undefined
@@ -108,7 +109,12 @@ export function PlayerView() {
           {screen === 'pause' ? (
             <PauseScreen title={campaign?.name ?? ''} />
           ) : screen === 'image' ? (
-            <img src={image!.src} alt="" className="size-full object-cover" />
+            // A series shows things to look at (D-259): whole, not cropped.
+            <img
+              src={image!.src}
+              alt=""
+              className={cn('size-full', gallery ? 'object-contain' : 'object-cover')}
+            />
           ) : screen === 'map' ? (
             <MapCanvas
               map={map!}
@@ -129,6 +135,15 @@ export function PlayerView() {
           )}
         </motion.div>
       </AnimatePresence>
+
+      {screen === 'image' && gallery && (
+        <p
+          className="absolute right-[5%] bottom-[5%] rounded-lg border border-[rgba(201,150,58,0.6)] bg-[rgba(21,17,13,0.86)] px-[2vh] py-[1vh] font-display text-[2.4vh] font-bold text-[#EBC274] tabular-nums"
+          aria-live="polite"
+        >
+          {gallery.index + 1} / {gallery.total}
+        </p>
+      )}
 
       {/* Turn banner, inside the 5 % TV safety margin (DA §10.8). */}
       {screen === 'map' && turn.status !== 'stopped' && (

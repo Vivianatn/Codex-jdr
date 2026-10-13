@@ -45,8 +45,9 @@ export function createBackupService(db: () => CodexDB = activeDb, now: () => num
 
     /** Takes a snapshot if the last one is old enough and there is something to keep. */
     async autoBackupIfDue(): Promise<Backup | null> {
-      const last = await db().backups.orderBy('createdAt').last()
-      if (last && now() - last.createdAt < AUTO_BACKUP_INTERVAL) return null
+      // Index only: reading the last backup itself would decrypt a whole archive.
+      const lastAt = (await db().backups.orderBy('createdAt').lastKey()) as number | undefined
+      if (lastAt !== undefined && now() - lastAt < AUTO_BACKUP_INTERVAL) return null
       if ((await db().campaigns.count()) === 0) return null
       return create('auto')
     },

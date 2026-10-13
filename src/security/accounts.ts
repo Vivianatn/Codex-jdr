@@ -120,6 +120,20 @@ async function wrap(
   }
 }
 
+/** Both wraps at once: WebCrypto runs the two PBKDF2 derivations in parallel. */
+async function wrapBoth(
+  key: Uint8Array,
+  secrets: { password: string; recovery: string },
+  accountId: string,
+  iterations: number,
+): Promise<{ password: WrappedKey; recovery: WrappedKey }> {
+  const [password, recovery] = await Promise.all([
+    wrap(key, secrets.password, accountId, 'password', iterations),
+    wrap(key, secrets.recovery, accountId, 'recovery', iterations),
+  ])
+  return { password, recovery }
+}
+
 async function unwrap(
   wrapped: WrappedKey,
   secret: string,
@@ -206,8 +220,12 @@ export function createAccountService(
         usernameKey: nameKey,
         createdAt: now(),
         lastLoginAt: now(),
-        password: await wrap(key, input.password, id, 'password', iterations),
-        recovery: await wrap(key, recoveryCode, id, 'recovery', iterations),
+        ...(await wrapBoth(
+          key,
+          { password: input.password, recovery: recoveryCode },
+          id,
+          iterations,
+        )),
         failedAttempts: 0,
         lockedUntil: 0,
         autoLockMinutes: DEFAULT_AUTO_LOCK,
@@ -236,8 +254,12 @@ export function createAccountService(
       if (!key) return registerFailure(record, 'wrongRecoveryCode')
       const recoveryCode = newRecoveryCode()
       await registry.accounts.update(record.id, {
-        password: await wrap(key, newPassword, record.id, 'password', iterations),
-        recovery: await wrap(key, recoveryCode, record.id, 'recovery', iterations),
+        ...(await wrapBoth(
+          key,
+          { password: newPassword, recovery: recoveryCode },
+          record.id,
+          iterations,
+        )),
         failedAttempts: 0,
         lockedUntil: 0,
         lastLoginAt: now(),

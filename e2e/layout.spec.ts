@@ -60,6 +60,22 @@ function sideways(page: Page): Promise<string[]> {
   })
 }
 
+/**
+ * Board screens fill the window: their panels scroll, never the page (a second,
+ * useless scroll bar next to the panel's). Also checked with larger text.
+ */
+async function pageScrollsDown(page: Page, textSize?: string): Promise<string | null> {
+  return page.evaluate(async (size) => {
+    const root = document.documentElement
+    const before = root.style.fontSize
+    if (size) root.style.fontSize = size
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    const height = root.scrollHeight
+    root.style.fontSize = before
+    return height > root.clientHeight + 1 ? `page (${height} > ${root.clientHeight})` : null
+  }, textSize)
+}
+
 const SECTIONS = [
   'Tableau de bord',
   'Joueurs',
@@ -127,6 +143,15 @@ for (const viewport of VIEWPORTS) {
     await page.getByRole('link', { name: 'Cartes', exact: true }).click()
     await page.getByRole('link', { name: 'Crypte d’Ombreval' }).click()
     await check('éditeur de carte')
+    // On phones the menu stacks above the board: the page scrolls down there, as it should.
+    const textSizes = viewport.width >= 768 ? [undefined, '125%', '150%'] : [undefined]
+    for (const size of textSizes) {
+      const down = await pageScrollsDown(page, size)
+      if (down)
+        problems.push(
+          `éditeur de carte${size ? ` (texte ${size})` : ''} : défile en hauteur, ${down}`,
+        )
+    }
 
     // Play: start panel, then the table, the quick panel and the sheet drawer.
     await page
@@ -136,6 +161,8 @@ for (const viewport of VIEWPORTS) {
     await check('démarrage')
     await startGame(page)
     await check('en jeu')
+    const down = await pageScrollsDown(page)
+    if (down) problems.push(`en jeu : défile en hauteur, ${down}`)
     const quick = page.getByRole('button', { name: 'Manipuler Gorak' }).first()
     if (await quick.isVisible()) {
       await quick.click()

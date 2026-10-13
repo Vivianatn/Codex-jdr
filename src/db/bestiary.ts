@@ -1,6 +1,7 @@
 import { normalizeEntityShape } from '@/domain/entity'
 import type { EnemyTemplate } from '@/domain/types'
 import { activeDb, type CodexDB } from './db'
+import { compareText } from '@/lib/text'
 
 /** Enemy templates of a campaign (D-224: everything belongs to its campaign). */
 export function createBestiaryRepository(
@@ -12,7 +13,7 @@ export function createBestiaryRepository(
       const all = (await db().bestiary.where('campaignId').equals(campaignId).toArray()).map(
         normalizeEntityShape,
       )
-      return all.sort((a, b) => a.identity.pseudo.localeCompare(b.identity.pseudo, 'fr'))
+      return all.sort((a, b) => compareText(a.identity.pseudo, b.identity.pseudo))
     },
     async get(id: string): Promise<EnemyTemplate | undefined> {
       const template = await db().bestiary.get(id)

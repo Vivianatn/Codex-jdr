@@ -1,10 +1,7 @@
 import { createEntity, normalizeEntityShape } from '@/domain/entity'
 import { ENTITY_KINDS, STAT_KEYS, type Entity, type EntityKind } from '@/domain/types'
 import { defaultRules } from '@/rules'
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
+import { isRecord } from '@/lib/guards'
 
 /**
  * Validates an entity coming from an import file and fills any missing field

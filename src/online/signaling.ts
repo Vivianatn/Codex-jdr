@@ -1,3 +1,5 @@
+import { isRecord } from '@/lib/guards'
+import { fromBase64, fromUtf8, toBase64, utf8 } from '@/security/crypto'
 import type { GuestRole } from './onlineStore'
 
 /**
@@ -42,19 +44,13 @@ async function pipe(bytes: Uint8Array, stream: CompressionStream | Decompression
   return new Uint8Array(await new Response(out).arrayBuffer())
 }
 
-function toBase64Url(bytes: Uint8Array): string {
-  let binary = ''
-  for (const b of bytes) binary += String.fromCharCode(b)
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
+const toBase64Url = (bytes: Uint8Array) =>
+  toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
-function fromBase64Url(text: string): Uint8Array {
-  const binary = atob(text.replace(/-/g, '+').replace(/_/g, '/'))
-  return Uint8Array.from(binary, (c) => c.charCodeAt(0))
-}
+const fromBase64Url = (text: string) => fromBase64(text.replace(/-/g, '+').replace(/_/g, '/'))
 
 export async function encodeCode(code: InviteCode | ReplyCode): Promise<string> {
-  const json = new TextEncoder().encode(JSON.stringify(code))
+  const json = utf8(JSON.stringify(code))
   return PREFIX + toBase64Url(await pipe(json, new CompressionStream('deflate-raw')))
 }
 
@@ -72,13 +68,13 @@ export async function decodeCode(text: string): Promise<InviteCode | ReplyCode> 
       new DecompressionStream('deflate-raw'),
     )
     if (bytes.length > 64_000) throw new InvalidCodeError()
-    data = JSON.parse(new TextDecoder().decode(bytes))
+    data = JSON.parse(fromUtf8(bytes))
   } catch {
     throw new InvalidCodeError()
   }
-  const c = data as Record<string, unknown>
-  if (typeof c !== 'object' || c === null || c.v !== 1 || !str(c.peerId, 64) || !str(c.sdp, 16_000))
-    throw new InvalidCodeError()
+  if (!isRecord(data)) throw new InvalidCodeError()
+  const c = data
+  if (c.v !== 1 || !str(c.peerId, 64) || !str(c.sdp, 16_000)) throw new InvalidCodeError()
   if (
     c.kind === 'invite' &&
     (c.role === 'editor' || c.role === 'player') &&

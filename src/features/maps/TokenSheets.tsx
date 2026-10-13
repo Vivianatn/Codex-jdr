@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { hexRadius, tokenCenter, type GameMap } from '@/domain/maps'
 import type { Entity } from '@/domain/types'
+import { isTypingTarget } from '@/lib/dom'
 import { MiniSheet } from '@/features/play/MiniSheet'
 import { useMapViewStore } from '@/stores/mapViewStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -21,8 +22,7 @@ export function TokenSheets({ map, entities }: { map: GameMap; entities: Record<
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null
-      if (e.key === 'Escape' && !/^(INPUT|SELECT|TEXTAREA)$/.test(target?.tagName ?? ''))
+      if (e.key === 'Escape' && !isTypingTarget(e.target))
         useMapViewStore.getState().openSheet(null)
     }
     window.addEventListener('keydown', onKey)

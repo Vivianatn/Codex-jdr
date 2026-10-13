@@ -34,7 +34,7 @@ async function setup() {
   await activeDb().maps.add(map)
   const plan = {
     ...newSessionPlan(campaign.id, 'La crypte'),
-    mapId: map.id,
+    mapIds: [map.id],
     objectives: [{ id: 'o1', text: 'Trouver Brann' }],
     encounters: [{ id: 'e1', templateId: goule.id, count: 2 }],
   }

@@ -1,3 +1,4 @@
+import { isRecord } from '@/lib/guards'
 /**
  * Sessions (D-244): the former « quêtes » became reusable session plans. A plan
  * is prepared once (objectives, rewards, notes, map, encounters) and put in
@@ -26,8 +27,11 @@ export interface SessionPlan {
   rewards: { xp: number; money: number; items: string }
   /** GM only, never shown to players. */
   notes: string
-  /** Map put on the board when the session starts. */
-  mapId: string | null
+  /**
+   * The session's maps in their order of appearance (D-258): the first is put
+   * on the board when the session starts, the GM moves on to the next ones.
+   */
+  mapIds: string[]
   encounters: SessionEncounter[]
   timesPlayed: number
   lastPlayedAt: number | null
@@ -64,17 +68,13 @@ export function newSessionPlan(campaignId: string, title: string, now = Date.now
     objectives: [],
     rewards: { xp: 0, money: 0, items: '' },
     notes: '',
-    mapId: null,
+    mapIds: [],
     encounters: [],
     timesPlayed: 0,
     lastPlayedAt: null,
     createdAt: now,
     updatedAt: now,
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 const text = (v: unknown, max = 20_000) => (typeof v === 'string' ? v.slice(0, max) : '')
@@ -99,7 +99,16 @@ export function normalizeSessionPlan(raw: unknown, campaignId: string): SessionP
       money: count(rewards.money),
       items: text(rewards.items, 2000),
     },
-    mapId: typeof raw.mapId === 'string' ? raw.mapId : null,
+    // Plans saved before D-258 had one map.
+    mapIds: [
+      ...new Set(
+        Array.isArray(raw.mapIds)
+          ? raw.mapIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+          : typeof raw.mapId === 'string'
+            ? [raw.mapId]
+            : [],
+      ),
+    ].slice(0, 100),
     encounters: (Array.isArray(raw.encounters) ? raw.encounters : [])
       .filter(
         (e): e is SessionEncounter =>
@@ -137,4 +146,27 @@ export function objectivesProgress(plan: SessionPlan, run: SessionRun | null) {
   const ids = new Set(plan.objectives.map((o) => o.id))
   const done = (run?.objectivesDone ?? []).filter((id) => ids.has(id)).length
   return { done, total: ids.size }
+}
+
+/** Map shown when the session starts. */
+export function startMapId(plan: Pick<SessionPlan, 'mapIds'> | null | undefined): string | null {
+  return plan?.mapIds[0] ?? null
+}
+
+/** The map after `currentId` in the session's order (the first when the board is elsewhere). */
+export function nextSessionMapId(
+  plan: Pick<SessionPlan, 'mapIds'>,
+  currentId: string | null,
+): string | null {
+  const index = currentId ? plan.mapIds.indexOf(currentId) : -1
+  return plan.mapIds[index + 1] ?? null
+}
+
+/** Moves the map at `from` to `to` in the session's order. */
+export function moveSessionMap(mapIds: readonly string[], from: number, to: number): string[] {
+  if (from === to || from < 0 || from >= mapIds.length) return [...mapIds]
+  const next = [...mapIds]
+  const [moved] = next.splice(from, 1)
+  next.splice(Math.max(0, Math.min(to, next.length)), 0, moved!)
+  return next
 }

@@ -4,12 +4,8 @@ import { toast } from 'sonner'
 import { useStore } from 'zustand'
 import { IconButton } from '@/components/ui/Button'
 import { useT } from '@/i18n'
+import { isTypingTarget } from '@/lib/dom'
 import { campaignHistory } from '@/stores/campaignStore'
-
-function isTyping(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
-}
 
 /** Header undo/redo buttons + Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y (outside text fields). */
 export function UndoRedo() {
@@ -31,7 +27,7 @@ export function UndoRedo() {
       toast(t.history.redone(entry.label))
     }
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || isTyping(e.target)) return
+      if (!(e.ctrlKey || e.metaKey) || isTypingTarget(e.target)) return
       const key = e.key.toLowerCase()
       if (key === 'z' && !e.shiftKey) {
         e.preventDefault()

@@ -4,6 +4,88 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Passages par joueur et cap sur la mise en ligne (2026-10-13)
+
+### D-256 · Un passage n'emmène que celui qui le prend
+
+Demande du MJ : quand un joueur touche un passage, lui seul est transporté dans la pièce où il mène ; le MJ garde accès à toutes les cartes de la séance par une arborescence rapide.
+
+- **Contact** : un jeton qui se pose sur un élément « Passage vers une carte » (une de ses cases sous l'élément, rotation comprise) part seul vers la carte cible. Une seule étape d'annulation pour les deux cartes (« Ayla passe vers « Cave » »). Le plateau du MJ (`play.mapId`) ne bouge pas.
+- **Arrivée** : à côté du passage qui ramène à la carte d'origine (une porte a deux côtés), sinon au milieu ; jamais sur un passage (le pas suivant le renverrait), jamais sur un autre jeton.
+- **Ne déclenchent pas** : un passage caché (le MJ le révèle d'abord), sans carte cible, ou qui mène à la même carte.
+- Demandé explicitement par le MJ, donc actif d'emblée (D-217 : règle confirmée par le MJ). Vaut pour tous les jetons que l'on déplace, ennemis compris : un passage est un passage.
+- **En ligne** : chaque joueur reçoit la carte où se trouve **son** personnage (jeton visible ; à défaut, la carte en jeu) et peut s'y déplacer. Un jeton caché ne trahit pas sa position. La fenêtre joueurs (second écran partagé) montre toujours la carte choisie par le MJ.
+- **Arborescence du MJ** (`MapTreeMenu`, en jeu, remplace la liste « Carte en jeu ») : la carte de la séance, puis celles où mènent ses passages, en arbre (chaque carte une fois, au plus court chemin), puis les cartes où se trouve le groupe, puis « Autres cartes ». Chaque carte indique qui s'y trouve (noms du groupe, nombre d'ennemis). La choisir la met sur le plateau du MJ ; personne n'est déplacé.
+
+### D-261 · Les écrans de plateau ne font jamais défiler la page
+
+Retour du MJ (capture de l'éditeur de carte, texte agrandi) : deux barres de défilement verticales côte à côte, celle du panneau et une autre, inutile, pour toute la page.
+
+- **Cause 1** : les champs de fichier invisibles (`sr-only`, positionnés en absolu) du panneau de réglages échappaient à sa zone de défilement, faute d'ancêtre positionné, et allongeaient la page. Les zones de défilement du panneau et de la palette sont maintenant `relative`.
+- **Cause 2** : avec un texte agrandi sur un écran peu haut, le menu de gauche de Préparation dépassait la fenêtre ; il défile désormais seul (à partir de 768 px de large).
+- Les tuiles de la palette grandissent avec le texte au lieu de couper leur nom.
+- **Audit** (`e2e/layout.spec.ts`) : l'éditeur de carte et le plateau de jeu ne doivent jamais faire défiler la page en hauteur, à 100 %, 125 % et 150 % de taille de texte (à partir de 768 px ; sur téléphone le menu s'empile au-dessus et la page défile normalement). Vérifié en réintroduisant le défaut.
+
+### D-260 · Supprimer sur le plateau de jeu aussi
+
+Retour du MJ : « la suppression d'éléments ne fonctionne pas ». Dans l'éditeur, tout se supprimait (vérifié : éléments de chaque type, murs, jetons, après rechargement) ; mais sur le plateau « En jeu », le panneau d'un élément n'avait pas de bouton « Supprimer », celui d'un mur ou d'une porte non plus, et la touche Suppr n'y faisait rien.
+
+- Le bouton « Supprimer l'élément » et « Supprimer » (mur, porte) sont proposés en jeu comme dans l'éditeur ; Ctrl+Z annule.
+- Les raccourcis (Suppr ou Retour arrière : supprimer la sélection ; R : tourner l'élément) sont partagés par l'éditeur et le plateau (`useMapKeys`). En jeu, la touche ne retire pas les personnages : cliquer un jeton ouvre sa fiche, un Retour arrière égaré ne doit pas l'enlever de la carte (« Retirer de la carte » reste dans la manipulation rapide).
+
+### D-259 · Éditeur de carte : personnages, zones d'images, portes à double sens
+
+Demandes du MJ : pouvoir supprimer des éléments en éditant une carte, y poser un allié ou un personnage (pas seulement un ennemi), faire apparaître une image ou une suite d'images quand on clique sur une zone, montrer les portes sur une seconde carte de la démo, et poser automatiquement le point de retour sur la carte cible.
+
+- **Supprimer** : le bouton « Supprimer l'élément » et la touche Suppr existaient, mais la couche du MJ (notes, et désormais zones d'images) n'écoutait les clics qu'avec la gomme : on ne pouvait ni ouvrir ni supprimer une note. Elle a maintenant sa propre couche cliquable, en édition comme en jeu.
+- **Personnages dans l'éditeur** : section « Personnages » de la palette (et du menu sous 1280 px) avec tous les types, joueurs, alliés, familiers, ennemis ; on glisse sur la carte ou on clique pour poser au centre. Un jeton sélectionné s'ouvre dans un panneau (taille, caché, « Retirer de la carte ») ; Suppr retire les jetons sélectionnés. La pose est partagée avec le jeu (`withToken`).
+- **Zone d'images** (« Image à montrer », couche MJ, jamais vue des joueurs) : une liste ordonnée d'images ajoutées dans l'éditeur. En jeu, le MJ clique la zone : « Montrer aux joueurs », puis image précédente / suivante (« 2 / 3 »), « Revenir à la carte ». `PlayerDisplay.gallery` porte la suite ; la fenêtre joueurs montre l'image entière et sa position, le joueur en ligne la voit par-dessus le plateau. Un joueur en ligne ne reçoit que l'image à l'écran, jamais les suivantes.
+- **Porte à double sens** : choisir la cible d'un passage (éditeur ou jeu) pose aussitôt le passage de retour sur la carte cible, au même endroit (ramené dans la carte), sur la case libre la plus proche qui n'est pas déjà un passage ; jamais un second retour. Une seule annulation retire les deux. Dans l'éditeur de session, le retour est posé tout seul ; le MJ peut cliquer pour le déplacer ou garder l'emplacement.
+- **Démo** (`exemples/campagne-test-ombreval.json`) : seconde carte « Ossuaire d'Ombreval » reliée à la crypte par un escalier dans chaque sens, une zone « Fresque de l'autel » avec deux images, et la session devient le parcours crypte → ossuaire. Réimporter le fichier pour la voir.
+
+### D-258 · Une session est un parcours de cartes
+
+Demande du MJ : une session est une succession de cartes dont on fixe l'ordre d'apparition, construite de la façon la plus visuelle possible, et les portes se posent depuis l'édition de la session.
+
+- **Modèle** : `SessionPlan.mapId` (une carte) devient `mapIds` (liste ordonnée). Les sessions enregistrées avant sont converties à la lecture (`normalizeSessionPlan`, aussi appliqué par le dépôt) et à l'import ; une copie de campagne garde l'ordre.
+- **« Parcours de la session »**, en tête de l'éditeur : une carte par étape (vignette de l'image de fond, sinon sa grille ; numéro d'étape ; portes vers et depuis les autres cartes, avec leur numéro). L'ordre se change en glissant les cartes, ou avec les flèches (clavier). On ajoute une carte existante ou on en crée une nouvelle sur place ; retirer une carte du parcours ne la supprime pas.
+- **Poser une porte** (fenêtre de préparation, autorisée hors jeu) : on choisit où elle mène (par défaut l'étape suivante), on clique sur la case du plateau ; puis on clique là où l'on arrive sur l'autre carte (la porte du retour), ou « Pas de porte de retour ». Si l'autre carte a déjà une porte qui revient, l'étape est sautée. Une porte posée sur une case qui en a déjà une est redirigée (`withPassage`). Chaque pose est annulable (Ctrl+Z). Ces portes sont des passages D-256 : un jeton qui les touche part seul.
+- **En jeu** : la première carte du parcours est mise sur le plateau au démarrage ; l'arborescence (D-256) liste les cartes du parcours numérotées dans l'ordre, et propose « Carte suivante ».
+- Le plateau de la fenêtre a un mode « choisir une case » (`MapCanvas.onCellPick`) ; elle est chargée à la demande (Konva).
+
+### D-257 · Mise en ligne : choix du MJ qui révisent D-249
+
+Le MJ abandonne l'échange de codes pair-à-pair (D-245) et vise directement la mise en ligne. Choix faits le 2026-10-13 :
+
+- **Ordre** : cartes d'abord (D-256), puis le serveur.
+- **Données chiffrées sur le serveur, lisibles par lui** (et non chiffrées de bout en bout comme le prévoyait D-249) : chiffrées au repos et en transit (HTTPS). Plus simple, mot de passe oublié réinitialisable par e-mail, recherche et partage côté serveur. La messagerie (phase 10) suit le même choix.
+- **Compte en ligne + copie hors ligne** : on prépare sans connexion sur une copie locale chiffrée, synchronisée au retour du réseau. Les comptes et campagnes locaux existants sont repris par le compte en ligne.
+- **Rejoindre** : un joueur demande à rejoindre une **campagne** (lien d'invitation ou recherche) ; le MJ accepte, choisit le rôle (joueur ou co-MJ) et le personnage ; ensuite le joueur voit les séances en cours et y entre en un clic. Un bouton bascule entre mode MJ (créer, gérer ses campagnes) et mode joueur (rejoindre, ses parties).
+- Reste valable de D-249 : Node.js, Fastify, PostgreSQL, WebSocket derrière Caddy en Docker Compose ; Umami sans cookie.
+
+## Hygiène du code (2026-10-13)
+
+### D-254 · Réutiliser avant d'écrire
+
+Demande du MJ : ne pas réécrire ce qui existe déjà dans une librairie. Règle (CLAUDE.md) : avant d'écrire un utilitaire, chercher dans la plateforme (`Intl`, `structuredClone`…), puis dans les dépendances installées, puis dans `src/lib/`. Première passe :
+
+- `shallowEqual` de l'historique remplacé par `shallow` de `zustand/shallow`.
+- `isRecord` (5 copies) → `src/lib/guards.ts` ; test « on tape dans un champ » (5 variantes) → `isTypingTarget` dans `src/lib/dom.ts`.
+- Base64url des codes de connexion : réutilise `toBase64`/`fromBase64`/`utf8` de `security/crypto.ts` au lieu d'un encodeur octet par octet.
+- Tris alphabétiques : un `Intl.Collator('fr')` partagé (`compareText`, `src/lib/text.ts`) au lieu de `localeCompare(…, 'fr')`, qui recrée un collateur à chaque comparaison.
+- Bornes `Math.min(Math.max(…))` → `clamp()` (`src/lib/numbers.ts`).
+- Pas de nouvelle dépendance (lodash, etc.) : la plateforme et les paquets déjà là suffisent.
+
+### D-255 · Écran de connexion rapide
+
+Demande du MJ : la connexion et l'inscription chargeaient trop lentement.
+
+- **Écrans à la demande** : tout ce qui est derrière le verrou (`src/app/screens.tsx`) se charge à la demande. Le JS téléchargé avant l'écran de connexion passe de ≈ 1 245 Ko à ≈ 620 Ko (React, routeur, Dexie, chiffrement). Pendant qu'on tape le mot de passe, `preloadScreens()` récupère en tâche de fond la liste des campagnes et la préparation : l'arrivée après déverrouillage n'attend rien.
+- Un écran dont le code est déjà là s'affiche directement, sans `lazy` : sinon React suspend une fois de plus et retient la page jusqu'à 500 ms par niveau de mise en page imbriqué. Le choix se fait au montage, pour ne jamais remonter un écran ouvert.
+- **Inscription et récupération** : les deux dérivations PBKDF2 (mot de passe, code de secours) tournent en parallèle, soit ≈ 220 ms au lieu de ≈ 330 ms sur ordinateur, et proportionnellement plus gagné sur téléphone. Les 600 000 itérations restent (D-241) : c'est le prix de la sécurité, pas un défaut.
+- **Sauvegarde du jour** : la date de la dernière sauvegarde se lit dans l'index (`lastKey()`), au lieu de déchiffrer toute la dernière archive à chaque connexion. Quand une sauvegarde est due, elle attend que le navigateur soit inactif (`whenIdle`) au lieu de concurrencer l'affichage du premier écran.
+- Tests : `renderApp` précharge tous les écrans (await au chargement du module).
+
 ## Interface façon jeu vidéo (2026-10-12)
 
 Demande du MJ : « gamifier » Codex et faire en sorte qu'il ne ressemble pas à une IA. Précisions du MJ : l'interface doit faire penser aux jeux vidéo, **sans ajouter de système de jeu** (pas de succès ni de progression du MJ) ; direction « RPG classique » (Baldur's Gate 3, Divinity) ; sons actifs par défaut, musique coupée ; retravailler l'apparence et les textes (le code, la documentation et l'historique git restent tels quels).

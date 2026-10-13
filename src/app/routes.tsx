@@ -1,20 +1,19 @@
 import { Navigate, type RouteObject } from 'react-router'
 import { RequirePlayersSession, RequireSession } from '@/features/account/SessionGate'
-import { CampaignsPage } from '@/features/campaigns/CampaignsPage'
-import { PlayerScreen } from '@/features/online/PlayerScreen'
-import { SessionEditor } from '@/features/sessions/SessionEditor'
-import { PlayLayout } from '@/features/play/PlayLayout'
-import { PrepLayout } from '@/features/prep/PrepLayout'
-import { PrepSectionPage } from '@/features/prep/PrepSectionPage'
-import { CampaignLayout } from '@/features/shell/CampaignLayout'
-import { EntitySheetPage, TemplateSheetPage } from '@/features/characters/SheetPages'
+import { ResumePrep, RouteError, WizardRoute } from './RouteHelpers'
 import {
-  MapEditorRoute,
-  PlayerViewRoute,
-  ResumePrep,
-  RouteError,
-  WizardRoute,
-} from './RouteHelpers'
+  CampaignLayout,
+  CampaignsPage,
+  EntitySheetPage,
+  MapEditorPage,
+  PlayerScreen,
+  PlayerView,
+  PlayLayout,
+  PrepLayout,
+  PrepSectionPage,
+  SessionEditor,
+  TemplateSheetPage,
+} from './screens'
 
 export const routes: RouteObject[] = [
   {
@@ -40,7 +39,7 @@ export const routes: RouteObject[] = [
               { path: 'new', element: <WizardRoute /> },
               { path: 'e/:entityId', element: <EntitySheetPage /> },
               { path: 't/:templateId', element: <TemplateSheetPage /> },
-              { path: 'm/:mapId', element: <MapEditorRoute /> },
+              { path: 'm/:mapId', element: <MapEditorPage /> },
               { path: 's/:sessionId', element: <SessionEditor /> },
             ],
           },
@@ -54,7 +53,7 @@ export const routes: RouteObject[] = [
     path: '/c/:campaignId/view',
     element: <RequirePlayersSession />,
     errorElement: <RouteError />,
-    children: [{ index: true, element: <PlayerViewRoute /> }],
+    children: [{ index: true, element: <PlayerView /> }],
   },
   { path: '*', element: <Navigate to="/" replace /> },
 ]

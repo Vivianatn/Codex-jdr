@@ -2,7 +2,17 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Shapes } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useResolvedTheme } from '@/app/usePreferences'
-import { DECOR_KINDS, newElement, OBJECT_KINDS, type ElementKind } from '@/domain/maps'
+import { entityName } from '@/domain/entity'
+import {
+  DECOR_KINDS,
+  newElement,
+  OBJECT_KINDS,
+  type ElementKind,
+  type GameMap,
+} from '@/domain/maps'
+import { compareText } from '@/lib/text'
+import { useCampaignStore } from '@/stores/campaignStore'
+import { MapCharacters } from './MapCharacters'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { useMapViewStore } from '@/stores/mapViewStore'
@@ -31,8 +41,14 @@ function ElementPreview({ kind }: { kind: ElementKind }) {
   return <canvas ref={canvas} className="size-11" aria-hidden />
 }
 
-/** Editor palette (DA §10.5): elements as tiles, then the layers. */
-export function MapPalette() {
+/** Editor palette (DA §10.5): elements as tiles, the characters (D-259), then the layers. */
+export function MapPalette({
+  map,
+  onPlace,
+}: {
+  map: GameMap
+  onPlace: (entityId: string) => void
+}) {
   const t = useT()
   const tool = useMapViewStore((s) => s.tool)
   const placeKind = useMapViewStore((s) => s.placeKind)
@@ -48,7 +64,7 @@ export function MapPalette() {
               type="button"
               aria-pressed={active}
               onClick={() => setPlaceKind(kind)}
-              style={{ height: TILE }}
+              style={{ minHeight: TILE }}
               className={cn(
                 'flex w-full flex-col items-center justify-center gap-0.5 rounded-lg border text-[0.65rem] leading-tight font-medium transition-colors',
                 active
@@ -68,7 +84,7 @@ export function MapPalette() {
   return (
     <aside
       aria-label={t.maps.palette}
-      className="hidden w-[232px] shrink-0 space-y-5 overflow-y-auto border-r border-line bg-surface p-3 xl:block"
+      className="relative hidden w-[232px] shrink-0 space-y-5 overflow-y-auto border-r border-line bg-surface p-3 xl:block"
     >
       <section className="space-y-2">
         <h2 className="type-eyebrow !text-ink-muted">{t.maps.objects}</h2>
@@ -79,6 +95,10 @@ export function MapPalette() {
         {tiles(DECOR_KINDS)}
       </section>
       <section className="space-y-2">
+        <h2 className="type-eyebrow !text-ink-muted">{t.maps.characters}</h2>
+        <MapCharacters map={map} onPlace={onPlace} />
+      </section>
+      <section className="space-y-2">
         <h2 className="type-eyebrow !text-ink-muted">{t.maps.layers}</h2>
         <LayersList />
       </section>
@@ -87,8 +107,18 @@ export function MapPalette() {
 }
 
 /** Under 1280 px the palette folds into a menu opened from the rail (DA §10.5). */
-export function PaletteMenu() {
+export function PaletteMenu({
+  map,
+  onPlace,
+}: {
+  map: GameMap
+  onPlace: (entityId: string) => void
+}) {
   const t = useT()
+  const entities = useCampaignStore((s) => s.entities)
+  const characters = Object.values(entities).sort((a, b) =>
+    compareText(entityName(a), entityName(b)),
+  )
   const tool = useMapViewStore((s) => s.tool)
   const placeKind = useMapViewStore((s) => s.placeKind)
   const setPlaceKind = useMapViewStore((s) => s.setPlaceKind)
@@ -132,6 +162,24 @@ export function PaletteMenu() {
           {section(t.maps.objects, OBJECT_KINDS)}
           <DropdownMenu.Separator className="my-1 h-px bg-line" />
           {section(t.maps.decor, DECOR_KINDS)}
+          {characters.length > 0 && (
+            <>
+              <DropdownMenu.Separator className="my-1 h-px bg-line" />
+              <DropdownMenu.Label className="px-2 py-1 text-xs font-semibold text-ink-muted">
+                {t.maps.characters}
+              </DropdownMenu.Label>
+              {characters.map((e) => (
+                <DropdownMenu.Item key={e.id} className={item} onSelect={() => onPlace(e.id)}>
+                  <span className="min-w-0 flex-1 truncate">{entityName(e)}</span>
+                  <span className="text-xs text-ink-muted">
+                    {map.tokens.some((tk) => tk.entityId === e.id)
+                      ? t.maps.onThisMap
+                      : t.kinds[e.kind]}
+                  </span>
+                </DropdownMenu.Item>
+              ))}
+            </>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

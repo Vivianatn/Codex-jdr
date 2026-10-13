@@ -1,3 +1,4 @@
+import { shallow } from 'zustand/shallow'
 import { createStore, type StateCreator, type StoreApi } from 'zustand/vanilla'
 
 /**
@@ -67,16 +68,6 @@ export type HistoryStore<S> = StoreApi<HistoryState<S>> & {
   record: (before: S, after: S) => void
 }
 
-export function shallowEqual(a: object, b: object): boolean {
-  if (Object.is(a, b)) return true
-  const keysA = Object.keys(a) as (keyof typeof a)[]
-  const keysB = Object.keys(b)
-  if (keysA.length !== keysB.length) return false
-  return keysA.every(
-    (key) => Object.prototype.hasOwnProperty.call(b, key) && Object.is(a[key], b[key]),
-  )
-}
-
 export function createHistory<S extends object>(options: HistoryOptions = {}): HistoryStore<S> {
   const limit = options.limit ?? 200
   const defaultLabel = options.defaultLabel ?? 'Modification'
@@ -141,7 +132,7 @@ export function createHistory<S extends object>(options: HistoryOptions = {}): H
           if (depth === 0 && binding && txBefore) {
             const before = txBefore
             txBefore = null
-            if (!shallowEqual(before, binding.read())) push(txLabel, before)
+            if (!shallow(before, binding.read())) push(txLabel, before)
           }
         }
       },
@@ -167,7 +158,7 @@ export function createHistory<S extends object>(options: HistoryOptions = {}): H
       }
     },
     record: (before: S, after: S) => {
-      if (suspended > 0 || depth > 0 || shallowEqual(before, after)) return
+      if (suspended > 0 || depth > 0 || shallow(before, after)) return
       const s = store.getState()
       const past = [...s.past, { label: defaultLabel, snapshot: before, at: now() }].slice(-limit)
       store.setState({ past, future: [], canUndo: true, canRedo: false })

@@ -1,6 +1,7 @@
 import type { GameMap } from '@/domain/maps'
 import { useMapViewStore } from '@/stores/mapViewStore'
 import { fitCamera, MAX_SCALE, MIN_SCALE } from './mapGeometry'
+import { clamp } from '@/lib/numbers'
 
 /** Zoom around the centre of the viewport, fit the whole map, centre on a point. */
 export function cameraControls(map: GameMap) {
@@ -13,7 +14,7 @@ export function cameraControls(map: GameMap) {
     zoom(factor: number) {
       const { viewport, setCamera } = state()
       const c = current()
-      const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, c.scale * factor))
+      const scale = clamp(c.scale * factor, MIN_SCALE, MAX_SCALE)
       const cx = viewport.width / 2
       const cy = viewport.height / 2
       const px = (cx - c.x) / c.scale

@@ -46,6 +46,7 @@ import {
 import type { Entity } from '@/domain/types'
 import { hpBand, type RulesConfig } from '@/rules'
 import { useResolvedTheme } from '@/app/usePreferences'
+import { isTypingTarget } from '@/lib/dom'
 import { useFxStore, type HpFx } from '@/stores/fxStore'
 import { useMapViewStore, type Camera } from '@/stores/mapViewStore'
 import { drawBoardIcon, type BoardIcon } from './boardIcons'
@@ -61,6 +62,7 @@ import { ENTITY_DRAG_TYPE } from './dragTypes'
 import { drawElement } from './drawElements'
 import { elementBox, fitCamera, MAX_SCALE, MIN_SCALE } from './mapGeometry'
 import { useAssetImage, useImage } from './useImage'
+import { clamp } from '@/lib/numbers'
 
 export type MapChange = (recipe: (map: GameMap) => GameMap, label: string) => void
 
@@ -108,6 +110,8 @@ export interface MapCanvasProps {
   calibrateCells?: number
   /** Names of the campaign's maps, for passage labels (GM only). */
   mapNames?: Record<string, string>
+  /** Pick mode (D-258, session editor): a click on the board picks a cell instead of acting. */
+  onCellPick?: (cell: Cell) => void
   className?: string
 }
 
@@ -200,7 +204,7 @@ export function MapCanvas(props: MapCanvasProps) {
 
   const setCamera = useCallback(
     (next: Camera) => {
-      const clamped = { ...next, scale: Math.min(MAX_SCALE, Math.max(MIN_SCALE, next.scale)) }
+      const clamped = { ...next, scale: clamp(next.scale, MIN_SCALE, MAX_SCALE) }
       setStoredCamera(map.id, clamped)
       props.onCameraChange?.(clamped, size)
     },
@@ -214,13 +218,15 @@ export function MapCanvas(props: MapCanvasProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size.width, size.height])
 
-  // Debug hook for end-to-end tests: map ↔ screen coordinates.
+  // Debug hook for end-to-end tests: map ↔ screen coordinates (not from the players' window).
+  const picking = Boolean(props.onCellPick)
   useEffect(() => {
-    if (!import.meta.env.DEV || mode === 'view') return
+    if (!import.meta.env.DEV || (mode === 'view' && !picking)) return
     const w = window as unknown as { __codexMap?: unknown }
-    w.__codexMap = {
+    const node = container.current
+    const hook = {
       toScreen: (p: Point) => {
-        const rect = container.current!.getBoundingClientRect()
+        const rect = node!.getBoundingClientRect()
         return {
           x: rect.left + camera.x + p.x * camera.scale,
           y: rect.top + camera.y + p.y * camera.scale,
@@ -229,7 +235,12 @@ export function MapCanvas(props: MapCanvasProps) {
       cellCenter: (col: number, row: number) => cellCenter(map.grid, { col, row }),
       camera,
     }
-  }, [camera, map.grid, mode])
+    w.__codexMap = hook
+    // A board that goes away takes its hook with it (the next screen sets its own).
+    return () => {
+      if (w.__codexMap === hook) delete w.__codexMap
+    }
+  }, [camera, map.grid, mode, picking])
 
   // ---- pointer handling ----------------------------------------------------
   const [gesture, setGesture] = useState<
@@ -261,7 +272,7 @@ export function MapCanvas(props: MapCanvasProps) {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !isTyping(e.target)) spaceHeld.current = true
+      if (e.code === 'Space' && !isTypingTarget(e.target)) spaceHeld.current = true
       if (e.key === 'Escape') {
         setChain([])
         setMeasure(null)
@@ -308,6 +319,11 @@ export function MapCanvas(props: MapCanvasProps) {
     if (!p) return
     const onEmpty = e.target === e.target.getStage() || e.target.name() === 'background'
     const evt = e.evt
+    if (props.onCellPick && evt.button === 0 && !spaceHeld.current) {
+      const cell = cellAt(map.grid, p)
+      if (inBounds(map, cell)) props.onCellPick(cell)
+      return
+    }
     if (
       evt.button === 1 ||
       spaceHeld.current ||
@@ -493,7 +509,7 @@ export function MapCanvas(props: MapCanvasProps) {
     const screen = stage.current?.getPointerPosition()
     if (!screen) return
     const factor = Math.pow(1.0015, -e.evt.deltaY)
-    const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, camera.scale * factor))
+    const scale = clamp(camera.scale * factor, MIN_SCALE, MAX_SCALE)
     const p = toMap(screen)
     setCamera({ scale, x: screen.x - p.x * scale, y: screen.y - p.y * scale })
   }
@@ -781,6 +797,11 @@ export function MapCanvas(props: MapCanvasProps) {
                     }
                   />
                 ))}
+          </Layer>
+
+          {/* GM notes and picture zones, above the fog: clickable, unlike the fog and drawings
+              layer that only listens to the eraser (D-259). */}
+          <Layer listening={mode !== 'view' || picking}>
             {isGm &&
               show('gm') &&
               gmNotes.map((el) => (
@@ -897,10 +918,6 @@ export function MapCanvas(props: MapCanvasProps) {
         ),
     }
   }
-}
-
-function isTyping(target: EventTarget | null) {
-  return target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
 }
 
 // ---------------------------------------------------------------------------
@@ -1320,7 +1337,7 @@ const TokenNode = memo(function TokenNode({
   const portrait = useImage(entity.identity.portrait)
   const name = entityName(entity)
   const max = entityHpMax(entity, rules)
-  const ratio = max > 0 ? Math.max(0, Math.min(1, entity.hp.current / max)) : 0
+  const ratio = max > 0 ? clamp(entity.hp.current / max, 0, 1) : 0
   const band = hpBand(entity.hp.current, max, rules.hp)
   const down = entity.hp.current <= 0
   const showHp = gm || entity.kind !== 'enemy'

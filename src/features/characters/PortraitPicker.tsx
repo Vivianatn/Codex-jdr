@@ -7,6 +7,7 @@ import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { imageFromFile } from '@/lib/images'
 import { Portrait } from './Portrait'
+import { clamp } from '@/lib/numbers'
 
 const VIEW = 256
 const OUTPUT = 384
@@ -114,12 +115,12 @@ function CropDialog({
   const w = image.naturalWidth * scale
   const h = image.naturalHeight * scale
   // Keep the image covering the viewport.
-  const clamp = (o: { x: number; y: number }, s = scale) => {
+  const keepInFrame = (o: { x: number; y: number }, s = scale) => {
     const maxX = (image.naturalWidth * s - VIEW) / 2
     const maxY = (image.naturalHeight * s - VIEW) / 2
-    return { x: Math.max(-maxX, Math.min(maxX, o.x)), y: Math.max(-maxY, Math.min(maxY, o.y)) }
+    return { x: clamp(o.x, -maxX, maxX), y: clamp(o.y, -maxY, maxY) }
   }
-  const pos = clamp(offset)
+  const pos = keepInFrame(offset)
 
   function confirm() {
     const canvas = document.createElement('canvas')
@@ -167,7 +168,7 @@ function CropDialog({
           }}
           onPointerMove={(e: PointerEvent) => {
             const d = drag.current
-            if (d) setOffset(clamp({ x: d.ox + e.clientX - d.x, y: d.oy + e.clientY - d.y }))
+            if (d) setOffset(keepInFrame({ x: d.ox + e.clientX - d.x, y: d.oy + e.clientY - d.y }))
           }}
           onPointerUp={() => (drag.current = null)}
           onKeyDown={(e) => {
@@ -181,7 +182,7 @@ function CropDialog({
             const move = moves[e.key]
             if (!move) return
             e.preventDefault()
-            setOffset(clamp({ x: pos.x + move[0], y: pos.y + move[1] }))
+            setOffset(keepInFrame({ x: pos.x + move[0], y: pos.y + move[1] }))
           }}
         >
           <img
@@ -214,7 +215,7 @@ function CropDialog({
             onChange={(e) => {
               const next = Number(e.target.value)
               setZoom(next)
-              setOffset((o) => clamp(o, cover * next))
+              setOffset((o) => keepInFrame(o, cover * next))
             }}
             className="flex-1 accent-[var(--codex-accent)]"
           />

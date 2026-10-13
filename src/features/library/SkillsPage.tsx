@@ -24,6 +24,7 @@ import { PageTransition } from '@/features/shell/PageTransition'
 import { useT } from '@/i18n'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
 import { SpellbookIllustration } from '@/components/illustrations'
+import { compareText } from '@/lib/text'
 
 const GROUPS: SkillKind[] = ['class', 'active', 'passive']
 
@@ -34,14 +35,14 @@ export function SkillsPage() {
   const skills = useCampaignStore((s) => s.skills)
   const characters = useCampaignStore(
     useShallow((s) =>
-      Object.values(s.entities).sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr')),
+      Object.values(s.entities).sort((a, b) => compareText(entityName(a), entityName(b))),
     ),
   )
   const saveSkill = useCampaignStore((s) => s.saveSkill)
   const removeSkill = useCampaignStore((s) => s.removeSkill)
   const [editing, setEditing] = useState<SkillDefinition | null>(null)
   const [deleting, setDeleting] = useState<SkillDefinition | null>(null)
-  const list = Object.values(skills).sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  const list = Object.values(skills).sort((a, b) => compareText(a.name, b.name))
 
   const give = (def: SkillDefinition, characterId: string) => {
     const target = useCampaignStore.getState().entities[characterId]

@@ -37,6 +37,7 @@ import { applyHpDelta, hpBand, statModifier, type RulesConfig } from '@/rules'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
 import { useFxStore } from '@/stores/fxStore'
 import { useRollStore, type NewRoll } from '@/stores/rollStore'
+import { clamp } from '@/lib/numbers'
 
 export interface CheckRequest {
   mode?: RollMode
@@ -731,7 +732,7 @@ export function createGameActions(t: Messages, campaign: Campaign, rng?: Rng) {
       const entity = get(entityId)
       if (!entity) return
       const from = entity.stats[stat]
-      const to = Math.min(rules.stats.max, Math.max(rules.stats.min, from + delta))
+      const to = clamp(from + delta, rules.stats.min, rules.stats.max)
       if (to === from) return
       store().updateEntity(
         entityId,

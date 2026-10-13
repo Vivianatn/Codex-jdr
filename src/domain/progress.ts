@@ -2,6 +2,7 @@ import { roll, type Rng } from '@/dice'
 import { clampHp, hpMaxAt, type CheckOutcome, type RulesConfig } from '@/rules'
 import { effectiveStats } from './entity'
 import { DISPOSITIONS, type Disposition, type Entity, type Skill } from './types'
+import { clamp } from '@/lib/numbers'
 
 // ---------------------------------------------------------------------------
 // Experience (SPEC §4.1)
@@ -92,7 +93,7 @@ export function shiftDisposition(
   const steps =
     (major ? rules.disposition.criticalStep : rules.disposition.step) * (outcome.success ? 1 : -1)
   const index = DISPOSITIONS.indexOf(current) + steps
-  return DISPOSITIONS[Math.min(DISPOSITIONS.length - 1, Math.max(0, index))]!
+  return DISPOSITIONS[clamp(index, 0, DISPOSITIONS.length - 1)]!
 }
 
 // ---------------------------------------------------------------------------
@@ -110,7 +111,7 @@ export function restsAvailable(rules: RulesConfig): { short: boolean; long: bool
 export function setExhaustion<E extends Entity>(entity: E, level: number, rules: RulesConfig): E {
   return {
     ...entity,
-    exhaustion: Math.min(rules.fatigue.maxExhaustion, Math.max(0, Math.round(level))),
+    exhaustion: clamp(Math.round(level), 0, rules.fatigue.maxExhaustion),
   }
 }
 

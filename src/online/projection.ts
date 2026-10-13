@@ -1,7 +1,7 @@
 import type { CodexDB } from '@/db/db'
 import type { Asset, Campaign } from '@/db/types'
 import type { ActivityRecord } from '@/domain/activity'
-import type { GameMap } from '@/domain/maps'
+import { entityMapId, type GameMap } from '@/domain/maps'
 import type { RollRecord } from '@/domain/rolls'
 import type { SessionPlan, SessionRun } from '@/domain/sessions'
 import { normalizePlayState } from '@/domain/turns'
@@ -55,15 +55,25 @@ export async function loadCampaignData(
 const PLAYER_ROLLS = 100
 
 /**
- * What a player may see (D-245): the map in play without hidden or GM-only
+ * What a player may see (D-245): the map where their character stands (D-256;
+ * the map in play when they have no token anywhere) without hidden or GM-only
  * content, the party, the enemies whose token is visible (name, picture, HP
  * and conditions only), the public rolls and the pictures on screen. No
  * bestiary, item library, session plans or GM notes.
  */
-export function projectForPlayer(data: CampaignData): CampaignData {
+export function projectForPlayer(
+  data: CampaignData,
+  characterIds: readonly string[] = [],
+): CampaignData {
   const campaign = data.campaigns[0]
   if (!campaign) return emptyCampaignData()
-  const play = normalizePlayState(campaign.play)
+  const inPlay = normalizePlayState(campaign.play)
+  // Only visible tokens count: a hidden character must not reveal where it is.
+  const shown = data.maps.map((m) => ({ ...m, tokens: m.tokens.filter((t) => !t.hidden) }))
+  const own = characterIds
+    .map((id) => entityMapId(shown, id, inPlay.mapId))
+    .find((id): id is string => id !== null)
+  const play = { ...inPlay, mapId: own ?? inPlay.mapId }
   const source = data.maps.find((m) => m.id === play.mapId)
   const map: GameMap | null = source
     ? {

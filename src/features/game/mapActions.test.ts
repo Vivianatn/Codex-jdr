@@ -195,3 +195,36 @@ describe('map actions', () => {
     expect(hp(a.id)).toBe(before - 3)
   })
 })
+
+describe('passages (D-256)', () => {
+  it('a token stepping on a passage goes alone to the other map, in one undo step', async () => {
+    const a = character('player', 'Ayla')
+    const b = character('player', 'Brann')
+    const hall = newMap('c1', { name: 'Hall', cols: 10, rows: 10 })
+    const cellar = newMap('c1', { name: 'Cave', cols: 10, rows: 10 })
+    hall.elements = [newElement('link', { col: 5, row: 5 }, { link: { mapId: cellar.id } })]
+    cellar.elements = [newElement('link', { col: 2, row: 2 }, { link: { mapId: hall.id } })]
+    const actions = await setup([a, b], hall)
+    store().addMap(cellar, 'map')
+    store().updatePlay((p) => ({ ...p, mapId: hall.id }), 'play')
+    actions.placeToken(hall.id, a.id, { col: 4, row: 5 })
+    actions.placeToken(hall.id, b.id, { col: 0, row: 0 })
+    campaignHistory.getState().clear()
+
+    const token = mapOf(hall.id).tokens.find((tk) => tk.entityId === a.id)!
+    actions.moveToken(hall.id, token.id, { col: 5, row: 5 })
+
+    expect(mapOf(hall.id).tokens.map((tk) => tk.entityId)).toEqual([b.id])
+    const arrived = mapOf(cellar.id).tokens.find((tk) => tk.entityId === a.id)!
+    expect(Math.max(Math.abs(arrived.col - 2), Math.abs(arrived.row - 2))).toBe(1)
+    // The GM's board stays on the hall.
+    expect(store().play.mapId).toBe(hall.id)
+    expect(campaignHistory.getState().past.map((e) => e.label)).toEqual([
+      t.maps.wentThrough('Ayla', 'Cave'),
+    ])
+
+    campaignHistory.getState().undo()
+    expect(mapOf(hall.id).tokens).toHaveLength(2)
+    expect(mapOf(cellar.id).tokens).toHaveLength(0)
+  })
+})

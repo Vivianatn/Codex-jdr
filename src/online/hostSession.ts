@@ -393,7 +393,8 @@ export class HostSession {
     if (intent.type === 'move') {
       const map = useCampaignStore.getState().maps[intent.mapId]
       const token = map?.tokens.find((t) => t.id === intent.tokenId)
-      if (!map || map.id !== play.mapId || !token || token.hidden) return 'invalid'
+      // A player moves on the map where their character is (D-256), not only the GM's board.
+      if (!map || !token || token.hidden) return 'invalid'
       if (!peer.info.characterIds.includes(token.entityId)) return 'notYours'
       const cell = { col: intent.col, row: intent.row }
       if (!inBounds(map, cell)) return 'invalid'
@@ -425,7 +426,9 @@ export class HostSession {
   // ---- synchronisation -------------------------------------------------------
 
   private viewOf(peer: Peer): CampaignData {
-    return peer.info.role === 'editor' ? this.data! : projectForPlayer(this.data!)
+    return peer.info.role === 'editor'
+      ? this.data!
+      : projectForPlayer(this.data!, peer.info.characterIds)
   }
 
   private async refresh(): Promise<void> {

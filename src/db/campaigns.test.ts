@@ -10,6 +10,7 @@ import { newItem } from '@/domain/items'
 import { newElement, newMap } from '@/domain/maps'
 import { newSessionPlan } from '@/domain/sessions'
 import { defaultRules } from '@/rules'
+import exampleCampaign from '../../exemples/campagne-test-ombreval.json?raw'
 import { CodexDB } from './db'
 
 let db: CodexDB
@@ -336,7 +337,7 @@ describe('everything belongs to its campaign (D-224)', () => {
         groups: [],
         turn: { status: 'stopped' },
         mapId: hall.id,
-        display: { mode: 'map', imageAssetId: null },
+        display: { mode: 'map', imageAssetId: null, gallery: [] },
         live: null,
       },
     })
@@ -374,7 +375,7 @@ describe('sessions travel with their campaign (D-244)', () => {
     await db.maps.add(map)
     const plan = {
       ...newSessionPlan(c.id, 'La crypte'),
-      mapId: map.id,
+      mapIds: [map.id],
       encounters: [{ id: 'e1', templateId: template.id, count: 2 }],
     }
     await db.sessions.add(plan)
@@ -396,7 +397,7 @@ describe('sessions travel with their campaign (D-244)', () => {
         groups: [],
         turn: { status: 'stopped' },
         mapId: null,
-        display: { mode: 'map', imageAssetId: null },
+        display: { mode: 'map', imageAssetId: null, gallery: [] },
         live: {
           runId: 'run1',
           planId: plan.id,
@@ -413,7 +414,7 @@ describe('sessions travel with their campaign (D-244)', () => {
     const [copiedTemplate] = await db.bestiary.where('campaignId').equals(copy.id).toArray()
     const [copiedRun] = await db.sessionRuns.where('campaignId').equals(copy.id).toArray()
     expect(copiedPlan!.id).not.toBe(plan.id)
-    expect(copiedPlan!.mapId).toBe(copiedMap!.id)
+    expect(copiedPlan!.mapIds).toEqual([copiedMap!.id])
     expect(copiedPlan!.encounters[0]!.templateId).toBe(copiedTemplate!.id)
     expect(copiedRun!.planId).toBe(copiedPlan!.id)
     expect((await db.campaigns.get(copy.id))?.play?.live).toBeNull()
@@ -421,5 +422,25 @@ describe('sessions travel with their campaign (D-244)', () => {
     await repo.remove(c.id)
     expect(await db.sessions.where('campaignId').equals(c.id).count()).toBe(0)
     expect(await db.sessionRuns.where('campaignId').equals(c.id).count()).toBe(0)
+  })
+})
+
+describe('the example campaign (D-258, D-259)', () => {
+  it('imports two maps linked both ways, the fresco pictures and the session route', async () => {
+    const { campaign } = await repo.importCampaign(exampleCampaign)
+    const maps = await db.maps.where('campaignId').equals(campaign.id).toArray()
+    const crypt = maps.find((m) => m.name === 'Crypte d’Ombreval')!
+    const ossuary = maps.find((m) => m.name === 'Ossuaire d’Ombreval')!
+    expect(crypt.elements.filter((e) => e.link?.mapId === ossuary.id)).toHaveLength(1)
+    expect(ossuary.elements.filter((e) => e.link?.mapId === crypt.id)).toHaveLength(1)
+
+    const fresco = crypt.elements.find((e) => e.kind === 'image')!
+    expect(fresco.layer).toBe('gm')
+    const assets = await db.assets.where('campaignId').equals(campaign.id).toArray()
+    expect(fresco.gallery!.assetIds).toHaveLength(2)
+    for (const id of fresco.gallery!.assetIds) expect(assets.map((a) => a.id)).toContain(id)
+
+    const [plan] = await db.sessions.where('campaignId').equals(campaign.id).toArray()
+    expect(plan!.mapIds).toEqual([crypt.id, ossuary.id])
   })
 })

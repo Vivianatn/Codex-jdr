@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Locale } from '@/i18n'
+import { clamp } from '@/lib/numbers'
 
 export type ThemePreference = 'light' | 'dark' | 'system'
 export type ResolvedTheme = 'light' | 'dark'
@@ -88,10 +89,10 @@ export const useSettingsStore = create<SettingsState>()(
       setTextSize: (textSize) => set({ textSize }),
       setSurface: (surface) => set({ surface }),
       setSoundEffects: (soundEffects) => set({ soundEffects }),
-      setSoundVolume: (soundVolume) => set({ soundVolume: Math.min(1, Math.max(0, soundVolume)) }),
+      setSoundVolume: (soundVolume) => set({ soundVolume: clamp(soundVolume, 0, 1) }),
       setMusic: (music) => set({ music }),
       setGameBanners: (gameBanners) => set({ gameBanners }),
-      setMusicVolume: (musicVolume) => set({ musicVolume: Math.min(1, Math.max(0, musicVolume)) }),
+      setMusicVolume: (musicVolume) => set({ musicVolume: clamp(musicVolume, 0, 1) }),
     }),
     {
       name: SETTINGS_STORAGE_KEY,

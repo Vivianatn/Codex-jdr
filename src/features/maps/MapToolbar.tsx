@@ -36,6 +36,7 @@ import {
 import type { GameMap } from '@/domain/maps'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
+import { isTypingTarget } from '@/lib/dom'
 import { MAP_LAYERS, useMapViewStore, type MapTool } from '@/stores/mapViewStore'
 import { cameraControls, useCameraScale } from './cameraControls'
 
@@ -221,9 +222,7 @@ function useToolShortcuts(tools: ToolItem[]) {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return
-      const target = e.target as HTMLElement | null
-      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))
-        return
+      if (isTypingTarget(e.target)) return
       const key = e.key.toLowerCase()
       const { tool, setTool } = useMapViewStore.getState()
       for (const item of tools) {

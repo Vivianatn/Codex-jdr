@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { AreaShape, ElementKind, Point } from '@/domain/maps'
+import { clamp } from '@/lib/numbers'
 
 /**
  * View state of the map canvas (not saved, not undoable): tool, selection,
@@ -114,7 +115,7 @@ export const useMapViewStore = create<MapViewState>()((set) => ({
   setPlaceKind: (placeKind) => set({ placeKind, tool: 'place' }),
   select: (selection) => set({ selection }),
   setCamera: (mapId, camera) => set((s) => ({ cameras: { ...s.cameras, [mapId]: camera } })),
-  setBrush: (brush) => set({ brush: Math.min(10, Math.max(1, brush)) }),
+  setBrush: (brush) => set({ brush: clamp(brush, 1, 10) }),
   setDraw: (patch) => set(patch),
   toggleLayer: (layer) =>
     set((s) => ({

@@ -2,10 +2,12 @@ import { LockKeyhole } from 'lucide-react'
 import { useEffect } from 'react'
 import { Outlet } from 'react-router'
 import { CandleOrnament } from '@/components/Brand'
+import { preloadScreens } from '@/app/screens'
 import { useIdle } from '@/app/useIdle'
 import { useSurface } from '@/app/useSurface'
 import { backupService } from '@/db/backups'
 import { useT } from '@/i18n'
+import { whenIdle } from '@/lib/dom'
 import { lockSession, onLock, useSessionStore } from '@/security/session'
 import { announceLock, followSession, serveSession } from '@/security/sessionChannel'
 import { LockScreen } from './LockScreen'
@@ -13,6 +15,8 @@ import { LockScreen } from './LockScreen'
 /** GM screens: shown only once an account is unlocked (D-241). */
 export function RequireSession() {
   const unlocked = useSessionStore((s) => s.status === 'unlocked' && !s.delegated)
+  // Fetch the first screens once the lock screen is up, while the password is typed.
+  useEffect(() => (unlocked ? undefined : whenIdle(preloadScreens)), [unlocked])
   return unlocked ? <UnlockedApp /> : <LockScreen />
 }
 
@@ -35,9 +39,12 @@ function UnlockedApp() {
     if (idle) void lockSession()
   }, [idle])
 
-  // One automatic snapshot a day, at unlock (D-242).
+  // One automatic snapshot a day, at unlock (D-242), once the first screen is up.
   useEffect(() => {
-    if (accountId) backupService.autoBackupIfDue().catch((e) => console.error('Backup failed', e))
+    if (!accountId) return
+    return whenIdle(() => {
+      backupService.autoBackupIfDue().catch((e) => console.error('Backup failed', e))
+    })
   }, [accountId])
 
   return <Outlet />

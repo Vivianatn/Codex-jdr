@@ -65,7 +65,7 @@ async function world() {
       groups: [],
       turn: { status: 'stopped' },
       mapId: map.id,
-      display: { mode: 'map', imageAssetId: null },
+      display: { mode: 'map', imageAssetId: null, gallery: [] },
       live: null,
     },
   })

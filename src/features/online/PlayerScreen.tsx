@@ -8,7 +8,7 @@ import { TextField } from '@/components/ui/TextField'
 import { activeDb } from '@/db/db'
 import { effectiveStats, entityHpMax, entityName, normalizeEntityShape } from '@/domain/entity'
 import { normalizeMap } from '@/domain/maps'
-import { normalizePlayState } from '@/domain/turns'
+import { galleryPosition, normalizePlayState, type PlayerDisplay } from '@/domain/turns'
 import { STAT_KEYS, type Entity } from '@/domain/types'
 import { Portrait } from '@/features/characters/Portrait'
 import { AppHeader } from '@/features/shell/AppHeader'
@@ -72,6 +72,7 @@ export function PlayerScreen() {
             aria-label={t.play.mapRegion}
             className="relative min-h-[50vh] flex-1 bg-bg"
           >
+            <ShownPicture campaignId={campaignId} display={play.display} />
             {map ? (
               <Suspense fallback={null}>
                 <PlayerBoard
@@ -103,6 +104,28 @@ export function PlayerScreen() {
         </div>
       )}
     </div>
+  )
+}
+
+/** The picture the GM shows (D-259), over the board; the series position when there is one. */
+function ShownPicture({ campaignId, display }: { campaignId: string; display: PlayerDisplay }) {
+  const t = useT()
+  const id = display.mode === 'image' ? display.imageAssetId : null
+  const src = useLiveQuery(
+    async () => (id ? ((await activeDb().assets.get(id))?.data ?? null) : null),
+    [campaignId, id],
+  )
+  if (!src) return null
+  const position = galleryPosition(display)
+  return (
+    <figure className="absolute inset-0 z-10 flex flex-col bg-bg" data-testid="shown-picture">
+      <img src={src} alt={t.online.shownPicture} className="min-h-0 flex-1 object-contain" />
+      {position && (
+        <figcaption className="p-2 text-center text-sm text-ink-muted tabular-nums">
+          {position.index + 1} / {position.total}
+        </figcaption>
+      )}
+    </figure>
   )
 }
 

@@ -1,4 +1,5 @@
 import type { RulesConfig } from './config'
+import { clamp } from '@/lib/numbers'
 
 /**
  * Max HP = `base + roll + 1` at level 1 (the sheet's `10 + 1d20 + Nv`),
@@ -42,7 +43,7 @@ export function hpFormulaParts(roll: number, level: number, rules: RulesConfig):
 }
 
 export function clampHp(current: number, max: number): number {
-  return Math.min(Math.max(0, Math.round(current)), Math.max(0, max))
+  return clamp(Math.round(current), 0, Math.max(0, max))
 }
 
 /**

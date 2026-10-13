@@ -26,6 +26,11 @@ export interface PlayerDisplay {
   mode: 'map' | 'image' | 'pause'
   /** Mood picture shown full screen in "image" mode. */
   imageAssetId: string | null
+  /**
+   * Pictures shown one after the other (D-259, from a picture zone of the map);
+   * `imageAssetId` is the one on screen. Empty for a single mood picture.
+   */
+  gallery: string[]
 }
 
 /** Someone taking part in the game: the host device ('host') or a peer (D-245). */
@@ -64,7 +69,7 @@ export function emptyPlayState(): PlayState {
     groups: [],
     turn: { status: 'stopped' },
     mapId: null,
-    display: { mode: 'map', imageAssetId: null },
+    display: { mode: 'map', imageAssetId: null, gallery: [] },
     live: null,
   }
 }
@@ -104,10 +109,16 @@ export function normalizePlayState(raw: unknown): PlayState {
       )
     : []
   const turn = value.turn && typeof value.turn === 'object' ? value.turn : { status: 'stopped' }
-  const display =
+  const shown: PlayerDisplay =
     value.display && typeof value.display === 'object'
       ? { ...emptyPlayState().display, ...value.display }
       : emptyPlayState().display
+  const display: PlayerDisplay = {
+    ...shown,
+    gallery: Array.isArray(shown.gallery)
+      ? shown.gallery.filter((id): id is string => typeof id === 'string').slice(0, 50)
+      : [],
+  }
   return {
     groups,
     turn: turn as TurnState,
@@ -265,4 +276,24 @@ function move<T>(list: readonly T[], match: (item: T) => boolean, delta: -1 | 1)
   const next = [...list]
   ;[next[from], next[to]] = [next[to]!, next[from]!]
   return next
+}
+
+/** The players' window shows `assetIds` one after the other (D-259), starting at `index`. */
+export function showGallery(assetIds: readonly string[], index = 0): PlayerDisplay {
+  const at = Math.max(0, Math.min(index, assetIds.length - 1))
+  return { mode: 'image', imageAssetId: assetIds[at] ?? null, gallery: [...assetIds] }
+}
+
+/** Position of the picture on screen in its series: `{ index, total }`, or null outside a series. */
+export function galleryPosition(display: PlayerDisplay): { index: number; total: number } | null {
+  if (display.mode !== 'image' || display.gallery.length < 2 || !display.imageAssetId) return null
+  const index = display.gallery.indexOf(display.imageAssetId)
+  return index < 0 ? null : { index, total: display.gallery.length }
+}
+
+/** Next (`+1`) or previous (`-1`) picture of the series; stays put at either end. */
+export function stepGallery(display: PlayerDisplay, delta: 1 | -1): PlayerDisplay {
+  const at = galleryPosition(display)
+  if (!at) return display
+  return showGallery(display.gallery, at.index + delta)
 }

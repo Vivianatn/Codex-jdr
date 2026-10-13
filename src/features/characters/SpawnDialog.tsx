@@ -8,6 +8,7 @@ import type { EnemyTemplate } from '@/domain/types'
 import { useT } from '@/i18n'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useCharacterActions } from './useCharacterActions'
+import { clamp } from '@/lib/numbers'
 
 /** "Ajouter à la campagne": N numbered copies of a template at a given level. */
 export function SpawnButton({
@@ -48,7 +49,7 @@ function SpawnForm({ template, onDone }: { template: EnemyTemplate; onDone: () =
   const actions = useCharacterActions()
   const [quantity, setQuantity] = useState('3')
   const [level, setLevel] = useState(String(template.level))
-  const q = Math.min(50, Math.max(1, Math.floor(Number(quantity) || 1)))
+  const q = clamp(Math.floor(Number(quantity) || 1), 1, 50)
   const lvl = Math.max(1, Math.floor(Number(level) || 1))
   const highest = useCampaignStore((s) =>
     Math.max(

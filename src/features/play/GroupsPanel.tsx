@@ -28,6 +28,7 @@ import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useUiStore } from '@/stores/uiStore'
+import { compareText } from '@/lib/text'
 
 /** Sidebar of the play screen: the groups (D-226) and everyone not in a group. */
 export function GroupsPanel() {
@@ -36,7 +37,7 @@ export function GroupsPanel() {
   const updatePlay = useCampaignStore((s) => s.updatePlay)
   const characters = useCampaignStore(
     useShallow((s) =>
-      Object.values(s.entities).sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr')),
+      Object.values(s.entities).sort((a, b) => compareText(entityName(a), entityName(b))),
     ),
   )
   const [name, setName] = useState('')

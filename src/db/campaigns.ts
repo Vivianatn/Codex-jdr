@@ -33,6 +33,7 @@ import {
   type CampaignLibrary,
   type DiceMacro,
 } from './types'
+import { isRecord } from '@/lib/guards'
 
 export type ImportErrorCode =
   'invalidJson' | 'wrongFormat' | 'unsupportedVersion' | 'invalidCampaign' | 'tooLarge'
@@ -289,6 +290,15 @@ export function createCampaignRepository(
               ...(el.link
                 ? { link: { mapId: el.link.mapId ? (mapIds.get(el.link.mapId) ?? null) : null } }
                 : {}),
+              ...(el.gallery
+                ? {
+                    gallery: {
+                      assetIds: el.gallery.assetIds.flatMap((id) =>
+                        assetIds.has(id) ? [assetIds.get(id)!] : [],
+                      ),
+                    },
+                  }
+                : {}),
               ...(el.npc
                 ? {
                     npc: {
@@ -309,6 +319,9 @@ export function createCampaignRepository(
               imageAssetId: play.display?.imageAssetId
                 ? (assetIds.get(play.display.imageAssetId) ?? null)
                 : null,
+              gallery: (play.display?.gallery ?? []).flatMap((id) =>
+                assetIds.has(id) ? [assetIds.get(id)!] : [],
+              ),
             },
           }
           await db().campaigns.put(campaign)
@@ -323,7 +336,7 @@ export function createCampaignRepository(
             ...p,
             id: planIds.get(p.id)!,
             campaignId: campaign.id,
-            mapId: p.mapId ? (mapIds.get(p.mapId) ?? null) : null,
+            mapIds: p.mapIds.flatMap((id) => (mapIds.has(id) ? [mapIds.get(id)!] : [])),
             encounters: p.encounters
               .filter((e) => templateIds.has(e.templateId))
               .map((e) => ({ ...e, templateId: templateIds.get(e.templateId)! })),
@@ -346,10 +359,6 @@ export function createCampaignRepository(
 export type CampaignRepository = ReturnType<typeof createCampaignRepository>
 
 export const campaignRepository = createCampaignRepository()
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function isCampaignCore(
   value: unknown,

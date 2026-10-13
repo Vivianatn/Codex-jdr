@@ -21,6 +21,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { useRollerName } from './useRollerName'
 import { RollCard } from './RollCard'
 import { recordActivity } from '@/stores/activityLog'
+import { compareText } from '@/lib/text'
 
 const QUICK_DICE = [4, 6, 8, 10, 12, 20, 100]
 const GM = '__gm__'
@@ -106,7 +107,7 @@ function Tray({ inputRef }: { inputRef: React.RefObject<HTMLInputElement> }) {
   }
 
   const people = useMemo(
-    () => Object.values(entities).sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr')),
+    () => Object.values(entities).sort((a, b) => compareText(entityName(a), entityName(b))),
     [entities],
   )
 

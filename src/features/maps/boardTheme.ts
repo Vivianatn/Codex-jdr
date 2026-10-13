@@ -77,6 +77,9 @@ export interface BoardTheme {
     lever: string
     passage: string
     passageFill: string
+    /** Picture zones (D-259): GM only. */
+    image: string
+    imageFill: string
     npc: string
     note: string
     noteEdge: string
@@ -162,6 +165,8 @@ export const BOARD_LIGHT: BoardTheme = {
     lever: '#2B66A8',
     passage: '#3D8F55',
     passageFill: 'rgba(61,143,85,0.12)',
+    image: '#2B66A8',
+    imageFill: 'rgba(43,102,168,0.10)',
     npc: '#B23D73',
     note: '#E8B04A',
     noteEdge: '#82601B',
@@ -244,6 +249,8 @@ export const BOARD_DARK: BoardTheme = {
     lever: '#93B1F2',
     passage: '#97C383',
     passageFill: 'rgba(151,195,131,0.12)',
+    image: '#93B1F2',
+    imageFill: 'rgba(147,177,242,0.12)',
     npc: '#B23D73',
     note: '#F0BF6E',
     noteEdge: '#C9963A',
