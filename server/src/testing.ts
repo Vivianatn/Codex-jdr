@@ -7,11 +7,11 @@ import { openDb, type Db } from './db.ts'
 import { memoryMailer } from './mailer.ts'
 
 /** A server on an in-memory PostgreSQL (PGlite), with a clock the test moves. */
-export async function testServer() {
+export async function testServer(siteDir: string | null = null) {
   const db = await openDb('pglite:memory')
   const mailer = memoryMailer()
   const clock = { now: Date.parse('2026-10-13T10:00:00Z') }
-  const config = { ...loadConfig({ NODE_ENV: 'test' }), databaseUrl: 'pglite:memory' }
+  const config = { ...loadConfig({ NODE_ENV: 'test' }), databaseUrl: 'pglite:memory', siteDir }
   const app = await buildApp({ db, config, mailer, now: () => clock.now })
   return {
     app,

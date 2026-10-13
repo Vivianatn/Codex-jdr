@@ -1,4 +1,8 @@
 import { createHash } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { siteDir } from './site.ts'
 
 /** Settings of the server, from the environment (deploy/.env, see docs/DEPLOIEMENT.md). */
 export interface Config {
@@ -17,6 +21,15 @@ export interface Config {
   secureCookies: boolean
   /** Development: e-mails are printed instead of sent. */
   dev: boolean
+  /** Built site served by the server itself (Plesk, D-263), or null (Caddy serves it). */
+  siteDir: string | null
+}
+
+/** The server/ folder, from src/ or from the compiled dist/server/src/. */
+function serverDir(): string {
+  let dir = dirname(fileURLToPath(import.meta.url))
+  for (let i = 0; i < 4 && !existsSync(join(dir, 'package.json')); i++) dir = dirname(dir)
+  return dir
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -40,5 +53,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     mailFrom: env.MAIL_FROM ?? 'Codex <ne-pas-repondre@codex.invalid>',
     secureCookies: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : !dev,
     dev,
+    siteDir: env.CODEX_SERVE_SITE === 'false' ? null : siteDir(env, serverDir()),
   }
 }

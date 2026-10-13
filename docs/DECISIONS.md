@@ -6,6 +6,13 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ## Le mode en ligne passe par le serveur (2026-10-13)
 
+### D-263 · Le serveur tourne sur Node 22 et peut servir le site
+
+Demande du MJ : faire tourner Codex sur Node.js 22.x (son serveur Plesk) et que le style s'affiche.
+
+- **Node 22** : Node 22 n'exécute pas le TypeScript sans option. Le serveur est donc compilé en JavaScript (`npm run server:build`, `tsc` vers `server/dist/`, `shared/` compris) ; il démarre avec `node dist/server/src/index.js`. Vérifié sous Node 22.12. En développement, `server:dev` garde le TypeScript direct. Vite 8 demande Node 22.12 au moins : `engines` le dit.
+- **Le style** : dans une application Node.js de Plesk, toutes les requêtes arrivent à Node ; le serveur ne servait que `/api`, donc `/assets/*.css` répondait 404. Il sert maintenant le site construit lui-même, avec les règles du Caddyfile (adresses sans .html, vraie page 404, `/assets` en cache un an, pages jamais, en-têtes de sécurité, aucun fichier hors du dossier). Avec Docker, Caddy garde ce rôle (`CODEX_SERVE_SITE=false`).
+
 ### D-262 · Serveur Codex : comptes, campagnes synchronisées, parties relayées
 
 Demande du MJ : « prépare la partie online du logiciel pour la migration sur mon serveur web », en partant du principe que le serveur fonctionne. Met en œuvre D-257 (et ce qui reste valable de D-249) ; remplace le pair-à-pair de D-245 (échange de codes, WebRTC, STUN) et le réglage STUN.

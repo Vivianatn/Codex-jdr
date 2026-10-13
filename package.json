@@ -5,7 +5,7 @@
   "description": "Codex — local-first tabletop RPG game master companion",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "scripts": {
     "dev": "vite",
@@ -26,7 +26,8 @@
     "brand:assets": "node scripts/brand-assets.ts",
     "server:install": "npm --prefix server install",
     "server:dev": "npm --prefix server run dev",
-    "deploy:bundle": "vite build && node scripts/deploy-bundle.ts",
+    "server:build": "npm --prefix server run build",
+    "deploy:bundle": "vite build && npm --prefix server run build && node scripts/deploy-bundle.ts",
     "prepare": "husky"
   },
   "dependencies": {

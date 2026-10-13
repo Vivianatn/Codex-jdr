@@ -17,4 +17,5 @@ deploy/.env
 deploy/site
 # Online server: local development database, release folder for the server (D-262)
 server/.data
+server/dist
 release

@@ -115,7 +115,16 @@ docker compose start server
 
 Chaque appareil garde aussi sa propre copie chiffrée des campagnes : même un serveur perdu ne fait pas perdre une campagne. Une campagne disparue du serveur reste sur l'appareil de son MJ, qui peut la remettre en ligne (bouton « En ligne » › « Mettre la campagne en ligne »).
 
-## 9. Essayer en local
+## 9. Variante Plesk (application Node.js 22)
+
+Sans Docker, le serveur Codex sert aussi le site et l'application lui-même (D-263) : une seule application Node.js suffit.
+
+1. `npm run deploy:bundle` sur ton ordinateur, puis envoie `release/server/` et `release/site/` côte à côte dans le dossier du sous-domaine (par exemple `codex.antoine-vivian.fr/server` et `codex.antoine-vivian.fr/site`).
+2. Dans Plesk › Node.js : version **22.x** (22.12 ou plus), racine de l'application `server`, fichier de démarrage `dist/server/src/index.js`, mode production. Clique « NPM install » (installe les dépendances de `package.json`).
+3. Variables d'environnement de l'application : `NODE_ENV=production`, `DATABASE_URL` (une base **PostgreSQL**), `CODEX_DATA_KEY`, `CODEX_SITE_URL=https://codex.antoine-vivian.fr`, `SMTP_URL`, `MAIL_FROM`. Si le site n'est pas dans `../site`, indique son dossier avec `CODEX_SITE_DIR`.
+4. Active HTTPS (Let's Encrypt) sur le sous-domaine et redémarre l'application. `https://codex.antoine-vivian.fr/api/health` doit répondre `{"ok":true}`, et les pages s'afficher avec leur style.
+
+## 10. Essayer en local
 
 ```sh
 npm run server:install   # une fois : les dépendances du serveur

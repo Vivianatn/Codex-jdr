@@ -17,6 +17,7 @@ export default tseslint.config(
       'src-tauri/target',
       'release',
       'server/.data',
+      'server/dist',
     ],
   },
   {

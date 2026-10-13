@@ -10,6 +10,7 @@ import type { Db } from './db.ts'
 import { Hub, registerHub } from './hub.ts'
 import type { Mailer } from './mailer.ts'
 import { registerRecords } from './records.ts'
+import { registerSite } from './site.ts'
 import { recordCipher, type RecordCipher } from './secrets.ts'
 
 /** Everything a route needs. */
@@ -100,6 +101,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   registerCampaigns(app, ctx)
   registerRecords(app, ctx)
   registerHub(app, ctx)
+  if (options.config.siteDir) await registerSite(app, options.config.siteDir)
   app.addHook('onClose', async () => ctx.hub.closeAll())
   return app
 }
