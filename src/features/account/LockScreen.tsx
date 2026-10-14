@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Cloud, LockKeyhole, ShieldCheck } from 'lucide-react'
+import { Cloud, LockKeyhole, LogIn, ShieldCheck, UserPlus } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { LogoMark, Ornament, Wordmark } from '@/components/Brand'
@@ -22,6 +22,7 @@ import { ForgotOnlineForm, OnlineRegisterForm, OnlineSignInForm } from './Online
 import { RecoveryCodePanel } from './RecoveryCodePanel'
 
 type Mode =
+  | { kind: 'welcome' }
   | { kind: 'login' }
   | { kind: 'create' }
   | { kind: 'recover' }
@@ -35,7 +36,8 @@ export function LockScreen() {
   const t = useT()
   const list = useLiveQuery(() => accounts.list(), [])
   const [mode, setMode] = useState<Mode | null>(null)
-  const current: Mode = mode ?? (list && list.length === 0 ? { kind: 'create' } : { kind: 'login' })
+  // No account on this device yet: ask first whether to create one or bring back an existing one.
+  const current: Mode = mode ?? (list && list.length === 0 ? { kind: 'welcome' } : { kind: 'login' })
 
   const enter = async (account: AccountSummary, key: Uint8Array) => {
     useSessionStore.setState({ status: 'unlocking' })
@@ -63,7 +65,7 @@ export function LockScreen() {
 
   const back = (
     <Button variant="ghost" className="w-full" onClick={() => setMode(null)}>
-      {t.account.backToLogin}
+      {list.length ? t.account.backToLogin : t.common.back}
     </Button>
   )
   const onlineButton = (
@@ -76,6 +78,31 @@ export function LockScreen() {
       {t.account.online.lockSignIn}
     </Button>
   )
+
+  if (current.kind === 'welcome')
+    return (
+      <Frame title={t.account.welcomeTitle} subtitle={t.account.welcomeChoice}>
+        <Button
+          variant="primary"
+          className="w-full"
+          icon={<UserPlus />}
+          onClick={() => setMode({ kind: 'create' })}
+        >
+          {t.account.welcomeCreate}
+        </Button>
+        <div className="space-y-2">
+          <Button
+            variant="secondary"
+            className="w-full"
+            icon={<LogIn />}
+            onClick={() => setMode({ kind: 'onlineSignIn' })}
+          >
+            {t.account.welcomeExisting}
+          </Button>
+          <p className="text-xs text-ink-muted">{t.account.welcomeExistingHint}</p>
+        </div>
+      </Frame>
+    )
 
   if (current.kind === 'onlineSignIn')
     return (
@@ -127,18 +154,21 @@ export function LockScreen() {
   if (current.kind === 'create')
     return (
       <Frame
-        title={list.length ? t.account.createAnother : t.account.welcomeTitle}
+        title={list.length ? t.account.createAnother : t.account.createTitle}
         subtitle={t.account.welcomeSubtitle}
       >
         <CreateForm
           onCreated={(code, account, key) => setMode({ kind: 'code', code, account, key })}
         />
-        {onlineButton}
-        {list.length > 0 && (
-          <Button variant="ghost" className="w-full" onClick={() => setMode({ kind: 'login' })}>
-            {t.account.backToLogin}
-          </Button>
-        )}
+        <Button
+          variant="secondary"
+          className="w-full"
+          icon={<Cloud />}
+          onClick={() => setMode({ kind: 'onlineRegister' })}
+        >
+          {t.account.online.wantNew}
+        </Button>
+        {back}
       </Frame>
     )
 

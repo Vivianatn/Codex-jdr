@@ -406,6 +406,8 @@ describe('sessions travel with their campaign (D-244)', () => {
           mode: 'local',
           startedAt: 1,
           operator: { id: 'host', name: 'MJ' },
+          title: 'Test',
+          listed: false,
         },
       },
     })

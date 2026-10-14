@@ -8,6 +8,7 @@ import {
   type LiveInfo,
   type MemberInfo,
   type MemberRole,
+  type OpenSession,
 } from '../../shared/sync.ts'
 import { ApiError, type Ctx } from './app.ts'
 import { requireUser } from './auth.ts'
@@ -320,6 +321,61 @@ export function registerCampaigns(app: FastifyInstance, ctx: Ctx): void {
     )
     if (!row?.listed) throw new ApiError(404, 'notFound')
     await requestToJoin(id, request.user!.id, text(request.body, 'message', 500, ''))
+    return { campaignId: id }
+  })
+
+  // ---- catalogue of open sessions -------------------------------------------------
+
+  /** A running online game its GM listed, whose device serves players right now. */
+  async function openSession(campaignId: string) {
+    const [row] = await ctx.db.query<{ live: LiveInfo | null }>(
+      'SELECT live FROM campaigns WHERE id = $1',
+      [campaignId],
+    )
+    const live = row?.live
+    return live?.mode === 'online' && live.listed && ctx.hub.isServing(campaignId) ? live : null
+  }
+
+  /** Open sessions of other GMs: one click asks to join their campaign. */
+  app.get('/api/sessions', authed, async (request): Promise<{ sessions: OpenSession[] }> => {
+    const self = request.user!.id
+    const rows = await ctx.db.query<{
+      id: string
+      name: string
+      live: LiveInfo
+      owner_name: string
+      role: MemberRole | null
+      requested: boolean
+    }>(
+      `SELECT c.id, c.name, c.live, u.display_name AS owner_name, m.role,
+         EXISTS (SELECT 1 FROM join_requests r WHERE r.campaign_id = c.id AND r.user_id = $1)
+           AS requested
+       FROM campaigns c JOIN users u ON u.id = c.owner_id
+       LEFT JOIN members m ON m.campaign_id = c.id AND m.user_id = $1
+       WHERE c.live->>'mode' = 'online' AND c.live->>'listed' = 'true'`,
+      [self],
+    )
+    const sessions = rows
+      // A GM does not join their own table as a player.
+      .filter((r) => !isManager(r.role) && ctx.hub.isServing(r.id))
+      .map((r): OpenSession => ({
+        campaignId: r.id,
+        campaignName: r.name,
+        ownerName: r.owner_name,
+        title: r.live.title,
+        operatorName: r.live.operatorName,
+        startedAt: r.live.startedAt,
+        status: r.role ? 'member' : r.requested ? 'requested' : 'none',
+      }))
+      .sort((a, b) => b.startedAt - a.startedAt)
+      .slice(0, 50)
+    return { sessions }
+  })
+
+  app.post<P>('/api/sessions/:id/request', { ...authed, ...joinLimit }, async (request) => {
+    const id = param(request.params.id)
+    if (!(await openSession(id))) throw new ApiError(404, 'notFound')
+    await requestToJoin(id, request.user!.id, '')
     return { campaignId: id }
   })
 

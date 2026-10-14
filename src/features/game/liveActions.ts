@@ -19,7 +19,12 @@ export function createLiveActions(t: Messages, campaign: Campaign) {
   const store = () => useCampaignStore.getState()
 
   return {
-    async start(options: { planId: string | null; mode: PlayMode }): Promise<SessionRun | null> {
+    async start(options: {
+      planId: string | null
+      mode: PlayMode
+      /** Online: show the game in the players' catalogue of open sessions. */
+      listed?: boolean
+    }): Promise<SessionRun | null> {
       if (store().play.live) return null
       const self = selfParticipant()
       const plan = options.planId ? await sessionRepository.getPlan(options.planId) : null
@@ -87,6 +92,8 @@ export function createLiveActions(t: Messages, campaign: Campaign) {
             mode: options.mode,
             startedAt: now,
             operator: self,
+            title: run.title,
+            listed: options.mode === 'online' && options.listed === true,
           },
         }),
         t.sessions.started,
@@ -116,6 +123,16 @@ export function createLiveActions(t: Messages, campaign: Campaign) {
         ...run,
         operators: run.operators.includes(to.name) ? run.operators : [...run.operators, to.name],
       }))
+    },
+
+    /** Shows or hides the running online game in the players' catalogue. */
+    setListed(listed: boolean): void {
+      const live = store().play.live
+      if (live?.mode !== 'online' || live.listed === listed) return
+      store().updatePlay(
+        (play) => (play.live ? { ...play, live: { ...play.live, listed } } : play),
+        listed ? t.sessions.listedOn : t.sessions.listedOff,
+      )
     },
 
     async toggleObjective(objectiveId: string): Promise<void> {

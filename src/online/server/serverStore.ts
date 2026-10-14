@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { CampaignSummary, PresenceUser, PublicUser } from '@shared/sync'
+import type { CampaignSummary, OpenSession, PresenceUser, PublicUser } from '@shared/sync'
 import type { MyRequest } from './api'
 
 /**
@@ -17,6 +17,8 @@ interface ServerState {
   campaigns: CampaignSummary[]
   /** Join requests this account sent, still waiting. */
   requests: MyRequest[]
+  /** Other GMs' games open to players right now (catalogue). */
+  sessions: OpenSession[]
   /** Members of each campaign connected right now. */
   presence: Record<string, PresenceUser[]>
   /** Local changes not yet accepted by the server. */
@@ -30,6 +32,7 @@ export const initialServerState: ServerState = {
   status: 'off',
   campaigns: [],
   requests: [],
+  sessions: [],
   presence: {},
   pending: 0,
   synced: [],

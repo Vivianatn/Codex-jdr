@@ -1370,6 +1370,15 @@ export const fr = {
     myGamesHint: 'Les campagnes où tu joues un personnage.',
     myGamesEmptyTitle: 'Aucune table ne t’attend encore',
     myGamesEmptyBody: 'Demande à ton MJ son lien d’invitation, ou cherche sa campagne par son nom.',
+    // Catalogue of open sessions
+    openSessions: 'Sessions ouvertes',
+    openSessionsHint:
+      'Les parties en cours que leur MJ ouvre à tous. Demande à entrer : une fois accepté, tu choisis ton personnage.',
+    noOpenSessions: 'Aucune session ouverte pour l’instant.',
+    sessionSince: (time: string) => `commencée à ${time}`,
+    askToJoin: 'Demander à rejoindre',
+    asked: 'Demande envoyée',
+    newRequest: (campaign: string) => `Nouvelle demande pour rejoindre « ${campaign} ».`,
     liveBy: (name: string) => `Partie en cours, menée par ${name}`,
     noLive: 'Pas de partie en cours',
     playingAs: (name: string) => `Tu joues ${name}`,
@@ -1573,6 +1582,11 @@ export const fr = {
     modeOnlineHint:
       'Les joueurs connectés déplacent leur jeton et lancent leurs dés ; tu gardes la main sur le reste.',
     modeOnlineNeedsHost: 'Mets d’abord la campagne en ligne (bouton « En ligne » en haut).',
+    listed: 'Afficher dans le catalogue des sessions',
+    listedHint:
+      'Tous les joueurs en ligne la voient dans « Sessions ouvertes » et demandent à entrer en un clic. Tu acceptes depuis le bouton « En ligne ».',
+    listedOn: 'Partie affichée dans le catalogue',
+    listedOff: 'Partie retirée du catalogue',
     start: 'Démarrer la partie',
     starting: 'Démarrage…',
     end: 'Terminer la partie',
@@ -1858,6 +1872,12 @@ export const fr = {
     lockSubtitle:
       'Tes campagnes sont chiffrées sur cet appareil. Déverrouille-les avec ton mot de passe.',
     welcomeTitle: 'Bienvenue dans Codex',
+    welcomeChoice: 'Tu as déjà un compte, ou tu commences ?',
+    welcomeCreate: 'Créer un compte',
+    welcomeExisting: 'J’ai déjà un compte',
+    welcomeExistingHint:
+      'Connecte-toi avec ton compte en ligne : tes campagnes reviennent sur cet appareil.',
+    createTitle: 'Créer ton compte',
     welcomeSubtitle:
       'Commence par ton compte. Il ne quitte pas cet appareil, et tout ce que tu y ranges est chiffré avec ton mot de passe.',
     account: 'Compte',

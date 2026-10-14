@@ -46,6 +46,7 @@ export const E2E_PASSWORD = 'lanterne verte sous le pont de grès'
 /** First launch: creates the account and goes through the recovery code step. */
 export async function createAccount(page: Page, username = 'MJ') {
   await expect(page.getByRole('heading', { name: 'Bienvenue dans Codex' })).toBeVisible()
+  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click()
   await page.getByLabel(/Nom du compte/).fill(username)
   await page.getByLabel(/^Mot de passe/).fill(E2E_PASSWORD)
   await page.getByLabel('Confirme le mot de passe').fill(E2E_PASSWORD)

@@ -52,7 +52,11 @@ function sanitize(table: SyncTable, record: Record<string, unknown>): Record<str
 }
 
 const sameLive = (a: LiveInfo | null, b: LiveInfo | null) =>
-  a?.operatorId === b?.operatorId && a?.mode === b?.mode && a?.startedAt === b?.startedAt
+  a?.operatorId === b?.operatorId &&
+  a?.mode === b?.mode &&
+  a?.startedAt === b?.startedAt &&
+  a?.title === b?.title &&
+  a?.listed === b?.listed
 
 export interface Refused {
   table: SyncTable

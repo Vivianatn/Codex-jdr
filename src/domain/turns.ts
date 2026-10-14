@@ -52,6 +52,10 @@ export interface LiveGame {
   mode: PlayMode
   startedAt: number
   operator: Participant
+  /** Title of the session played (the plan's, or « Partie libre »). */
+  title: string
+  /** Online: shown in the players' catalogue of open sessions (off unless the GM says so). */
+  listed: boolean
 }
 
 export interface PlayState {
@@ -90,6 +94,8 @@ function normalizeLive(raw: unknown): LiveGame | null {
     mode: live.mode === 'online' ? 'online' : 'local',
     startedAt: typeof live.startedAt === 'number' ? live.startedAt : 0,
     operator: { id: operator.id, name: operator.name },
+    title: typeof live.title === 'string' ? live.title : '',
+    listed: live.listed === true,
   }
 }
 

@@ -98,6 +98,7 @@ test('the audience notice can be reopened and refused from any page (point 5)', 
 test('forms refuse invalid input and say why (point 17)', async ({ page }) => {
   await page.goto(`${BUILD}/app/`)
   await expect(page.getByRole('heading', { name: 'Bienvenue dans Codex' })).toBeVisible()
+  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click()
   await page.getByLabel(/Nom du compte/).fill('MJ')
   await page.getByLabel(/^Mot de passe/).fill('court')
   await page.getByLabel('Confirme le mot de passe').fill('autre chose')

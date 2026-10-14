@@ -38,7 +38,7 @@ async function device(browser: Browser): Promise<Page> {
 /** Lock screen › « Créer un compte en ligne ». */
 async function registerOnline(page: Page, name: string) {
   await expect(page.getByTestId('lock-screen')).toBeVisible()
-  await page.getByRole('button', { name: 'Se connecter avec un compte en ligne' }).click()
+  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click()
   await page.getByRole('button', { name: 'Créer un compte en ligne' }).click()
   await expectNoSeriousA11yViolations(page)
   await page.getByLabel(/Adresse e-mail/).fill(email(name))
@@ -49,22 +49,8 @@ async function registerOnline(page: Page, name: string) {
   await expect(page.getByTestId('lock-screen')).toBeHidden({ timeout: 20_000 })
 }
 
-/** Asks to join through the GM's invitation link. */
-async function requestToJoin(page: Page, link: string, message: string) {
-  await page.goto(link)
-  const form = page.getByTestId('join-request-form')
-  await expect(form).toContainText('Ombreval')
-  await form.getByLabel(/Un mot pour le MJ/).fill(message)
-  await form.getByRole('button', { name: 'Demander à rejoindre' }).click()
-  await expect(page.getByText('Demande envoyée : le MJ va te répondre.')).toBeVisible()
-}
-
-test('a GM puts a campaign online, a player plays her character, a co-GM prepares', async ({
-  browser,
-}) => {
-  test.setTimeout(300_000)
-
-  // --- The GM: a local account, a campaign, then the account goes online --------
+/** The GM: a local account, Ombreval with Lyra on the Crypte map, then the account goes online. */
+async function gmOnline(browser: Browser, address = 'MJ'): Promise<Page> {
   const gm = await device(browser)
   await createAccount(gm, 'MJ')
   await createCampaign(gm, 'Ombreval')
@@ -91,7 +77,7 @@ test('a GM puts a campaign online, a player plays her character, a co-GM prepare
 
   await gm.getByRole('button', { name: 'Ouvrir les paramètres' }).click()
   const account = gm.getByTestId('online-account')
-  await account.getByLabel(/Adresse e-mail/).fill(email('MJ'))
+  await account.getByLabel(/Adresse e-mail/).fill(email(address))
   await account.getByLabel(/Mot de passe actuel/).fill(E2E_PASSWORD)
   await account.getByRole('button', { name: 'Créer mon compte en ligne' }).click()
   await expect(account.getByText('Connecté au serveur')).toBeVisible({ timeout: 20_000 })
@@ -99,6 +85,26 @@ test('a GM puts a campaign online, a player plays her character, a co-GM prepare
   await gm.keyboard.press('Escape')
   // The local campaign is taken over by the online account (D-257).
   await expect(gm.getByTestId('campaign-online')).toHaveText('En ligne', { timeout: 20_000 })
+  return gm
+}
+
+/** Asks to join through the GM's invitation link. */
+async function requestToJoin(page: Page, link: string, message: string) {
+  await page.goto(link)
+  const form = page.getByTestId('join-request-form')
+  await expect(form).toContainText('Ombreval')
+  await form.getByLabel(/Un mot pour le MJ/).fill(message)
+  await form.getByRole('button', { name: 'Demander à rejoindre' }).click()
+  await expect(page.getByText('Demande envoyée : le MJ va te répondre.')).toBeVisible()
+}
+
+test('a GM puts a campaign online, a player plays her character, a co-GM prepares', async ({
+  browser,
+}) => {
+  test.setTimeout(300_000)
+
+  // --- The GM: a local account, a campaign, then the account goes online --------
+  const gm = await gmOnline(browser)
 
   // --- An invitation link ------------------------------------------------------
   await gm.getByRole('link', { name: /Ombreval/ }).click()
@@ -216,11 +222,76 @@ test('an online account comes back on a new device, campaigns included', async (
   await expect(first.getByTestId('campaign-online')).toHaveText('En ligne', { timeout: 20_000 })
 
   const second = await device(browser)
-  await second.getByRole('button', { name: 'Se connecter avec un compte en ligne' }).click()
+  await second.getByRole('button', { name: 'J’ai déjà un compte' }).click()
   await second.getByLabel(/Adresse e-mail/).fill(email('Ysolde'))
   await second.getByLabel(/^Mot de passe/).fill(E2E_PASSWORD)
   await second.getByRole('button', { name: 'Me connecter' }).click()
   await expect(second.getByRole('link', { name: /Les Terres Brisées/ })).toBeVisible({
     timeout: 20_000,
   })
+})
+
+test('a player finds an open session, is accepted in one click and picks a character', async ({
+  browser,
+}) => {
+  test.setTimeout(240_000)
+  const gm = await gmOnline(browser, 'MJ-catalogue')
+  await gm.getByRole('link', { name: /Ombreval/ }).click()
+  await gm.getByRole('radiogroup', { name: 'Mode' }).getByRole('radio', { name: 'En jeu' }).click()
+  const start = gm.getByTestId('start-play')
+  await start.getByRole('radio', { name: 'En ligne' }).click()
+  await start.getByLabel('Afficher dans le catalogue des sessions').check()
+  await start.getByRole('button', { name: 'Démarrer la partie' }).click()
+
+  // --- A stranger sees the session and asks in one click -----------------------
+  const player = await device(browser)
+  await registerOnline(player, 'Maël')
+  await player
+    .getByRole('radiogroup', { name: 'Je joue en tant que' })
+    .getByRole('radio', { name: 'Joueur' })
+    .click()
+  const session = player.getByTestId('open-session')
+  await expect(session).toContainText('Partie libre', { timeout: 20_000 })
+  await expect(session).toContainText('« Ombreval », menée par MJ')
+  await expectNoSeriousA11yViolations(player)
+  await session.getByRole('button', { name: 'Demander à rejoindre' }).click()
+  await expect(session.getByRole('button', { name: 'Demande envoyée' })).toBeDisabled()
+
+  // --- The GM accepts without choosing a character ---------------------------------
+  await expect(gm.getByText('Nouvelle demande pour rejoindre « Ombreval ».')).toBeVisible({
+    timeout: 20_000,
+  })
+  await gm.getByTestId('online-button').click()
+  const request = gm.getByTestId('online-panel').getByTestId('join-request')
+  await expect(request).toContainText('Maël')
+  await request.getByRole('button', { name: 'Accepter' }).click()
+  await gm.keyboard.press('Escape')
+
+  // --- The player enters, picks a free character, then sees the map ---------------
+  await session.getByRole('button', { name: 'Entrer dans la partie' }).click({ timeout: 20_000 })
+  await expect(player.getByRole('heading', { name: 'Choisis ton personnage' })).toBeVisible({
+    timeout: 20_000,
+  })
+  await expect(player.getByTestId('map-canvas')).toHaveCount(0)
+  await expectNoSeriousA11yViolations(player)
+  await player.getByRole('button', { name: 'Jouer ce personnage' }).click()
+  const sheet = player.getByTestId('player-panel')
+  await expect(sheet.getByRole('heading', { name: 'Lyra' })).toBeVisible({ timeout: 20_000 })
+  await expect(player.getByTestId('map-canvas')).toBeVisible()
+
+  // --- Unlisted, the session leaves the catalogue ------------------------------------
+  await gm.getByTestId('online-button').click()
+  await gm
+    .getByTestId('online-panel')
+    .getByLabel('Afficher dans le catalogue des sessions')
+    .uncheck()
+  const other = await device(browser)
+  await registerOnline(other, 'Ilan')
+  await other
+    .getByRole('radiogroup', { name: 'Je joue en tant que' })
+    .getByRole('radio', { name: 'Joueur' })
+    .click()
+  await expect(other.getByTestId('open-sessions')).toContainText(
+    'Aucune session ouverte pour l’instant.',
+  )
 })

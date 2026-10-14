@@ -4,6 +4,21 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Accueil d'un nouvel appareil (2026-10-14)
+
+### D-265 · Catalogue des sessions ouvertes
+
+Demande du MJ : des sessions que les joueurs rejoignent en un clic après accord du MJ ; une fois entré, le joueur choisit parmi les personnages disponibles avant de voir la carte.
+
+- **Côté MJ** : au démarrage d'une partie **en ligne**, case « Afficher dans le catalogue des sessions », **décochée par défaut** (une partie n'est pas montrée à tout le serveur sans que le MJ le décide). Elle se change aussi pendant la partie, dans le panneau « En ligne ». `play.live` porte le titre de la session (`title`) et ce choix (`listed`) ; le serveur les lit comme le reste de `live` (`liveOf`).
+- **Catalogue** (`GET /api/sessions`) : les parties en ligne affichées dont l'appareil de l'opérateur sert les joueurs **en ce moment** (une partie qu'on ne peut pas rejoindre n'y figure pas). Il montre le titre, la campagne, le MJ et l'heure de début, jamais le contenu de la session. Un MJ ou co-MJ ne voit pas sa propre table. Le serveur envoie `{ t: 'sessions' }` à tous quand une partie démarre, s'arrête, change d'affichage ou n'est plus servie.
+- **Rejoindre** : « Demander à rejoindre » envoie, sans message, la même demande d'adhésion à la campagne que le lien d'invitation (D-257) ; le serveur la refuse si la session n'est plus ouverte. Le MJ reçoit un toast même en pleine partie et accepte depuis le panneau « En ligne » : par défaut sans imposer de personnage. Le bouton devient alors « Entrer dans la partie ».
+- **Choix du personnage** : sans personnage imposé, l'écran du joueur montre d'abord « Choisis ton personnage » (personnages joueurs, ceux déjà pris grisés) ; la carte n'apparaît qu'après le choix, vérifié par l'opérateur (déjà en place, D-245).
+
+### D-264 · L'écran d'accueil demande d'abord : créer un compte ou en retrouver un
+
+Demande du MJ : en arrivant sur Codex sans compte sur l'appareil, on tombait directement sur le formulaire de création, alors qu'on a peut-être déjà un compte. L'écran « Bienvenue dans Codex » propose maintenant deux choix : **Créer un compte** (formulaire local, avec « Créer un compte en ligne » à côté) et **J'ai déjà un compte** (connexion au compte en ligne : un compte local ne peut pas exister ailleurs que sur son appareil). Chaque écran a un bouton Retour vers ce choix. Quand des comptes existent déjà sur l'appareil, l'écran de verrouillage ne change pas.
+
 ## Le mode en ligne passe par le serveur (2026-10-13)
 
 ### D-263 · Le serveur tourne sur Node 22 et peut servir le site

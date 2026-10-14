@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { CandleOrnament } from '@/components/Brand'
 import { Button } from '@/components/ui/Button'
-import { SelectField } from '@/components/ui/fields'
+import { CheckboxField, SelectField } from '@/components/ui/fields'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { sessionRepository } from '@/db/sessions'
 import type { PlayMode } from '@/domain/sessions'
@@ -26,6 +26,7 @@ export function StartPlayPanel() {
   const online = useIsOnlineCampaign(campaign.id)
   const [planId, setPlanId] = useState<string>(params.get('session') ?? FREE)
   const [mode, setMode] = useState<PlayMode>(online ? 'online' : 'local')
+  const [listed, setListed] = useState(false)
   const [busy, setBusy] = useState(false)
   const actions = useMemo(() => createLiveActions(t, campaign), [t, campaign])
   const chosen = plans?.some((p) => p.id === planId) ? planId : FREE
@@ -71,6 +72,14 @@ export function StartPlayPanel() {
                 : t.sessions.modeOnlineNeedsHost}
           </p>
         </div>
+        {mode === 'online' && online && (
+          <CheckboxField
+            label={t.sessions.listed}
+            hint={t.sessions.listedHint}
+            checked={listed}
+            onChange={setListed}
+          />
+        )}
         <Button
           variant="primary"
           className="w-full"
@@ -79,7 +88,7 @@ export function StartPlayPanel() {
           onClick={async () => {
             setBusy(true)
             try {
-              await actions.start({ planId: chosen === FREE ? null : chosen, mode })
+              await actions.start({ planId: chosen === FREE ? null : chosen, mode, listed })
               toast.success(t.sessions.started)
             } catch (error) {
               console.error(error)

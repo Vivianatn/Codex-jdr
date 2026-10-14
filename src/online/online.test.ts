@@ -90,7 +90,10 @@ function join(host: HostSession, name: string, characterId: string | null = null
 
 const startGame = (mode: 'local' | 'online', operator = { id: HOST_ID, name: 'MJ' }) =>
   store().updatePlay(
-    (p) => ({ ...p, live: { runId: 'r1', planId: null, mode, startedAt: 1, operator } }),
+    (p) => ({
+      ...p,
+      live: { runId: 'r1', planId: null, mode, startedAt: 1, operator, title: 'r1', listed: false },
+    }),
     'start',
   )
 

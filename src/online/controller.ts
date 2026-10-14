@@ -12,7 +12,7 @@ import {
 } from '@/security/session'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useRollStore } from '@/stores/rollStore'
-import type { PublicUser, ServerFrame } from '@shared/sync'
+import type { CampaignSummary, PublicUser, ServerFrame } from '@shared/sync'
 import { GuestSession, type Welcome } from './guestSession'
 import { HostSession } from './hostSession'
 import { relayLink, type RelayEnd } from './link'
@@ -85,7 +85,10 @@ export async function connectOnline(account: AccountSummary): Promise<void> {
     onOffline: () => {
       if (useServerStore.getState().status === 'online') socket?.retryNow()
     },
-    onCampaigns: (campaigns) => useServerStore.setState({ campaigns }),
+    onCampaigns: (campaigns) => {
+      announceRequests(useServerStore.getState().campaigns, campaigns)
+      useServerStore.setState({ campaigns })
+    },
   })
   engine = sync
   await sync.start()
@@ -120,6 +123,7 @@ function onOpen() {
   engine?.setOnline(true)
   void engine?.reconcile()
   void refreshRequests()
+  void refreshSessions()
   if (host) socket?.send({ t: 'serve', campaignId: host.campaignId })
 }
 
@@ -145,9 +149,12 @@ function onFrame(frame: ServerFrame) {
     case 'campaigns':
       void engine?.reconcile()
       void refreshRequests()
+      void refreshSessions()
       // A game that just started may now be served.
       if (host && !host.serving) socket?.send({ t: 'serve', campaignId: host.campaignId })
       return
+    case 'sessions':
+      return void refreshSessions()
     case 'presence':
       return useServerStore.setState((s) => ({
         presence: { ...s.presence, [frame.campaignId]: frame.users },
@@ -196,10 +203,28 @@ async function refreshRequests(): Promise<void> {
   }
 }
 
+async function refreshSessions(): Promise<void> {
+  try {
+    const { sessions } = await server.openSessions()
+    useServerStore.setState({ sessions })
+  } catch {
+    // Offline: the catalogue stays as it was.
+  }
+}
+
+/** A GM hears of a new join request even in the middle of a game. */
+function announceRequests(before: CampaignSummary[], after: CampaignSummary[]): void {
+  for (const c of after) {
+    const was = before.find((b) => b.id === c.id)?.pendingRequests ?? 0
+    if (c.pendingRequests > was) toast(t().online.newRequest(c.name))
+  }
+}
+
 /** The server list of campaigns, now (after accepting someone, for instance). */
 export function refreshOnline(): void {
   void engine?.reconcile()
   void refreshRequests()
+  void refreshSessions()
 }
 
 /** Is this campaign kept on the server by this device? */

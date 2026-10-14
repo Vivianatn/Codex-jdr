@@ -102,18 +102,24 @@ export interface LiveInfo {
   operatorName: string
   mode: 'local' | 'online'
   startedAt: number
+  /** Title of the session being played. */
+  title: string
+  /** The GM shows the game in the catalogue of open sessions. */
+  listed: boolean
 }
 
 export function liveOf(campaign: Record<string, unknown> | undefined): LiveInfo | null {
   const play = campaign?.play
   if (!isRecord(play) || !isRecord(play.live)) return null
-  const { operator, mode, startedAt } = play.live
+  const { operator, mode, startedAt, title, listed } = play.live
   if (!isRecord(operator) || !isId(operator.id) || typeof operator.name !== 'string') return null
   return {
     operatorId: operator.id,
     operatorName: operator.name,
     mode: mode === 'online' ? 'online' : 'local',
     startedAt: typeof startedAt === 'number' ? startedAt : 0,
+    title: typeof title === 'string' ? title.slice(0, 200) : '',
+    listed: listed === true,
   }
 }
 
@@ -155,6 +161,8 @@ export type ServerFrame =
   | { t: 'changed'; campaignId: string; rev: number }
   /** Memberships, requests or running games changed: refresh the campaign list. */
   | { t: 'campaigns' }
+  /** The catalogue of open sessions changed: read it again. */
+  | { t: 'sessions' }
   /** Members of a campaign connected right now. */
   | { t: 'presence'; campaignId: string; users: PresenceUser[] }
   | { t: 'serving'; campaignId: string; ok: boolean }
@@ -208,6 +216,7 @@ const SERVER_FRAMES = new Set([
   'hello',
   'changed',
   'campaigns',
+  'sessions',
   'presence',
   'serving',
   'peer',
@@ -266,6 +275,18 @@ export interface InvitePreview {
   campaignName: string
   ownerName: string
   /** The viewer already belongs to the campaign, or already asked. */
+  status: 'none' | 'member' | 'requested'
+}
+
+/** An online game its GM shows in the catalogue: players ask to join it in one click. */
+export interface OpenSession {
+  campaignId: string
+  campaignName: string
+  ownerName: string
+  title: string
+  operatorName: string
+  startedAt: number
+  /** The viewer already plays in the campaign, or already asked. */
   status: 'none' | 'member' | 'requested'
 }
 

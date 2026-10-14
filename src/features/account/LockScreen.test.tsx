@@ -27,11 +27,26 @@ beforeEach(() => {
 })
 
 describe('lock screen (D-241)', () => {
+  it('first asks a new visitor whether to create an account or use an existing one', async () => {
+    const { user } = renderApp('/')
+    expect(await screen.findByRole('heading', { name: 'Bienvenue dans Codex' })).toBeVisible()
+    expect(screen.queryByLabelText(/Nom du compte/)).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'J’ai déjà un compte' }))
+    expect(await screen.findByRole('heading', { name: 'Compte en ligne' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Retour' }))
+
+    await user.click(await screen.findByRole('button', { name: 'Créer un compte' }))
+    expect(await screen.findByRole('heading', { name: 'Créer ton compte' })).toBeVisible()
+    expect(screen.getByLabelText(/Nom du compte/)).toBeVisible()
+  })
+
   it('creates an account, shows the recovery code once, locks and unlocks', async () => {
     const { user } = renderApp('/')
     expect(await screen.findByRole('heading', { name: 'Bienvenue dans Codex' })).toBeVisible()
     expect(hasActiveDb()).toBe(false)
 
+    await user.click(screen.getByRole('button', { name: 'Créer un compte' }))
     await user.type(screen.getByLabelText(/Nom du compte/), 'Agathe')
     await user.type(screen.getByLabelText(/^Mot de passe/), PASSWORD)
     await user.type(screen.getByLabelText('Confirme le mot de passe'), 'autre chose encore là')

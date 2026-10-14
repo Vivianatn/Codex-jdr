@@ -1,4 +1,4 @@
-import { DoorOpen, Link2, LogIn, X } from 'lucide-react'
+import { Check, DoorOpen, Link2, LogIn, Send, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -7,12 +7,12 @@ import { Button, IconButton } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SettingsDialog } from '@/features/settings/SettingsDialog'
-import { useT } from '@/i18n'
+import { useIntlLocale, useT } from '@/i18n'
 import { EnterError, enterGame, refreshOnline } from '@/online/controller'
 import { guestHome } from '@/online/routes'
 import { server } from '@/online/server/api'
 import { useServerStore } from '@/online/server/serverStore'
-import type { CampaignSummary } from '@shared/sync'
+import type { CampaignSummary, OpenSession } from '@shared/sync'
 import { JoinDialog } from './JoinDialog'
 import { onlineErrorMessage } from './onlineMessages'
 import { ServerStatusLine } from './OnlinePanel'
@@ -24,6 +24,7 @@ export function PlayerGames() {
   const campaigns = useServerStore((s) => s.campaigns)
   const games = useMemo(() => campaigns.filter((c) => c.role === 'player'), [campaigns])
   const requests = useServerStore((s) => s.requests)
+  const sessions = useServerStore((s) => s.sessions)
   const [joining, setJoining] = useState(false)
   const [settings, setSettings] = useState(false)
 
@@ -56,6 +57,21 @@ export function PlayerGames() {
         <ServerStatusLine />
         {games.length > 0 && joinButton}
       </div>
+      <section className="space-y-3" data-testid="open-sessions">
+        <div>
+          <h2 className="type-section text-ink">{t.online.openSessions}</h2>
+          <p className="mt-1 text-sm text-ink-muted">{t.online.openSessionsHint}</p>
+        </div>
+        {sessions.length === 0 ? (
+          <p className="text-sm text-ink-muted">{t.online.noOpenSessions}</p>
+        ) : (
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {sessions.map((s) => (
+              <SessionCard key={s.campaignId} session={s} />
+            ))}
+          </ul>
+        )}
+      </section>
       {games.length === 0 ? (
         <EmptyState
           icon={<GameIcon name="tabletop-players" className="size-7" />}
@@ -103,10 +119,87 @@ export function PlayerGames() {
   )
 }
 
-function GameCard({ game }: { game: CampaignSummary }) {
+/** Enters a campaign's running game; the player then picks a free character (PlayerScreen). */
+function useEnterGame(campaignId: string) {
   const t = useT()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
+  const enter = async () => {
+    setBusy(true)
+    try {
+      const welcome = await enterGame(campaignId)
+      navigate(guestHome(welcome.campaignId))
+    } catch (error) {
+      toast.error(
+        error instanceof EnterError
+          ? t.online.enterFailed[error.reason]
+          : onlineErrorMessage(t, error),
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+  return { busy, enter }
+}
+
+/** An open session of the catalogue: ask to join in one click, then enter once accepted. */
+function SessionCard({ session }: { session: OpenSession }) {
+  const t = useT()
+  const locale = useIntlLocale()
+  const { busy, enter } = useEnterGame(session.campaignId)
+  const [asking, setAsking] = useState(false)
+  const time = new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(session.startedAt)
+  return (
+    <li
+      className="flex min-h-36 flex-col gap-2 rounded-lg border border-line bg-surface p-5 shadow-soft"
+      data-testid="open-session"
+    >
+      <span className="font-title text-[1.375rem] leading-snug font-semibold text-ink">
+        {session.title || session.campaignName}
+      </span>
+      <span className="text-sm text-ink-muted">
+        {t.online.campaignBy(session.campaignName, session.ownerName)}
+      </span>
+      <span className="text-sm text-ink">{t.online.sessionSince(time)}</span>
+      <div className="mt-auto flex flex-wrap justify-end gap-2 pt-2">
+        {session.status === 'member' ? (
+          <Button size="sm" variant="primary" icon={<DoorOpen />} disabled={busy} onClick={enter}>
+            {busy ? t.online.entering : t.online.enter}
+          </Button>
+        ) : session.status === 'requested' ? (
+          <Button size="sm" variant="secondary" icon={<Check />} disabled>
+            {t.online.asked}
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="primary"
+            icon={<Send />}
+            disabled={asking}
+            onClick={async () => {
+              setAsking(true)
+              try {
+                await server.requestSession(session.campaignId)
+                toast.success(t.online.requestSent)
+                refreshOnline()
+              } catch (error) {
+                toast.error(onlineErrorMessage(t, error))
+              } finally {
+                setAsking(false)
+              }
+            }}
+          >
+            {t.online.askToJoin}
+          </Button>
+        )}
+      </div>
+    </li>
+  )
+}
+
+function GameCard({ game }: { game: CampaignSummary }) {
+  const t = useT()
+  const { busy, enter } = useEnterGame(game.id)
   const [leaving, setLeaving] = useState(false)
   const live = game.live?.mode === 'online' ? game.live : null
   return (
@@ -130,21 +223,7 @@ function GameCard({ game }: { game: CampaignSummary }) {
           variant="primary"
           icon={<DoorOpen />}
           disabled={!live || busy}
-          onClick={async () => {
-            setBusy(true)
-            try {
-              const welcome = await enterGame(game.id)
-              navigate(guestHome(welcome.campaignId))
-            } catch (error) {
-              toast.error(
-                error instanceof EnterError
-                  ? t.online.enterFailed[error.reason]
-                  : onlineErrorMessage(t, error),
-              )
-            } finally {
-              setBusy(false)
-            }
-          }}
+          onClick={enter}
         >
           {busy ? t.online.entering : t.online.enter}
         </Button>

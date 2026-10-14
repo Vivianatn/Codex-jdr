@@ -5,6 +5,7 @@ import type {
   JoinRequestInfo,
   MemberInfo,
   MemberRole,
+  OpenSession,
   PublicUser,
   TableChanges,
 } from '@shared/sync'
@@ -120,6 +121,9 @@ export const server = {
     api<{ results: InvitePreview[] }>('GET', `/search?q=${encodeURIComponent(q)}`),
   requestListed: (id: string, message: string) =>
     api<{ campaignId: string }>('POST', `/campaigns/${id}/requests`, { message }),
+  openSessions: () => api<{ sessions: OpenSession[] }>('GET', '/sessions'),
+  requestSession: (id: string) =>
+    api<{ campaignId: string }>('POST', `/sessions/${id}/request`, {}),
   requests: (id: string) =>
     api<{ requests: JoinRequestInfo[] }>('GET', `/campaigns/${id}/requests`),
   myRequests: () => api<{ requests: MyRequest[] }>('GET', '/requests'),

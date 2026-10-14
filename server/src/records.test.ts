@@ -179,6 +179,8 @@ describe('campaign records', () => {
       operatorName: 'Gm',
       mode: 'online',
       startedAt: 1,
+      title: '',
+      listed: false,
     })
 
     const refused = await push(cogm, 'camp-1', [

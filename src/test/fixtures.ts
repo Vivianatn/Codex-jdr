@@ -85,6 +85,8 @@ export async function startLocalGame(campaignId: string): Promise<void> {
         mode: 'local',
         startedAt: 0,
         operator: { id: HOST_ID, name: 'MJ' },
+        title: 'Partie libre',
+        listed: false,
       },
     },
   })

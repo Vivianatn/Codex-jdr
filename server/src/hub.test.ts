@@ -25,7 +25,7 @@ beforeEach(async () => {
 })
 afterEach(() => server.close())
 
-const startGame = (operator: Agent, name: string, mode = 'online') =>
+const startGame = (operator: Agent, name: string, mode = 'online', extra = {}) =>
   push(operator, 'camp-1', [
     {
       table: 'campaigns',
@@ -38,6 +38,7 @@ const startGame = (operator: Agent, name: string, mode = 'online') =>
               mode,
               startedAt: 1,
               operator: { id: operator.userId, name },
+              ...extra,
             },
           },
         }),
@@ -189,5 +190,63 @@ describe('real time', () => {
     const closed = new Promise<number>((resolve) => l.ws.on('close', (code) => resolve(code)))
     await lyra.request('POST', '/api/auth/logout')
     expect(await closed).toBe(4001)
+  })
+
+  it('lists open sessions; a stranger asks in one click, then enters and picks a character', async () => {
+    const bran = await signUp(server.app, 'Bran')
+    const catalogue = async (a: Agent) =>
+      (await a.request<{ sessions: Record<string, unknown>[] }>('GET', '/api/sessions')).body
+        .sessions
+    const g = await socket(server.app, gm)
+    const b = await socket(server.app, bran)
+
+    // A game the GM did not list stays out of the catalogue.
+    await startGame(gm, 'Gm', 'online', { title: 'La crypte' })
+    g.send({ t: 'serve', campaignId: 'camp-1' })
+    await g.next('serving')
+    expect(await catalogue(bran)).toEqual([])
+    expect((await bran.request('POST', '/api/sessions/camp-1/request')).status).toBe(404)
+
+    await startGame(gm, 'Gm', 'online', { title: 'La crypte', listed: true })
+    await b.next('sessions')
+    expect(await catalogue(bran)).toEqual([
+      {
+        campaignId: 'camp-1',
+        campaignName: 'Ombreval',
+        ownerName: 'Gm',
+        title: 'La crypte',
+        operatorName: 'Gm',
+        startedAt: 1,
+        status: 'none',
+      },
+    ])
+    expect((await catalogue(lyra))[0]?.status).toBe('member')
+    // The GM does not see their own table.
+    expect(await catalogue(gm)).toEqual([])
+
+    expect((await bran.request('POST', '/api/sessions/camp-1/request')).status).toBe(200)
+    expect((await catalogue(bran))[0]?.status).toBe('requested')
+    const { body } = await gm.request<{ requests: { id: string; displayName: string }[] }>(
+      'GET',
+      '/api/campaigns/camp-1/requests',
+    )
+    expect(body.requests.map((r) => r.displayName)).toEqual(['Bran'])
+    await gm.request('POST', `/api/campaigns/camp-1/requests/${body.requests[0]!.id}/accept`, {
+      role: 'player',
+      characterId: null,
+    })
+    expect((await catalogue(bran))[0]?.status).toBe('member')
+
+    // No character given: the player picks a free one once in the game.
+    b.send({ t: 'enter', campaignId: 'camp-1' })
+    await b.next('entered')
+    expect((await g.next('peer')).characterId).toBeNull()
+
+    // The operator's device stops serving: the session leaves the catalogue.
+    g.send({ t: 'unserve', campaignId: 'camp-1' })
+    await b.next('hostGone')
+    expect(await catalogue(bran)).toEqual([])
+    g.close()
+    b.close()
   })
 })

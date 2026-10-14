@@ -6,6 +6,7 @@ import { GameIcon } from '@/components/GameIcon'
 import { Button, IconButton } from '@/components/ui/Button'
 import { CheckboxField, SelectField } from '@/components/ui/fields'
 import { SettingsDialog } from '@/features/settings/SettingsDialog'
+import { createLiveActions } from '@/features/game/liveActions'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import type { Messages } from '@/i18n/locales/fr'
@@ -187,6 +188,7 @@ function useCharacterOptions(t: Messages) {
 
 function LiveSection() {
   const t = useT()
+  const campaign = useCampaign()
   const live = useCampaignStore((s) => s.play.live)
   const serving = useOnlineStore((s) => s.role === 'host')
   const peers = useOnlineStore((s) => s.peers)
@@ -199,6 +201,14 @@ function LiveSection() {
       <p className="text-xs text-ink-muted">
         {serving ? t.online.serving : t.sessions.operator(live.operator.name)}
       </p>
+      {serving && (
+        <CheckboxField
+          label={t.sessions.listed}
+          hint={t.sessions.listedHint}
+          checked={live.listed}
+          onChange={(listed) => createLiveActions(t, campaign).setListed(listed)}
+        />
+      )}
       {serving && (
         <ul
           className="divide-y divide-line rounded-lg border border-line"

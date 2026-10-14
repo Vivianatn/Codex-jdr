@@ -167,11 +167,22 @@ export class Hub {
     for (const r of rows) await this.presence(r.campaign_id)
   }
 
-  /** The running game changed (started, ended, handed over): the relay follows. */
+  /** The running game changed (started, ended, handed over, listed): the relay follows. */
   async liveChanged(campaignId: string): Promise<void> {
     const host = this.hosts.get(campaignId)
     if (host && !(await this.mayServe(campaignId, host.user.id))) this.dropHost(campaignId, host)
     this.notifyCampaigns(await this.membersOf([campaignId]))
+    this.sessionsChanged()
+  }
+
+  /** Is the operator's device of this campaign serving its players right now? */
+  isServing(campaignId: string): boolean {
+    return this.hosts.has(campaignId)
+  }
+
+  /** Everyone connected reads the catalogue of open sessions again (it is small). */
+  sessionsChanged(): void {
+    for (const conn of this.conns) this.send(conn, { t: 'sessions' })
   }
 
   /** The campaign is deleted: its game stops. */
@@ -213,6 +224,7 @@ export class Hub {
       this.send(player, { t: 'hostGone' })
     }
     this.players.delete(campaignId)
+    this.sessionsChanged()
   }
 
   private leave(conn: Conn): void {
@@ -248,7 +260,10 @@ export class Hub {
           conn.serving.add(campaignId)
         }
         this.send(conn, { t: 'serving', campaignId, ok })
-        if (ok) this.notifyCampaigns(await this.membersOf([campaignId], ['player']))
+        if (ok) {
+          this.notifyCampaigns(await this.membersOf([campaignId], ['player']))
+          this.sessionsChanged()
+        }
         return
       }
       case 'unserve':
