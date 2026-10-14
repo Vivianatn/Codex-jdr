@@ -1,12 +1,13 @@
 import * as Popover from '@radix-ui/react-popover'
 import { Copy, Link2, RefreshCw, Unlink, UserMinus, Wifi, WifiOff, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { GameIcon } from '@/components/GameIcon'
 import { Button, IconButton } from '@/components/ui/Button'
 import { CheckboxField, SelectField } from '@/components/ui/fields'
-import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { createLiveActions } from '@/features/game/liveActions'
+import { RelationButton } from '@/features/social/RelationButton'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import type { Messages } from '@/i18n/locales/fr'
@@ -59,9 +60,7 @@ export function OnlinePanel() {
             <p className="type-eyebrow">{t.online.title}</p>
             {user && <ServerStatusLine />}
           </div>
-          {!user ? (
-            <NotLinked />
-          ) : !online ? (
+          {!online ? (
             <PutOnline />
           ) : (
             <>
@@ -100,26 +99,6 @@ export function ServerStatusLine() {
         {pending > 0 && ` · ${t.online.pending(pending)}`}
       </span>
     </p>
-  )
-}
-
-function NotLinked() {
-  const t = useT()
-  const [settings, setSettings] = useState(false)
-  return (
-    <div className="space-y-3">
-      <p className="text-sm font-semibold text-ink">{t.online.notLinkedTitle}</p>
-      <p className="text-sm text-ink-muted">{t.online.notLinkedBody}</p>
-      <Button
-        variant="primary"
-        className="w-full"
-        icon={<Link2 />}
-        onClick={() => setSettings(true)}
-      >
-        {t.online.openAccount}
-      </Button>
-      <SettingsDialog open={settings} onOpenChange={setSettings} />
-    </div>
   )
 }
 
@@ -231,6 +210,7 @@ function LiveSection() {
                     ),
                 )}
               </span>
+              <RelationButton user={{ id: p.id, displayName: p.name }} compact />
               <IconButton
                 size="sm"
                 label={t.online.kick(p.name)}
@@ -309,14 +289,23 @@ function RequestRow({
       className="space-y-2 rounded-lg border border-line bg-surface p-3"
       data-testid="join-request"
     >
-      <p className="text-sm text-ink">
-        <strong className="font-semibold">{request.displayName}</strong>
-        {request.message && (
-          <span className="block text-xs text-ink-muted">
-            {t.online.requestMessage(request.message)}
-          </span>
-        )}
-      </p>
+      <div className="flex items-start gap-2">
+        <p className="min-w-0 flex-1 text-sm text-ink">
+          <Link
+            to={`/profil/${request.userId}`}
+            className="font-semibold hover:text-accent-text hover:underline"
+            aria-label={t.adventurers.viewProfile(request.displayName)}
+          >
+            {request.displayName}
+          </Link>
+          {request.message && (
+            <span className="block text-xs text-ink-muted">
+              {t.online.requestMessage(request.message)}
+            </span>
+          )}
+        </p>
+        <RelationButton user={{ id: request.userId, displayName: request.displayName }} compact />
+      </div>
       <div className="grid gap-2 sm:grid-cols-2">
         {role === 'owner' && (
           <SelectField<'player' | 'editor'>
@@ -502,16 +491,28 @@ function Members({ campaignId, role }: { campaignId: string; role: MemberRole })
                 <GameIcon name="crown" className="size-4 text-gold-text" aria-hidden />
               )}
               <span className="min-w-0 flex-1">
-                <span className="text-ink">
-                  {m.displayName}
-                  {m.userId === selfId && ` (${t.online.you})`}
-                </span>
+                {m.userId === selfId ? (
+                  <span className="text-ink">
+                    {m.displayName} ({t.online.you})
+                  </span>
+                ) : (
+                  <Link
+                    to={`/profil/${m.userId}`}
+                    className="text-ink hover:text-accent-text hover:underline"
+                    aria-label={t.adventurers.viewProfile(m.displayName)}
+                  >
+                    {m.displayName}
+                  </Link>
+                )}
                 <span className="block text-xs text-ink-muted">
                   {roleName(m.role)}
                   {online.has(m.userId) && ` · ${t.online.connected}`}
                   {operator === m.userId && ` · ${t.online.operating}`}
                 </span>
               </span>
+              {m.userId !== selfId && (
+                <RelationButton user={{ id: m.userId, displayName: m.displayName }} compact />
+              )}
               {canManage(m) && (
                 <IconButton
                   size="sm"

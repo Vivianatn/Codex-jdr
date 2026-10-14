@@ -36,6 +36,12 @@ export const CampaignsPage = screen(() =>
 export const InvitePage = screen(() =>
   import('@/features/online/InvitePage').then((m) => m.InvitePage),
 )
+export const ProfilePage = screen(() =>
+  import('@/features/social/ProfilePage').then((m) => m.ProfilePage),
+)
+export const AdventurerLinkPage = screen(() =>
+  import('@/features/social/ProfilePage').then((m) => m.AdventurerLinkPage),
+)
 export const ResetPasswordPage = screen(() =>
   import('@/features/account/ResetPasswordPage').then((m) => m.ResetPasswordPage),
 )

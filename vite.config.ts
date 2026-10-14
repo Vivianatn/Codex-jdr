@@ -114,6 +114,8 @@ export default defineConfig({
           environment: 'node',
           include: ['server/src/**/*.test.ts'],
           testTimeout: 30_000,
+          // Each test starts a fresh in-memory PostgreSQL: slow while the app suite runs alongside.
+          hookTimeout: 30_000,
         },
       },
     ],

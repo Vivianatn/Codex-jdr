@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { LockKeyhole } from 'lucide-react'
 import { IconButton } from '@/components/ui/Button'
 import { SettingsButton, ThemeToggle } from '@/features/settings/SettingsDialog'
+import { ProfileButton } from '@/features/social/ProfileButton'
 import { useT } from '@/i18n'
 import { lockSession } from '@/security/session'
 import { cn } from '@/lib/cn'
@@ -33,6 +34,7 @@ export function AppHeader({
       )}
       <div className="flex shrink-0 items-center justify-end gap-0.5 sm:flex-1 sm:gap-1">
         {end}
+        <ProfileButton />
         <LockButton />
         {/* Also in the settings: left out on phones to keep the header on one line. */}
         <span className="hidden sm:contents">

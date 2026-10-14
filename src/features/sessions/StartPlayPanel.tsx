@@ -1,14 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Monitor, Play, Wifi } from 'lucide-react'
+import { Play } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { CandleOrnament } from '@/components/Brand'
 import { Button } from '@/components/ui/Button'
 import { CheckboxField, SelectField } from '@/components/ui/fields'
-import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { sessionRepository } from '@/db/sessions'
-import type { PlayMode } from '@/domain/sessions'
 import { createLiveActions } from '@/features/game/liveActions'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
@@ -16,7 +14,7 @@ import { useIsOnlineCampaign } from '@/online/server/serverStore'
 
 const FREE = '__free__'
 
-/** Play starts by hand (D-244): pick a session plan (or none) and a mode. */
+/** Play starts by hand (D-244): pick a session plan (or none); games are online (D-266). */
 export function StartPlayPanel() {
   const t = useT()
   const campaign = useCampaign()
@@ -25,7 +23,6 @@ export function StartPlayPanel() {
   // Players enter through the server: the campaign must be online (D-262).
   const online = useIsOnlineCampaign(campaign.id)
   const [planId, setPlanId] = useState<string>(params.get('session') ?? FREE)
-  const [mode, setMode] = useState<PlayMode>(online ? 'online' : 'local')
   const [listed, setListed] = useState(false)
   const [busy, setBusy] = useState(false)
   const actions = useMemo(() => createLiveActions(t, campaign), [t, campaign])
@@ -53,26 +50,10 @@ export function StartPlayPanel() {
             ...(plans ?? []).map((p) => ({ value: p.id, label: p.title })),
           ]}
         />
-        <div className="space-y-1.5">
-          <p className="text-[0.8125rem] font-semibold text-ink">{t.sessions.startMode}</p>
-          <SegmentedControl<PlayMode>
-            label={t.sessions.startMode}
-            value={mode}
-            onValueChange={setMode}
-            options={[
-              { value: 'local', label: t.sessions.modeLocal, icon: <Monitor /> },
-              { value: 'online', label: t.sessions.modeOnline, icon: <Wifi /> },
-            ]}
-          />
-          <p className="text-xs text-ink-muted">
-            {mode === 'local'
-              ? t.sessions.modeLocalHint
-              : online
-                ? t.sessions.modeOnlineHint
-                : t.sessions.modeOnlineNeedsHost}
-          </p>
-        </div>
-        {mode === 'online' && online && (
+        <p className="text-xs text-ink-muted">
+          {online ? t.sessions.modeOnlineHint : t.sessions.notSyncedYet}
+        </p>
+        {online && (
           <CheckboxField
             label={t.sessions.listed}
             hint={t.sessions.listedHint}
@@ -84,11 +65,15 @@ export function StartPlayPanel() {
           variant="primary"
           className="w-full"
           icon={<Play />}
-          disabled={busy || (mode === 'online' && !online)}
+          disabled={busy || !online}
           onClick={async () => {
             setBusy(true)
             try {
-              await actions.start({ planId: chosen === FREE ? null : chosen, mode, listed })
+              await actions.start({
+                planId: chosen === FREE ? null : chosen,
+                mode: 'online',
+                listed,
+              })
               toast.success(t.sessions.started)
             } catch (error) {
               console.error(error)

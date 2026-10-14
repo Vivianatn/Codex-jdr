@@ -1,5 +1,12 @@
 import { create } from 'zustand'
-import type { CampaignSummary, OpenSession, PresenceUser, PublicUser } from '@shared/sync'
+import type {
+  AdventurerProfile,
+  CampaignSummary,
+  FriendsList,
+  OpenSession,
+  PresenceUser,
+  PublicUser,
+} from '@shared/sync'
 import type { MyRequest } from './api'
 
 /**
@@ -19,6 +26,10 @@ interface ServerState {
   requests: MyRequest[]
   /** Other GMs' games open to players right now (catalogue). */
   sessions: OpenSession[]
+  /** Own profile (picture, banner, adventurer code), once read (D-267). */
+  profile: AdventurerProfile | null
+  /** Adventurers and requests, once read. */
+  friends: FriendsList | null
   /** Members of each campaign connected right now. */
   presence: Record<string, PresenceUser[]>
   /** Local changes not yet accepted by the server. */
@@ -33,6 +44,8 @@ export const initialServerState: ServerState = {
   campaigns: [],
   requests: [],
   sessions: [],
+  profile: null,
+  friends: null,
   presence: {},
   pending: 0,
   synced: [],

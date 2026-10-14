@@ -124,6 +124,7 @@ function onOpen() {
   void engine?.reconcile()
   void refreshRequests()
   void refreshSessions()
+  void refreshSocial()
   if (host) socket?.send({ t: 'serve', campaignId: host.campaignId })
 }
 
@@ -155,6 +156,8 @@ function onFrame(frame: ServerFrame) {
       return
     case 'sessions':
       return void refreshSessions()
+    case 'friends':
+      return void refreshSocial()
     case 'presence':
       return useServerStore.setState((s) => ({
         presence: { ...s.presence, [frame.campaignId]: frame.users },
@@ -212,6 +215,37 @@ async function refreshSessions(): Promise<void> {
   }
 }
 
+/** Own profile and adventurers; a toast for each new request received (D-267). */
+export async function refreshSocial(): Promise<void> {
+  try {
+    const [{ profile }, friends] = await Promise.all([server.profile(), server.friends()])
+    const before = useServerStore.getState().friends
+    if (before)
+      for (const f of friends.incoming)
+        if (!before.incoming.some((b) => b.id === f.id))
+          toast(t().adventurers.newRequest(f.displayName))
+    useServerStore.setState({ profile, friends })
+  } catch {
+    // Offline: the lists stay as they were.
+  }
+}
+
+/** Saves the profile; a new name also goes to the local account. */
+export async function saveProfile(
+  patch: Parameters<typeof server.updateProfile>[0],
+): Promise<void> {
+  const { profile } = await server.updateProfile(patch)
+  useServerStore.setState({ profile })
+  const local = useSessionStore.getState().account
+  const user = useServerStore.getState().user
+  if (local?.online && user && user.displayName !== profile.displayName) {
+    const renamed = { ...user, displayName: profile.displayName }
+    const account = await accounts.setOnline(local.id, linkOf(renamed))
+    updateSessionAccount({ online: account.online })
+    useServerStore.setState({ user: renamed })
+  }
+}
+
 /** A GM hears of a new join request even in the middle of a game. */
 function announceRequests(before: CampaignSummary[], after: CampaignSummary[]): void {
   for (const c of after) {
@@ -225,6 +259,17 @@ export function refreshOnline(): void {
   void engine?.reconcile()
   void refreshRequests()
   void refreshSessions()
+}
+
+/**
+ * GDPR erasure (D-266): the GM's campaigns are deleted from the server, the
+ * others are left; then this device stops following the server.
+ */
+export async function eraseOnline(): Promise<void> {
+  const { campaigns } = await server.campaigns()
+  for (const c of campaigns)
+    await (c.role === 'owner' ? server.deleteCampaign(c.id) : server.leaveCampaign(c.id))
+  disconnectOnline()
 }
 
 /** Is this campaign kept on the server by this device? */
@@ -265,14 +310,6 @@ export async function linkAccount(
   updateSessionAccount({ online: account.online })
 }
 
-/** Forgets the online account on this device (the campaigns stay here). */
-export async function unlinkAccount(): Promise<void> {
-  const local = useSessionStore.getState().account
-  if (!local) return
-  await server.logout().catch(() => null)
-  await forgetOnline(local.id)
-}
-
 /**
  * This device stops following the server: the campaigns stay, as local ones;
  * changes not sent yet are dropped (the account was unlinked or deleted).
@@ -310,6 +347,7 @@ export async function renameOnline(displayName: string): Promise<void> {
   const account = await accounts.setOnline(local.id, linkOf(user))
   updateSessionAccount({ online: account.online })
   useServerStore.setState({ user })
+  void refreshSocial()
 }
 
 export class LinkedElsewhereError extends Error {

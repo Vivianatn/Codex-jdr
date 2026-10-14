@@ -35,24 +35,13 @@ async function device(browser: Browser): Promise<Page> {
   return page
 }
 
-/** Lock screen › « Créer un compte en ligne ». */
-async function registerOnline(page: Page, name: string) {
-  await expect(page.getByTestId('lock-screen')).toBeVisible()
-  await page.getByRole('button', { name: 'Créer un compte', exact: true }).click()
-  await page.getByRole('button', { name: 'Créer un compte en ligne' }).click()
-  await expectNoSeriousA11yViolations(page)
-  await page.getByLabel(/Adresse e-mail/).fill(email(name))
-  await page.getByLabel(/Nom affiché/).fill(name)
-  await page.getByLabel(/^Mot de passe/).fill(E2E_PASSWORD)
-  await page.getByLabel('Confirme le mot de passe').fill(E2E_PASSWORD)
-  await page.getByRole('button', { name: 'Créer mon compte en ligne' }).click()
-  await expect(page.getByTestId('lock-screen')).toBeHidden({ timeout: 20_000 })
-}
+/** Lock screen › « Créer un compte ». */
+const registerOnline = (page: Page, name: string) => createAccount(page, name, email(name))
 
-/** The GM: a local account, Ombreval with Lyra on the Crypte map, then the account goes online. */
+/** The GM: an account, Ombreval with Lyra on the Crypte map, on the server. */
 async function gmOnline(browser: Browser, address = 'MJ'): Promise<Page> {
   const gm = await device(browser)
-  await createAccount(gm, 'MJ')
+  await createAccount(gm, 'MJ', email(address))
   await createCampaign(gm, 'Ombreval')
   await importCharacter(gm, 'Joueurs', { name: 'Lyra', hp: 22 })
   await gm.getByRole('link', { name: 'Cartes', exact: true }).click()
@@ -75,15 +64,7 @@ async function gmOnline(browser: Browser, address = 'MJ'): Promise<Page> {
     { ...record, play: { ...(record!.play as object), mapId: map!.id } },
   ])
 
-  await gm.getByRole('button', { name: 'Ouvrir les paramètres' }).click()
-  const account = gm.getByTestId('online-account')
-  await account.getByLabel(/Adresse e-mail/).fill(email(address))
-  await account.getByLabel(/Mot de passe actuel/).fill(E2E_PASSWORD)
-  await account.getByRole('button', { name: 'Créer mon compte en ligne' }).click()
-  await expect(account.getByText('Connecté au serveur')).toBeVisible({ timeout: 20_000 })
-  await expectNoSeriousA11yViolations(gm)
-  await gm.keyboard.press('Escape')
-  // The local campaign is taken over by the online account (D-257).
+  // The campaign goes to the server by itself (D-266).
   await expect(gm.getByTestId('campaign-online')).toHaveText('En ligne', { timeout: 20_000 })
   return gm
 }
@@ -151,7 +132,6 @@ test('a GM puts a campaign online, a player plays her character, a co-GM prepare
 
   // --- The GM starts an online game; the player enters and rolls her dice ------
   await gm.getByRole('radiogroup', { name: 'Mode' }).getByRole('radio', { name: 'En jeu' }).click()
-  await gm.getByTestId('start-play').getByRole('radio', { name: 'En ligne' }).click()
   await gm.getByTestId('start-play').getByRole('button', { name: 'Démarrer la partie' }).click()
 
   await player.goto('/app/#/')
@@ -239,7 +219,6 @@ test('a player finds an open session, is accepted in one click and picks a chara
   await gm.getByRole('link', { name: /Ombreval/ }).click()
   await gm.getByRole('radiogroup', { name: 'Mode' }).getByRole('radio', { name: 'En jeu' }).click()
   const start = gm.getByTestId('start-play')
-  await start.getByRole('radio', { name: 'En ligne' }).click()
   await start.getByLabel('Afficher dans le catalogue des sessions').check()
   await start.getByRole('button', { name: 'Démarrer la partie' }).click()
 
@@ -294,4 +273,82 @@ test('a player finds an open session, is accepted in one click and picks a chara
   await expect(other.getByTestId('open-sessions')).toContainText(
     'Aucune session ouverte pour l’instant.',
   )
+})
+
+test('adventurers: a profile with its pictures, found by name and by link', async ({ browser }) => {
+  test.setTimeout(240_000)
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+    'base64',
+  )
+
+  // --- Aube dresses her profile up -------------------------------------------------
+  const ysolde = await device(browser)
+  await createAccount(ysolde, 'Aube', email('Aube-aventure'))
+  await ysolde.getByTestId('profile-button').click()
+  await expect(ysolde.getByTestId('profile-card')).toContainText('Aube')
+  await ysolde.getByRole('button', { name: 'Modifier le profil' }).click()
+  const editor = ysolde.getByTestId('profile-editor')
+  await editor
+    .getByLabel('Photo de profil : Choisir une image')
+    .setInputFiles({ name: 'moi.png', mimeType: 'image/png', buffer: png })
+  await editor
+    .getByLabel('Bannière : Choisir une image')
+    .setInputFiles({ name: 'banniere.png', mimeType: 'image/png', buffer: png })
+  await editor.getByLabel('Devise').fill('Toujours un pas devant le dragon.')
+  await expectNoSeriousA11yViolations(ysolde)
+  await editor.getByRole('button', { name: 'Enregistrer' }).click()
+  await expect(ysolde.getByText('Profil enregistré.')).toBeVisible()
+  const card = ysolde.getByTestId('profile-card')
+  await expect(card).toContainText('Toujours un pas devant le dragon.')
+  await expect(ysolde.getByTestId('profile-button').locator('img')).toBeVisible()
+  await expectNoSeriousA11yViolations(ysolde)
+  const code = (await ysolde.getByTestId('adventurer-code').locator('p').first().textContent())!
+  expect(code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/)
+
+  // --- Bran finds her by name and asks; she accepts ---------------------------------
+  const bran = await device(browser)
+  await createAccount(bran, 'Bran', email('Bran-aventure'))
+  await bran.getByTestId('profile-button').click()
+  const search = bran.getByTestId('adventurer-search')
+  await search.getByLabel('Pseudo ou code d’aventurier').fill('Aub')
+  await search.getByRole('button', { name: 'Chercher' }).click()
+  await search.getByRole('button', { name: 'Ajouter Aube comme aventurier' }).click()
+  await expect(bran.getByTestId('adventurers-outgoing')).toContainText('Aube')
+
+  await expect(ysolde.getByText('Bran veut faire route avec toi.')).toBeVisible({
+    timeout: 20_000,
+  })
+  await expect(ysolde.getByTestId('profile-button')).toContainText('1')
+  await ysolde
+    .getByTestId('adventurers-incoming')
+    .getByRole('button', { name: 'Accepter Bran comme aventurier' })
+    .click()
+  await expect(ysolde.getByTestId('adventurers-friends')).toContainText('Bran')
+  await expect(bran.getByTestId('adventurers-friends')).toContainText('Aube', {
+    timeout: 20_000,
+  })
+  // Both are connected: each sees the other online.
+  await expect(bran.getByTestId('adventurers-friends')).toContainText('1 en ligne')
+
+  // --- Bran opens her profile: her pictures, their bond ---------------------------------
+  await bran
+    .getByTestId('adventurers-friends')
+    .getByRole('link', { name: 'Voir le profil de Aube' })
+    .click()
+  const seen = bran.getByTestId('profile-card')
+  await expect(seen).toContainText('Toujours un pas devant le dragon.')
+  await expect(seen.getByText('Aventurier', { exact: true })).toBeVisible()
+  await expect(seen.locator('img').first()).toBeVisible()
+
+  // --- Corwin follows her shared link -----------------------------------------------------
+  const corwin = await device(browser)
+  await createAccount(corwin, 'Corwin', email('Corwin-aventure'))
+  await corwin.goto(`/app/#/aventurier/${code.replace('-', '')}`)
+  await expect(corwin.getByTestId('profile-card')).toContainText('Aube', { timeout: 20_000 })
+  await corwin.getByRole('button', { name: 'Ajouter comme aventurier' }).click()
+  await expect(corwin.getByText('Demande envoyée', { exact: true })).toBeVisible()
+  await expect(ysolde.getByTestId('adventurers-incoming')).toContainText('Corwin', {
+    timeout: 20_000,
+  })
 })

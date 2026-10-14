@@ -66,7 +66,7 @@ export const PAGES: SitePage[] = [
     path: '/',
     title: 'Codex · le grimoire du maître du jeu pour tes parties de JDR',
     description:
-      'Fiches, dés, plateau à brouillard de guerre, tours par groupes et parties en ligne avec tes joueurs. Tes campagnes restent chiffrées, sur ton appareil comme sur le serveur.',
+      'Fiches, dés, plateau à brouillard de guerre, tours par groupes et parties en ligne avec tes joueurs. Tes campagnes te suivent partout, chiffrées sur le serveur.',
     indexed: true,
     priority: 1,
   },

@@ -197,8 +197,15 @@ export function createCampaignRepository(
       })
     },
 
-    /** Accepts raw file text or an already-parsed object. */
-    async importCampaign(input: string | unknown, copySuffix = '(copie)'): Promise<ImportResult> {
+    /**
+     * Accepts raw file text or an already-parsed object. `freshIds`: every record
+     * gets a new id (D-266: ids are global on the server, another GM may hold them).
+     */
+    async importCampaign(
+      input: string | unknown,
+      copySuffix = '(copie)',
+      { freshIds = false }: { freshIds?: boolean } = {},
+    ): Promise<ImportResult> {
       const data = parseExport(input)
       return db().transaction('rw', ownedTables(), async () => {
         const existing = await db().campaigns.get(data.campaign.id)
@@ -209,11 +216,13 @@ export function createCampaignRepository(
               name: `${data.campaign.name} ${copySuffix}`,
               updatedAt: now(),
             }
-          : data.campaign
+          : freshIds
+            ? { ...data.campaign, id: newId() }
+            : data.campaign
 
         // Fresh ids if the campaign is a copy or if any id is already taken.
         const taken = await db().entities.bulkGet(data.entities.map((e) => e.id))
-        const remap = existing || taken.some(Boolean)
+        const remap = freshIds || existing || taken.some(Boolean)
         const ids = new Map(data.entities.map((e) => [e.id, remap ? newId() : e.id]))
         const templateIds = new Map(data.bestiary.map((t) => [t.id, remap ? newId() : t.id]))
         const entities = data.entities.map((e): Entity => {

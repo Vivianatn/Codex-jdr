@@ -343,13 +343,18 @@ export function registerCampaigns(app: FastifyInstance, ctx: Ctx): void {
       id: string
       name: string
       live: LiveInfo
+      owner_id: string
       owner_name: string
       role: MemberRole | null
       requested: boolean
+      friend: boolean
     }>(
-      `SELECT c.id, c.name, c.live, u.display_name AS owner_name, m.role,
+      `SELECT c.id, c.name, c.live, c.owner_id, u.display_name AS owner_name, m.role,
          EXISTS (SELECT 1 FROM join_requests r WHERE r.campaign_id = c.id AND r.user_id = $1)
-           AS requested
+           AS requested,
+         EXISTS (SELECT 1 FROM friendships f WHERE f.accepted_at IS NOT NULL
+           AND ((f.requester = $1 AND f.addressee = c.owner_id)
+             OR (f.requester = c.owner_id AND f.addressee = $1))) AS friend
        FROM campaigns c JOIN users u ON u.id = c.owner_id
        LEFT JOIN members m ON m.campaign_id = c.id AND m.user_id = $1
        WHERE c.live->>'mode' = 'online' AND c.live->>'listed' = 'true'`,
@@ -365,9 +370,12 @@ export function registerCampaigns(app: FastifyInstance, ctx: Ctx): void {
         title: r.live.title,
         operatorName: r.live.operatorName,
         startedAt: r.live.startedAt,
+        ownerId: r.owner_id,
+        byAdventurer: r.friend,
         status: r.role ? 'member' : r.requested ? 'requested' : 'none',
       }))
-      .sort((a, b) => b.startedAt - a.startedAt)
+      // The tables of one's adventurers first (D-267), then the newest.
+      .sort((a, b) => Number(b.byAdventurer) - Number(a.byAdventurer) || b.startedAt - a.startedAt)
       .slice(0, 50)
     return { sessions }
   })

@@ -1283,10 +1283,6 @@ export const fr = {
     button: 'En ligne',
     title: 'Campagne en ligne',
     // Not online yet
-    notLinkedTitle: 'Ton compte n’est pas encore en ligne',
-    notLinkedBody:
-      'Relie-le à un compte en ligne (Paramètres › Compte) : tes campagnes seront gardées sur le serveur de Codex, tu prépareras à plusieurs et tes joueurs te rejoindront.',
-    openAccount: 'Relier mon compte',
     localOnly: 'Cette campagne n’existe que sur cet appareil.',
     detached:
       'Cette campagne a été retirée du serveur depuis un autre appareil. Elle reste ici, hors ligne.',
@@ -1394,8 +1390,6 @@ export const fr = {
       offline: 'Le serveur est injoignable.',
       timeout: 'Le MJ ne répond pas : réessaie dans un instant.',
     },
-    notLinkedPlayer:
-      'Pour jouer en ligne, relie d’abord ton compte à un compte en ligne (Paramètres › Compte).',
     // Joining
     join: 'Rejoindre une campagne',
     joinHint: 'Avec le lien de ton MJ, ou par son nom',
@@ -1572,16 +1566,13 @@ export const fr = {
     // Start of play (D-244)
     startTitle: 'La table attend ses joueurs',
     startBody:
-      'Prends une session préparée ou joue à l’improviste, puis choisis comment la table se réunit.',
+      'Prends une session préparée ou joue à l’improviste. Tes joueurs entrent depuis leur écran « Mes parties ».',
     startPlan: 'Session',
     startFree: 'Partie libre (sans session)',
-    startMode: 'Mode',
-    modeLocal: 'MJ seul',
-    modeLocalHint: 'Sur cet écran : toi seul déplaces les jetons et lances les dés.',
-    modeOnline: 'En ligne',
     modeOnlineHint:
       'Les joueurs connectés déplacent leur jeton et lancent leurs dés ; tu gardes la main sur le reste.',
-    modeOnlineNeedsHost: 'Mets d’abord la campagne en ligne (bouton « En ligne » en haut).',
+    notSyncedYet:
+      'La campagne n’est pas encore sur le serveur : vérifie ta connexion (bouton « En ligne » en haut).',
     listed: 'Afficher dans le catalogue des sessions',
     listedHint:
       'Tous les joueurs en ligne la voient dans « Sessions ouvertes » et demandent à entrer en un clic. Tu acceptes depuis le bouton « En ligne ».',
@@ -1840,13 +1831,13 @@ export const fr = {
   privacy: {
     title: 'Données et confidentialité',
     summary:
-      'Tes campagnes, fiches, cartes et images restent sur cet appareil, chiffrées avec ton mot de passe. Avec un compte en ligne, elles sont aussi gardées, chiffrées, sur le serveur de Codex. La mesure d’audience, quand elle est active, est anonyme et sans cookie.',
+      'Tes campagnes, fiches, cartes et images sont gardées sur le serveur de Codex, chiffrées, avec une copie chiffrée avec ton mot de passe sur chaque appareil où tu te connectes. La mesure d’audience, quand elle est active, est anonyme et sans cookie.',
     noticeToggle: 'Lire la notice de confidentialité',
     notice: [
-      'Responsable des données : toi. Codex n’a pas de serveur et son éditeur ne reçoit aucune donnée.',
-      'Données conservées : ton nom de compte, et ce que tu saisis (campagnes, personnages, notes, jets, cartes, images), chiffré dans la base locale du navigateur (IndexedDB). Les réglages d’affichage restent en clair (localStorage) : ils ne contiennent rien de personnel.',
+      'Responsable des données : l’éditeur de Codex (voir la page Confidentialité du site).',
+      'Données conservées : ton adresse e-mail, ton nom affiché, et ce que tu saisis (campagnes, personnages, notes, jets, cartes, images), chiffré sur le serveur de Codex et dans la copie de ton navigateur (IndexedDB). Les réglages d’affichage restent en clair (localStorage) : ils ne contiennent rien de personnel.',
       'Si tu y notes des informations sur de vraies personnes (prénoms, pseudos Discord, portraits), informe-les et n’en garde que le nécessaire.',
-      'Compte en ligne : ton adresse e-mail, ton nom affiché et tes campagnes sont gardés sur le serveur de Codex, chiffrés. Tes co-MJ voient toute la campagne ; les joueurs ne reçoivent que ce qui est visible à la table, et leur copie est effacée quand ils quittent la partie. Supprimer ton compte en ligne efface aussi ses campagnes du serveur.',
+      'Partage : tes co-MJ voient toute la campagne ; les joueurs ne reçoivent que ce qui est visible à la table, et leur copie est effacée quand ils quittent la partie. Supprimer ton compte en ligne efface aussi ses campagnes du serveur.',
       'Durée : les données restent tant que tu ne les supprimes pas. Supprimer une campagne efface tout ce qui lui appartient.',
       'Tes droits : accès et portabilité avec « Tout exporter » (fichier JSON lisible), effacement avec « Tout effacer » ou « Supprimer le compte ».',
       'Les fichiers exportés ne sont pas chiffrés : ils quittent la protection de Codex, range-les en lieu sûr.',
@@ -1866,20 +1857,98 @@ export const fr = {
     eraseDialogBody:
       'Toutes les campagnes, fiches, cartes, images, jets et sauvegardes de ton compte seront supprimés définitivement. Exporte d’abord une archive si tu veux les garder.',
     eraseConfirm: 'Effacer définitivement',
+    eraseFailed: 'Le serveur est injoignable : rien n’a été effacé. Réessaie une fois connecté.',
+  },
+  adventurers: {
+    // Header and profile (D-267)
+    myProfile: 'Mon profil',
+    settingsHint: 'Ta photo, ta bannière, ta devise et tes aventuriers sont sur ton profil.',
+    adventurerTable: 'Table d’un de tes aventuriers',
+    online: 'En ligne',
+    onlineCount: (n: number) => (n === 1 ? '1 en ligne' : `${n} en ligne`),
+    openProfile: (name: string) => `Ouvrir mon profil (${name})`,
+    pendingBadge: (n: number) =>
+      n === 1 ? '1 demande d’aventurier' : `${n} demandes d’aventurier`,
+    profileTitle: 'Profil',
+    since: (date: string) => `Aventurier depuis ${date}`,
+    friendCount: (n: number) =>
+      n === 0 ? 'Aucun aventurier' : n === 1 ? '1 aventurier' : `${n} aventuriers`,
+    together: (names: string) => `Vous jouez ensemble : ${names}`,
+    noBio: 'Pas encore de devise.',
+    edit: 'Modifier le profil',
+    editTitle: 'Modifier ton profil',
+    editBody:
+      'Ton nom, ta devise et tes images sont visibles par les autres aventuriers connectés.',
+    displayName: 'Pseudo',
+    bio: 'Devise',
+    bioHint: (max: number) => `Une phrase qui te ressemble, ${max} caractères au plus.`,
+    bioPlaceholder: 'Toujours un pas devant le dragon.',
+    avatar: 'Photo de profil',
+    banner: 'Bannière',
+    choosePicture: 'Choisir une image',
+    removePicture: 'Retirer',
+    pictureTooBig: 'Cette image est trop lourde, même réduite : essaie une image plus petite.',
+    notAnImage: 'Ce fichier n’est pas une image.',
+    saved: 'Profil enregistré.',
+    save: 'Enregistrer',
+    saving: 'Enregistrement…',
+    offline:
+      'Le serveur est injoignable : ton profil et tes aventuriers reviendront dès la reconnexion.',
+    notFound: 'Cet aventurier est introuvable.',
+    backToMine: 'Retour à mon profil',
+    // Tabs
+    tabAdventurers: 'Aventuriers',
+    tabAccount: 'Compte',
+    // Relation buttons
+    add: 'Ajouter comme aventurier',
+    addNamed: (name: string) => `Ajouter ${name} comme aventurier`,
+    sent: 'Demande envoyée',
+    cancel: 'Retirer la demande',
+    accept: 'Accepter',
+    acceptNamed: (name: string) => `Accepter ${name} comme aventurier`,
+    decline: 'Refuser',
+    declineNamed: (name: string) => `Refuser la demande de ${name}`,
+    friend: 'Aventurier',
+    remove: 'Ne plus faire route ensemble',
+    removeTitle: (name: string) => `Ne plus faire route avec ${name} ?`,
+    removeBody: 'Vous ne serez plus aventuriers. Tu pourras lui redemander plus tard.',
+    requestSent: (name: string) => `Demande envoyée à ${name}.`,
+    accepted: (name: string) => `${name} fait maintenant route avec toi.`,
+    newRequest: (name: string) => `${name} veut faire route avec toi.`,
+    // Lists
+    friendsTitle: 'Mes aventuriers',
+    noFriends:
+      'Pas encore de compagnon de route. Cherche un pseudo, partage ton code, ou regarde qui joue à tes tables.',
+    incomingTitle: 'Demandes reçues',
+    outgoingTitle: 'Demandes envoyées',
+    sentOn: (date: string) => `envoyée le ${date}`,
+    suggestionsTitle: 'Compagnons de table',
+    suggestionsHint: 'Ils jouent dans tes campagnes sans être encore tes aventuriers.',
+    metIn: (campaign: string) => `dans « ${campaign} »`,
+    // Ways to find someone
+    findTitle: 'Trouver un aventurier',
+    searchLabel: 'Pseudo ou code d’aventurier',
+    search: 'Chercher',
+    searching: 'Recherche…',
+    noResults: 'Personne sous ce nom ou ce code.',
+    codeTitle: 'Ton code d’aventurier',
+    codeHint: 'Donne ce code ou ce lien : on te trouve en un clic.',
+    copyCode: 'Copier le code',
+    copyLink: 'Copier le lien',
+    codeCopied: 'Code copié.',
+    linkCopied: 'Lien copié.',
+    linkTitle: 'Un aventurier t’ouvre sa porte',
+    linkLoading: 'Recherche de l’aventurier…',
+    viewProfile: (name: string) => `Voir le profil de ${name}`,
   },
   account: {
     lockTitle: 'Codex est verrouillé',
     lockSubtitle:
-      'Tes campagnes sont chiffrées sur cet appareil. Déverrouille-les avec ton mot de passe.',
+      'Déverrouille Codex avec le mot de passe de ton compte : tes campagnes se synchronisent avec le serveur.',
     welcomeTitle: 'Bienvenue dans Codex',
     welcomeChoice: 'Tu as déjà un compte, ou tu commences ?',
     welcomeCreate: 'Créer un compte',
     welcomeExisting: 'J’ai déjà un compte',
-    welcomeExistingHint:
-      'Connecte-toi avec ton compte en ligne : tes campagnes reviennent sur cet appareil.',
-    createTitle: 'Créer ton compte',
-    welcomeSubtitle:
-      'Commence par ton compte. Il ne quitte pas cet appareil, et tout ce que tu y ranges est chiffré avec ton mot de passe.',
     account: 'Compte',
     username: 'Nom du compte',
     usernameHint: 'ton prénom ou un pseudo',
@@ -1943,7 +2012,7 @@ export const fr = {
     online: {
       title: 'Compte en ligne',
       intro:
-        'Avec un compte en ligne, tes campagnes sont gardées sur le serveur de Codex (chiffrées), tu les retrouves sur tes autres appareils, tu prépares à plusieurs et tes joueurs te rejoignent. Tu peux toujours travailler sans réseau : tout part au retour de la connexion.',
+        'Codex fonctionne en ligne : relie ce compte à un compte en ligne. Tes campagnes partent sur le serveur de Codex, chiffrées ; tu les retrouves partout, tu prépares à plusieurs et tes joueurs te rejoignent.',
       email: 'Adresse e-mail',
       emailHint: 'pour te connecter et retrouver ton mot de passe',
       displayName: 'Nom affiché',
@@ -1962,10 +2031,8 @@ export const fr = {
       rename: 'Changer le nom affiché',
       renamed: 'Nom affiché changé.',
       reconnect: 'Me reconnecter',
-      unlink: 'Ne plus relier ce compte',
-      unlinkHint:
-        'Cet appareil se déconnecte du serveur. Tes campagnes y restent ; celles du serveur aussi.',
-      unlinked: 'Compte délié : tu travailles hors ligne.',
+      linkRequiredTitle: 'Relie ton compte pour continuer',
+      linkRequiredLock: 'Verrouiller',
       deleteOnline: 'Supprimer mon compte en ligne',
       deleteOnlineHint:
         'Supprime ton compte du serveur, avec les campagnes dont tu es le MJ, pour tout le monde. Les copies de cet appareil restent.',
@@ -1975,13 +2042,13 @@ export const fr = {
       oldCopyKept:
         'Ton mot de passe a changé en ligne : l’ancienne copie de cet appareil est gardée sous un autre nom, une nouvelle arrive du serveur.',
       // Lock screen
-      lockSignIn: 'Se connecter avec un compte en ligne',
-      lockSignInTitle: 'Compte en ligne',
+      lockSignIn: 'Se connecter avec un autre compte',
+      lockSignInTitle: 'Connexion',
       lockSignInSubtitle:
-        'Connecte-toi avec ton adresse e-mail : tes campagnes reviennent du serveur sur cet appareil, chiffrées avec ton mot de passe.',
-      lockRegisterTitle: 'Créer un compte en ligne',
+        'Connecte-toi avec ton adresse e-mail : tes campagnes arrivent du serveur.',
+      lockRegisterTitle: 'Créer un compte',
       lockRegisterSubtitle:
-        'Pour jouer avec d’autres et retrouver tes campagnes partout. Elles restent aussi sur cet appareil, chiffrées avec ton mot de passe.',
+        'Tes campagnes sont gardées sur le serveur de Codex, chiffrées : tu les retrouves partout, tu prépares à plusieurs et tes joueurs te rejoignent.',
       forgot: 'Mot de passe oublié ?',
       forgotTitle: 'Mot de passe oublié',
       forgotSubtitle:

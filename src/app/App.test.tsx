@@ -1,3 +1,4 @@
+import { useServerStore } from '@/online/server/serverStore'
 import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { campaignRepository } from '@/db/campaigns'
@@ -51,6 +52,8 @@ describe('campaigns page', () => {
 describe('campaign shell', () => {
   it('switches between Préparation and En jeu in one click, back to the last section', async () => {
     const campaign = await campaignRepository.create({ name: 'Mode test' })
+    // Games are online (D-266): the campaign is on the server.
+    useServerStore.setState({ synced: [campaign.id] })
     const { user, router } = renderApp(`/c/${campaign.id}/prep/bestiary`)
 
     expect(await screen.findByRole('heading', { name: 'Bestiaire' })).toBeInTheDocument()

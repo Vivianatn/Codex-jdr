@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from 'react-router'
 import { RequirePlayersSession, RequireSession } from '@/features/account/SessionGate'
 import { ResumePrep, RouteError, WizardRoute } from './RouteHelpers'
 import {
+  AdventurerLinkPage,
   CampaignLayout,
   CampaignsPage,
   EntitySheetPage,
@@ -12,6 +13,7 @@ import {
   PlayLayout,
   PrepLayout,
   PrepSectionPage,
+  ProfilePage,
   ResetPasswordPage,
   SessionEditor,
   TemplateSheetPage,
@@ -26,6 +28,10 @@ export const routes: RouteObject[] = [
       { path: '/', element: <CampaignsPage />, errorElement: <RouteError /> },
       // An invitation link of an online campaign (D-262).
       { path: '/rejoindre/:code', element: <InvitePage />, errorElement: <RouteError /> },
+      // Profiles and adventurers (D-267).
+      { path: '/profil', element: <ProfilePage />, errorElement: <RouteError /> },
+      { path: '/profil/:userId', element: <ProfilePage />, errorElement: <RouteError /> },
+      { path: '/aventurier/:code', element: <AdventurerLinkPage />, errorElement: <RouteError /> },
       // A player in someone else's game (D-245).
       { path: '/c/:campaignId/player', element: <PlayerScreen />, errorElement: <RouteError /> },
       {

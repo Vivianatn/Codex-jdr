@@ -17,6 +17,8 @@ export interface Config {
   /** `smtp://user:password@host:587` (or smtps://…); empty = no e-mail. */
   smtpUrl: string
   mailFrom: string
+  /** End-to-end tests only (`CODEX_RELAX_LIMITS=true`): account routes allow many more tries. */
+  relaxLimits: boolean
   /** Session cookie only over HTTPS (off for the local dev server). */
   secureCookies: boolean
   /** Development: e-mails are printed instead of sent. */
@@ -51,6 +53,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     publicUrl: (env.CODEX_SITE_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
     smtpUrl: env.SMTP_URL ?? '',
     mailFrom: env.MAIL_FROM ?? 'Codex <ne-pas-repondre@codex.invalid>',
+    relaxLimits: dev && env.CODEX_RELAX_LIMITS === 'true',
     secureCookies: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : !dev,
     dev,
     siteDir: env.CODEX_SERVE_SITE === 'false' ? null : siteDir(env, serverDir()),

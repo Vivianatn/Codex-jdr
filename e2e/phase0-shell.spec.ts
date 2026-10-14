@@ -71,8 +71,10 @@ test('exports a campaign, deletes it and re-imports it identically', async ({ pa
   })
   await expect(page.getByRole('link', { name: /Aller-retour/ })).toBeVisible()
 
-  const reimported = await dumpTable(page, 'campaigns')
-  expect(reimported).toEqual([file.campaign])
+  // Same campaign, under a new id (D-266: ids are global on the server).
+  const reimported = (await dumpTable(page, 'campaigns')) as { id: string }[]
+  expect(reimported).toEqual([{ ...file.campaign, id: reimported[0]!.id }])
+  expect(reimported[0]!.id).not.toBe(file.campaign.id)
 })
 
 test('rejects an invalid import file with a clear message', async ({ page }) => {
@@ -124,7 +126,7 @@ test('GDPR: exports every campaign in one archive, then erases everything', asyn
   await page.getByRole('button', { name: 'Ouvrir les paramètres' }).click()
   const privacy = page.getByTestId('privacy-section')
   await privacy.getByText('Lire la notice de confidentialité').click()
-  await expect(privacy.getByText(/Responsable des données : toi/)).toBeVisible()
+  await expect(privacy.getByText(/Responsable des données/)).toBeVisible()
   await expectNoSeriousA11yViolations(page)
 
   const downloadPromise = page.waitForEvent('download')

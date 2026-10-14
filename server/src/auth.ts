@@ -118,7 +118,12 @@ const time = (v: Date | string | null) => (v ? new Date(v).getTime() : 0)
 export function registerAuth(app: FastifyInstance, ctx: Ctx): void {
   const authed = { preHandler: requireUser(ctx) }
   const tight = (max: number, minutes: number) => ({
-    config: { rateLimit: { max, timeWindow: `${minutes} minutes` } },
+    config: {
+      rateLimit: {
+        max: ctx.config.relaxLimits ? max * 100 : max,
+        timeWindow: `${minutes} minutes`,
+      },
+    },
   })
 
   app.post('/api/auth/register', tight(10, 60), async (request, reply) => {

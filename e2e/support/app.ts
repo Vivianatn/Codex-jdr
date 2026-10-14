@@ -43,18 +43,20 @@ export async function importCharacter(
 /** Password of the account every scenario creates (a valid passphrase, D-241). */
 export const E2E_PASSWORD = 'lanterne verte sous le pont de grès'
 
-/** First launch: creates the account and goes through the recovery code step. */
-export async function createAccount(page: Page, username = 'MJ') {
+/** First launch: creates an online account (D-266) with a fresh e-mail address. */
+export async function createAccount(
+  page: Page,
+  username = 'MJ',
+  email = `${username.toLowerCase()}-${crypto.randomUUID().slice(0, 8)}@exemple.fr`,
+) {
   await expect(page.getByRole('heading', { name: 'Bienvenue dans Codex' })).toBeVisible()
   await page.getByRole('button', { name: 'Créer un compte', exact: true }).click()
-  await page.getByLabel(/Nom du compte/).fill(username)
+  await page.getByLabel(/Adresse e-mail/).fill(email)
+  await page.getByLabel(/Nom affiché/).fill(username)
   await page.getByLabel(/^Mot de passe/).fill(E2E_PASSWORD)
   await page.getByLabel('Confirme le mot de passe').fill(E2E_PASSWORD)
-  await page.getByRole('button', { name: 'Créer le compte' }).click()
-  await expect(page.getByTestId('recovery-code')).toBeVisible({ timeout: 15_000 })
-  await page.getByLabel(/J’ai rangé ce code/).check()
-  await page.getByRole('button', { name: 'Continuer' }).click()
-  await expect(page.getByTestId('lock-screen')).toBeHidden()
+  await page.getByRole('button', { name: 'Créer mon compte en ligne' }).click()
+  await expect(page.getByTestId('lock-screen')).toBeHidden({ timeout: 20_000 })
 }
 
 /** After a reload: the key was only in memory, the password is asked again. */
@@ -101,8 +103,11 @@ export function putRows(page: Page, table: string, rows: unknown[]) {
   )
 }
 
-/** The play screen starts empty: games start by hand (D-244). Starts a free local game. */
+/** The play screen starts empty: games start by hand (D-244), once the campaign is on the server. */
 export async function startGame(page: Page) {
-  await page.getByTestId('start-play').getByRole('button', { name: 'Démarrer la partie' }).click()
+  await page
+    .getByTestId('start-play')
+    .getByRole('button', { name: 'Démarrer la partie' })
+    .click({ timeout: 60_000 })
   await expect(page.getByRole('main', { name: 'Plateau de jeu' })).toBeVisible()
 }

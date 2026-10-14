@@ -63,7 +63,10 @@ export class Hub {
     const first = !this.byUser(user.id).length
     this.conns.add(conn)
     this.send(conn, { t: 'hello', userId: user.id })
-    if (first) await this.presenceOfUser(user.id)
+    if (first) {
+      await this.presenceOfUser(user.id)
+      await this.friendsSeeOnline(user.id)
+    }
     return conn
   }
 
@@ -71,7 +74,25 @@ export class Hub {
     if (!this.conns.delete(conn)) return
     for (const campaignId of conn.serving) this.dropHost(campaignId, conn)
     this.leave(conn)
-    if (!this.byUser(conn.user.id).length) await this.presenceOfUser(conn.user.id)
+    if (!this.byUser(conn.user.id).length) {
+      await this.presenceOfUser(conn.user.id)
+      await this.friendsSeeOnline(conn.user.id)
+    }
+  }
+
+  /** Is this account connected right now (any device)? */
+  isOnline(userId: string): boolean {
+    return this.byUser(userId).length > 0
+  }
+
+  /** An account came or went: its adventurers read their lists again (D-267). */
+  private async friendsSeeOnline(userId: string): Promise<void> {
+    const rows = await this.db.query<{ other: string }>(
+      `SELECT CASE WHEN requester = $1 THEN addressee ELSE requester END AS other
+       FROM friendships WHERE (requester = $1 OR addressee = $1) AND accepted_at IS NOT NULL`,
+      [userId],
+    )
+    this.notifyFriends(rows.map((r) => r.other))
   }
 
   /** Called every 30 s: connections that did not answer the last ping are closed. */
@@ -129,6 +150,11 @@ export class Hub {
 
   notifyCampaigns(userIds: Iterable<string>): void {
     this.sendUsers(userIds, { t: 'campaigns' })
+  }
+
+  /** Adventurers or requests of these accounts changed (D-267). */
+  notifyFriends(userIds: Iterable<string>): void {
+    this.sendUsers(userIds, { t: 'friends' })
   }
 
   /** Records changed: the editors pull them. */

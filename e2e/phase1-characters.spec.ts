@@ -144,9 +144,17 @@ test('scenario 7: export, delete and re-import a campaign with its characters', 
   expect(file).toMatchObject({ format: 'codex-campaign', version: 8 })
   expect(file.entities).toHaveLength(1)
 
+  // Imports give new ids (D-266: ids are global on the server): compare the rest.
   const dump = async () => ({
-    campaigns: await dumpTable(page, 'campaigns'),
-    entities: await dumpTable(page, 'entities'),
+    campaigns: ((await dumpTable(page, 'campaigns')) as Record<string, unknown>[]).map((c) => ({
+      ...c,
+      id: 'campaign',
+    })),
+    entities: ((await dumpTable(page, 'entities')) as Record<string, unknown>[]).map((e) => ({
+      ...e,
+      id: 'entity',
+      campaignId: 'campaign',
+    })),
   })
   const before = await dump()
 

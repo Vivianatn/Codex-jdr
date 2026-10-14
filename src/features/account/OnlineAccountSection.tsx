@@ -1,4 +1,4 @@
-import { Cloud, CloudOff, LogIn, Pencil, Trash2 } from 'lucide-react'
+import { Cloud, LogIn, Pencil, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -13,7 +13,6 @@ import {
   linkAccount,
   reconnect,
   renameOnline,
-  unlinkAccount,
 } from '@/online/controller'
 import { server } from '@/online/server/api'
 import { useServerStore } from '@/online/server/serverStore'
@@ -22,14 +21,12 @@ import { accountErrorMessage } from './accountErrors'
 import { useSessionStore } from '@/security/session'
 import { PasswordField } from './PasswordField'
 
-/** Settings › Compte en ligne (D-262): link this local account, see the connection, leave. */
+/** Settings › Compte en ligne (D-262): see the connection, rename, delete. */
 export function OnlineAccountSection() {
   const t = useT()
   const account = useSessionStore((s) => s.account)
   const status = useServerStore((s) => s.status)
-  const [dialog, setDialog] = useState<'none' | 'rename' | 'unlink' | 'delete' | 'reconnect'>(
-    'none',
-  )
+  const [dialog, setDialog] = useState<'none' | 'rename' | 'delete' | 'reconnect'>('none')
   if (!account) return null
   const close = () => setDialog('none')
 
@@ -61,9 +58,6 @@ export function OnlineAccountSection() {
             <Button size="sm" icon={<Pencil />} onClick={() => setDialog('rename')}>
               {t.account.online.rename}
             </Button>
-            <Button size="sm" icon={<CloudOff />} onClick={() => setDialog('unlink')}>
-              {t.account.online.unlink}
-            </Button>
             <Button
               size="sm"
               variant="danger"
@@ -79,29 +73,6 @@ export function OnlineAccountSection() {
             onClose={close}
           />
           <ReconnectDialog open={dialog === 'reconnect'} onClose={close} />
-          <Dialog
-            open={dialog === 'unlink'}
-            onOpenChange={(o) => !o && close()}
-            title={`${t.account.online.unlink} ?`}
-            description={t.account.online.unlinkHint}
-            footer={
-              <>
-                <Button variant="ghost" onClick={close}>
-                  {t.common.cancel}
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={async () => {
-                    await unlinkAccount()
-                    toast(t.account.online.unlinked)
-                    close()
-                  }}
-                >
-                  {t.account.online.unlink}
-                </Button>
-              </>
-            }
-          />
           <DeleteOnlineDialog open={dialog === 'delete'} accountId={account.id} onClose={close} />
         </>
       )}
@@ -136,7 +107,7 @@ function useForm() {
   return { busy, error, setError, submit }
 }
 
-function LinkForm({ username }: { username: string }) {
+export function LinkForm({ username }: { username: string }) {
   const t = useT()
   const [mode, setMode] = useState<'register' | 'login'>('register')
   const [email, setEmail] = useState('')

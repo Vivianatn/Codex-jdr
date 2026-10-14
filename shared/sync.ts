@@ -163,6 +163,8 @@ export type ServerFrame =
   | { t: 'campaigns' }
   /** The catalogue of open sessions changed: read it again. */
   | { t: 'sessions' }
+  /** Adventurers (friends) or requests changed: read them again (D-267). */
+  | { t: 'friends' }
   /** Members of a campaign connected right now. */
   | { t: 'presence'; campaignId: string; users: PresenceUser[] }
   | { t: 'serving'; campaignId: string; ok: boolean }
@@ -217,6 +219,7 @@ const SERVER_FRAMES = new Set([
   'changed',
   'campaigns',
   'sessions',
+  'friends',
   'presence',
   'serving',
   'peer',
@@ -286,8 +289,59 @@ export interface OpenSession {
   title: string
   operatorName: string
   startedAt: number
+  /** The GM, to open their profile. */
+  ownerId: string
+  /** The GM is one of the viewer's adventurers (D-267). */
+  byAdventurer: boolean
   /** The viewer already plays in the campaign, or already asked. */
   status: 'none' | 'member' | 'requested'
+}
+
+// ---- profiles and adventurers (D-267) ---------------------------------------------
+
+/** Longest motto of a profile. */
+export const BIO_MAX = 300
+/** Largest pictures, as data URLs (the app shrinks them before sending). */
+export const AVATAR_MAX = 400_000
+export const BANNER_MAX = 1_500_000
+
+/** How the viewer stands with an adventurer: themselves, friends, a request either way, or nothing. */
+export type Relation = 'self' | 'friend' | 'sent' | 'received' | 'none'
+
+export interface AdventurerSummary {
+  id: string
+  displayName: string
+  /** Address of the profile picture (changes with it), or null. */
+  avatar: string | null
+  bio: string
+}
+
+export interface AdventurerProfile extends AdventurerSummary {
+  banner: string | null
+  /** Account creation. */
+  since: number
+  relation: Relation
+  friendCount: number
+  /** Campaigns the viewer and this adventurer share. */
+  together: string[]
+  /** Own profile only: the code that lets others find you. */
+  code: string | null
+}
+
+export interface FriendsList {
+  friends: (AdventurerSummary & { since: number; online: boolean })[]
+  /** Requests received, waiting for an answer. */
+  incoming: (AdventurerSummary & { at: number })[]
+  /** Requests sent, waiting. */
+  outgoing: (AdventurerSummary & { at: number })[]
+  /** People met at a table who are not adventurers yet. */
+  suggestions: (AdventurerSummary & { campaign: string })[]
+}
+
+/** Normalises an adventurer code as typed or pasted (spaces, dashes, case, a whole link). */
+export function adventurerCodeOf(input: string): string {
+  const last = input.trim().split('/').pop() ?? ''
+  return last.toUpperCase().replace(/[^A-Z0-9]/g, '')
 }
 
 /** Error codes of the API (the app turns them into French messages). */

@@ -1,10 +1,18 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { CodexDB, setActiveDb } from '@/db/db'
 import { DEFAULT_AUTO_LOCK } from '@/security/accounts'
 import { useSessionStore } from '@/security/session'
+import type * as Controller from '@/online/controller'
+
+// Accounts are online (D-266); component tests never reach a server.
+vi.mock('@/online/controller', async (original) => ({
+  ...(await original<typeof Controller>()),
+  connectOnline: async () => {},
+  serveCampaign: () => {},
+}))
 
 // Component tests run unlocked, on a plain database (encryption has its own tests).
 setActiveDb(new CodexDB('codex-test'))
@@ -17,6 +25,7 @@ useSessionStore.setState({
     createdAt: 0,
     lastLoginAt: 0,
     autoLockMinutes: DEFAULT_AUTO_LOCK,
+    online: { userId: 'test-user', email: 'mj@exemple.fr', displayName: 'MJ' },
   },
 })
 

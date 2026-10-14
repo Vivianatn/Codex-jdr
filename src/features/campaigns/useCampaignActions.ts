@@ -7,6 +7,7 @@ import { MAX_IMPORT_BYTES } from '@/db/sanitize'
 import { downloadJson, slugify } from '@/lib/files'
 import { flushAutosave, useCampaignStore } from '@/stores/campaignStore'
 import { recordActivity } from '@/stores/activityLog'
+import { useSessionStore } from '@/security/session'
 
 export function importErrorMessage(t: Messages, error: unknown): string {
   if (!(error instanceof CampaignImportError)) return t.errors.generic
@@ -77,6 +78,7 @@ export function useCampaignActions() {
           const { campaign, renamed } = await campaignRepository.importCampaign(
             part,
             t.campaigns.copySuffix,
+            { freshIds: true },
           )
           last = campaign
           if (parts.length === 1)
@@ -103,8 +105,11 @@ export function useCampaignActions() {
       toast.success(t.privacy.exported(data.campaigns.length))
     },
 
-    /** GDPR erasure: the database and every preference kept on this device. */
+    /** GDPR erasure: the account's campaigns on the server, the database and the preferences here. */
     async eraseAll(): Promise<void> {
+      // First the server, or the campaigns would come back from it (D-266).
+      if (useSessionStore.getState().account?.online)
+        await (await import('@/online/controller')).eraseOnline()
       await useCampaignStore.getState().unload()
       await campaignRepository.eraseAll()
       clearLocalPreferences()

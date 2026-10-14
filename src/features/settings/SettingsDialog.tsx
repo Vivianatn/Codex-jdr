@@ -16,6 +16,7 @@ import { AccountSection } from '@/features/account/AccountSection'
 import { BackupsSection } from '@/features/account/BackupsSection'
 import { CreditsSection } from './CreditsSection'
 import { PrivacySection } from './PrivacySection'
+import { ProfileShortcut } from '@/features/social/ProfileButton'
 import { SoundSection } from './SoundSection'
 
 export function SettingsButton() {
@@ -156,6 +157,7 @@ export function SettingsDialog({
           <p className="text-sm text-ink-muted">{t.settings.languageFrench}</p>
         </section>
 
+        <ProfileShortcut onOpen={() => onOpenChange(false)} />
         <AccountSection />
 
         <BackupsSection />

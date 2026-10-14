@@ -1,5 +1,5 @@
 import { LockKeyhole } from 'lucide-react'
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Outlet } from 'react-router'
 import { CandleOrnament } from '@/components/Brand'
 import { preloadScreens } from '@/app/screens'
@@ -12,6 +12,9 @@ import { lockSession, onLock, useSessionStore } from '@/security/session'
 import { announceLock, followSession, serveSession } from '@/security/sessionChannel'
 import { LockScreen } from './LockScreen'
 
+// Loaded on demand: it pulls the online code, kept out of the lock screen (D-255).
+const LinkRequired = lazy(() => import('./LinkRequired').then((m) => ({ default: m.LinkRequired })))
+
 /** GM screens: shown only once an account is unlocked (D-241). */
 export function RequireSession() {
   const unlocked = useSessionStore((s) => s.status === 'unlocked' && !s.delegated)
@@ -19,6 +22,9 @@ export function RequireSession() {
   useEffect(() => (unlocked ? undefined : whenIdle(preloadScreens)), [unlocked])
   return unlocked ? <UnlockedApp /> : <LockScreen />
 }
+
+/** Each connection the effect below starts; only the latest one may be stopped. */
+let connections = 0
 
 function UnlockedApp() {
   const accountId = useSessionStore((s) => s.account?.id)
@@ -44,14 +50,16 @@ function UnlockedApp() {
   // online code stays out of what the lock screen downloads (D-255).
   useEffect(() => {
     if (!onlineUser) return
-    let alive = true
+    const run = ++connections
     void import('@/online/controller').then((online) => {
       const account = useSessionStore.getState().account
-      if (alive && account?.online) void online.connectOnline(account)
+      if (run === connections && account?.online) void online.connectOnline(account)
     })
     return () => {
-      alive = false
-      void import('@/online/controller').then((online) => online.disconnectOnline())
+      // The import resolves later: a newer connection (remount, Strict Mode) must not be cut.
+      void import('@/online/controller').then((online) => {
+        if (run === connections) online.disconnectOnline()
+      })
     }
   }, [accountId, onlineUser])
 
@@ -63,6 +71,13 @@ function UnlockedApp() {
     })
   }, [accountId])
 
+  // Codex is online only (D-266): an account of this device alone must be linked first.
+  if (!onlineUser)
+    return (
+      <Suspense fallback={null}>
+        <LinkRequired />
+      </Suspense>
+    )
   return <Outlet />
 }
 

@@ -156,6 +156,8 @@ test('dice tray: notation, advantage, secret roll and history', async ({ page })
 
 for (const theme of ['light', 'dark'] as const) {
   test(`play screens have no serious accessibility violations (${theme})`, async ({ page }) => {
+    // Account on the server, then many screens checked (D-266).
+    test.setTimeout(120_000)
     if (theme === 'dark') await page.getByRole('button', { name: 'Changer de thème' }).click()
     await createCampaign(page, 'Accessible')
     await importCharacter(page, 'Joueurs', { name: 'Gorak', hp: 25 })

@@ -93,6 +93,18 @@ describe('export / import', () => {
     expect(await repo.list()).toHaveLength(2)
   })
 
+  it('gives every record a new id when asked (D-266), keeping the name', async () => {
+    const original = await repo.create({ name: 'Ombreval' })
+    const exported = await repo.exportCampaign(original.id)
+    await repo.remove(original.id)
+    const { campaign, renamed } = await repo.importCampaign(exported, '(copie)', {
+      freshIds: true,
+    })
+    expect(renamed).toBe(false)
+    expect(campaign.id).not.toBe(original.id)
+    expect(campaign.name).toBe('Ombreval')
+  })
+
   it.each([
     ['not json', 'invalidJson'],
     ['{"hello":1}', 'wrongFormat'],

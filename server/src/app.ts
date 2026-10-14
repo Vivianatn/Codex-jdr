@@ -11,6 +11,7 @@ import { Hub, registerHub } from './hub.ts'
 import type { Mailer } from './mailer.ts'
 import { registerRecords } from './records.ts'
 import { registerSite } from './site.ts'
+import { registerSocial } from './social.ts'
 import { recordCipher, type RecordCipher } from './secrets.ts'
 
 /** Everything a route needs. */
@@ -72,7 +73,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   await app.register(cookie)
   // Anti-spam (launch checklist point 18): a ceiling per address, tighter on account routes.
   await app.register(rateLimit, {
-    max: 600,
+    // End-to-end tests run many browsers from one address.
+    max: ctx.config.relaxLimits ? 60_000 : 600,
     timeWindow: '1 minute',
     keyGenerator: (request) => request.ip || 'unknown',
   })
@@ -100,6 +102,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   registerAuth(app, ctx)
   registerCampaigns(app, ctx)
   registerRecords(app, ctx)
+  registerSocial(app, ctx)
   registerHub(app, ctx)
   if (options.config.siteDir) await registerSite(app, options.config.siteDir)
   app.addHook('onClose', async () => ctx.hub.closeAll())

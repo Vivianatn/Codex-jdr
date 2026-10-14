@@ -217,6 +217,8 @@ describe('real time', () => {
         title: 'La crypte',
         operatorName: 'Gm',
         startedAt: 1,
+        ownerId: gm.userId,
+        byAdventurer: false,
         status: 'none',
       },
     ])

@@ -1,11 +1,9 @@
-import { ArrowLeft, Link2 } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { LogoMark, Ornament, Wordmark } from '@/components/Brand'
-import { Button } from '@/components/ui/Button'
 import { buttonClasses } from '@/components/ui/buttonStyles'
 import { AppHeader } from '@/features/shell/AppHeader'
-import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { server } from '@/online/server/api'
@@ -22,7 +20,6 @@ export function InvitePage() {
   const linked = useServerStore((s) => s.user !== null)
   const status = useServerStore((s) => s.status)
   const [preview, setPreview] = useState<InvitePreview | null | undefined>(undefined)
-  const [settings, setSettings] = useState(false)
 
   useEffect(() => {
     if (!linked || status !== 'online') return
@@ -55,15 +52,7 @@ export function InvitePage() {
         <h1 className="type-screen-title text-ink">{t.online.invitePageTitle}</h1>
         <Ornament className="mt-4 mb-8" />
         <div className="space-y-4 rounded-xl border border-line bg-surface-raised p-6 shadow-overlay">
-          {!linked ? (
-            <>
-              <p className="text-sm text-ink-muted">{t.online.notLinkedPlayer}</p>
-              <Button variant="primary" icon={<Link2 />} onClick={() => setSettings(true)}>
-                {t.online.openAccount}
-              </Button>
-              <SettingsDialog open={settings} onOpenChange={setSettings} />
-            </>
-          ) : status !== 'online' ? (
+          {status !== 'online' ? (
             <p className="text-sm text-ink-muted" role="status">
               {t.online.status[status]}
             </p>

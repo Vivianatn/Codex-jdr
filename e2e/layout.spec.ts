@@ -109,6 +109,16 @@ for (const viewport of VIEWPORTS) {
     await homeMode.getByRole('radio', { name: 'Joueur' }).click()
     await check('mes parties')
     await homeMode.getByRole('radio', { name: 'MJ' }).click()
+    // Profile, adventurers, account (D-267).
+    await page.getByTestId('profile-button').click()
+    await expect(page.getByTestId('profile-card')).toBeVisible()
+    await check('profil')
+    await page.getByRole('button', { name: 'Modifier le profil' }).click()
+    await check('profil › modifier')
+    await page.keyboard.press('Escape')
+    await page.getByRole('tab', { name: 'Compte' }).click()
+    await check('profil › compte')
+    await page.goto('/app/#/')
 
     await page
       .getByTestId('campaign-import-input')

@@ -69,4 +69,21 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX records_campaign_rev ON records (campaign_id, rev);
   CREATE INDEX records_campaign_tbl ON records (campaign_id, tbl)
   `,
+  // 2: profiles (picture, banner, motto, adventurer code) and adventurers (friends, D-267).
+  `
+  ALTER TABLE users ADD COLUMN bio text NOT NULL DEFAULT '';
+  ALTER TABLE users ADD COLUMN avatar text;
+  ALTER TABLE users ADD COLUMN banner text;
+  ALTER TABLE users ADD COLUMN profile_rev int NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN friend_code text UNIQUE;
+  CREATE TABLE friendships (
+    requester uuid NOT NULL REFERENCES users ON DELETE CASCADE,
+    addressee uuid NOT NULL REFERENCES users ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    accepted_at timestamptz,
+    PRIMARY KEY (requester, addressee),
+    CHECK (requester <> addressee)
+  );
+  CREATE INDEX friendships_addressee ON friendships (addressee)
+  `,
 ]

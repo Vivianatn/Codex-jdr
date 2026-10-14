@@ -4,6 +4,36 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Profil et aventuriers (2026-10-14)
+
+### D-267 · Un profil pour chaque compte, des « aventuriers » pour amis
+
+Demande du MJ : un espace pour voir et modifier son compte, une vraie partie sociale avec des amis appelés « aventuriers », photo de profil et bannière, plusieurs façons de demander l'amitié, et l'accès au profil dans la barre du haut (photo + pseudo).
+
+- **Barre du haut** : `ProfileButton` (photo, ou initiales, et pseudo ; la photo seule sur téléphone), avec une pastille pour les demandes reçues. Il mène à `#/profil`.
+- **Page profil** (`src/features/social/`) : bannière, photo, pseudo, devise (300 caractères au plus), date d'arrivée, nombre d'aventuriers, campagnes partagées. « Modifier le profil » ouvre une fenêtre (hors partie, donc permise) : pseudo, devise, photo, bannière. Les images sont réduites sur l'appareil (photo 320 px, bannière 1500 × 500, WebP) puis envoyées. Deux onglets : **Aventuriers** et **Compte** (la section Compte des Paramètres, réutilisée). Le profil d'un autre compte est sur `#/profil/:id`.
+- **Serveur** (`server/src/social.ts`, migration 2) : colonnes `bio`, `avatar`, `banner`, `profile_rev`, `friend_code` sur `users`, table `friendships` (demandeur, destinataire, acceptée ou non). Les images sont gardées en data URL raster vérifiée (comme les images de campagne, D-243) et servies comme fichiers par `/api/users/:id/avatar|banner?v=rev` (cache d'un an, l'adresse change avec l'image), pour que les listes restent légères. Le serveur envoie `{ t: 'friends' }` aux deux comptes à chaque changement ; l'application relit et affiche un toast pour une nouvelle demande.
+- **Qui voit quoi** : tout compte connecté peut voir le pseudo, la devise et les images d'un autre (c'est un profil public entre joueurs) ; l'adresse e-mail reste privée ; le code d'aventurier n'est montré qu'à son titulaire, qui le partage s'il veut. Supprimer le compte supprime le profil et les liens. La page Confidentialité le dit.
+- **Les façons de demander** : (1) chercher un pseudo ou un code dans « Trouver un aventurier » ; (2) partager son **code d'aventurier** (8 caractères sans 0/O ni 1/I, affiché `XXXX-XXXX`) ou son **lien** `#/aventurier/CODE`, qui ouvre le profil ; (3) les **compagnons de table** : les membres de ses campagnes qui ne sont pas encore aventuriers ; (4) la **liste des membres** du panneau « En ligne » d'une campagne (bouton par membre, le nom ouvre son profil) ; (5) le **profil** de quelqu'un. Demander à quelqu'un qui nous avait déjà demandé vaut acceptation. Refuser, retirer sa demande et « Ne plus faire route ensemble » (avec confirmation) suppriment le lien.
+- **Ailleurs dans Codex** : le nom d'un candidat dans les demandes pour rejoindre une campagne, celui d'un joueur entré dans la partie et celui du MJ d'une session du catalogue ouvrent leur profil ou portent le bouton d'ajout. Les Paramètres renvoient vers « Mon profil ».
+- **Présence** : un aventurier connecté a une pastille verte et passe en tête de liste (« 2 en ligne »). Le serveur prévient les aventuriers d'un compte quand son premier appareil se connecte ou que le dernier se déconnecte. Seuls les aventuriers voient cette présence.
+- **Catalogue des sessions** (D-265) : les sessions ouvertes par un de ses aventuriers viennent en premier, marquées « Table d'un de tes aventuriers ». Une session reste visible seulement si son MJ l'affiche : être aventuriers ne donne pas accès aux parties non affichées.
+- **Connexion** : l'effet qui connecte le compte au serveur ne coupe plus une connexion plus récente (remontage, Strict Mode) : sa déconnexion arrivait après la nouvelle connexion, d'où des échecs aléatoires des tests en ligne.
+
+## Codex passe entièrement en ligne (2026-10-14)
+
+### D-266 · Plus de compte ni de partie « local »
+
+Demande du MJ : « le logiciel sera entièrement en ligne ». Remplace la partie « local-first » de D-241/D-257 pour les comptes et le mode « MJ seul » de D-244.
+
+- **Comptes** : tout compte est un compte en ligne. L'écran d'accueil propose « Créer un compte » (inscription en ligne) ou « J'ai déjà un compte » (connexion). La création de compte local, le code de secours et la récupération par code disparaissent de l'écran de verrouillage ; « Mot de passe oublié » passe par l'e-mail. On ne peut plus délier son compte (Paramètres).
+- **Copie sur l'appareil** : gardée, chiffrée avec le mot de passe, comme cache du moteur de synchronisation (D-262) ; le déverrouillage rapide (« Déverrouiller ») l'ouvre et se connecte. Ce n'est plus un mode de travail : rien n'est présenté comme « hors ligne ».
+- **Anciens comptes locaux** : après déverrouillage, un compte non relié n'ouvre rien d'autre que « Relie ton compte pour continuer » (créer ou rejoindre un compte en ligne) ; ses campagnes partent alors sur le serveur.
+- **Campagnes** : déjà envoyées toutes seules au serveur (D-257) ; plus d'état « pas encore en ligne » sauf une campagne détachée.
+- **Parties** : toujours en ligne. Le choix « MJ seul / En ligne » disparaît ; le bouton « Démarrer » attend que la campagne soit sur le serveur. Les anciennes parties `local` restent lisibles.
+- **Textes** : écran de verrouillage, notice de confidentialité, page d'accueil, CGU et Confidentialité du site disent que les campagnes sont gardées sur le serveur, chiffrées.
+- **Tests** : les tests unitaires tournent sur un compte relié, sans serveur (`connectOnline`/`serveCampaign` neutralisés dans `src/test/setup.ts`) ; chaque scénario e2e crée un compte en ligne (`createAccount`). Le serveur des e2e assouplit ses limites de comptes (`CODEX_RELAX_LIMITS`, ignoré en production).
+
 ## Accueil d'un nouvel appareil (2026-10-14)
 
 ### D-265 · Catalogue des sessions ouvertes

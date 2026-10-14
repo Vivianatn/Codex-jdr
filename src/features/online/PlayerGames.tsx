@@ -1,12 +1,11 @@
-import { Check, DoorOpen, Link2, LogIn, Send, X } from 'lucide-react'
+import { Check, DoorOpen, LogIn, Send, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { GameIcon } from '@/components/GameIcon'
 import { Button, IconButton } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { useIntlLocale, useT } from '@/i18n'
 import { EnterError, enterGame, refreshOnline } from '@/online/controller'
 import { guestHome } from '@/online/routes'
@@ -20,30 +19,11 @@ import { ServerStatusLine } from './OnlinePanel'
 /** « Mes parties »: the campaigns this account plays in, and the way in (D-257). */
 export function PlayerGames() {
   const t = useT()
-  const user = useServerStore((s) => s.user)
   const campaigns = useServerStore((s) => s.campaigns)
   const games = useMemo(() => campaigns.filter((c) => c.role === 'player'), [campaigns])
   const requests = useServerStore((s) => s.requests)
   const sessions = useServerStore((s) => s.sessions)
   const [joining, setJoining] = useState(false)
-  const [settings, setSettings] = useState(false)
-
-  if (!user)
-    return (
-      <EmptyState
-        icon={<GameIcon name="tabletop-players" className="size-7" />}
-        title={t.online.notLinkedTitle}
-        body={t.online.notLinkedPlayer}
-        actions={
-          <>
-            <Button variant="primary" icon={<Link2 />} onClick={() => setSettings(true)}>
-              {t.online.openAccount}
-            </Button>
-            <SettingsDialog open={settings} onOpenChange={setSettings} />
-          </>
-        }
-      />
-    )
 
   const joinButton = (
     <Button variant="primary" icon={<LogIn />} onClick={() => setJoining(true)}>
@@ -154,11 +134,23 @@ function SessionCard({ session }: { session: OpenSession }) {
       className="flex min-h-36 flex-col gap-2 rounded-lg border border-line bg-surface p-5 shadow-soft"
       data-testid="open-session"
     >
+      {session.byAdventurer && (
+        <span className="self-start rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent-text">
+          {t.adventurers.adventurerTable}
+        </span>
+      )}
       <span className="font-title text-[1.375rem] leading-snug font-semibold text-ink">
         {session.title || session.campaignName}
       </span>
       <span className="text-sm text-ink-muted">
-        {t.online.campaignBy(session.campaignName, session.ownerName)}
+        {t.online.campaignBy(session.campaignName, '')}
+        <Link
+          to={`/profil/${session.ownerId}`}
+          className="font-medium text-ink hover:text-accent-text hover:underline"
+          aria-label={t.adventurers.viewProfile(session.ownerName)}
+        >
+          {session.ownerName}
+        </Link>
       </span>
       <span className="text-sm text-ink">{t.online.sessionSince(time)}</span>
       <div className="mt-auto flex flex-wrap justify-end gap-2 pt-2">

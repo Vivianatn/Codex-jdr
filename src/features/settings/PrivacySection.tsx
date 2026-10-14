@@ -1,4 +1,5 @@
 import { Download, ShieldCheck, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { useState } from 'react'
 import { CheckboxField } from '@/components/ui/fields'
 import { Button } from '@/components/ui/Button'
@@ -79,7 +80,13 @@ export function PrivacySection() {
               disabled={busy}
               onClick={async () => {
                 setBusy(true)
-                await actions.eraseAll()
+                try {
+                  await actions.eraseAll()
+                } catch (error) {
+                  console.error(error)
+                  toast.error(t.privacy.eraseFailed)
+                  setBusy(false)
+                }
               }}
               data-testid="erase-all-confirm"
             >

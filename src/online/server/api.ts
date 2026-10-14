@@ -1,5 +1,9 @@
 import type {
+  AdventurerProfile,
+  AdventurerSummary,
   ApiErrorCode,
+  FriendsList,
+  Relation,
   CampaignSummary,
   InvitePreview,
   JoinRequestInfo,
@@ -94,6 +98,35 @@ export const server = {
     api<{ user: PublicUser }>('POST', '/auth/reset/confirm', { token, password }),
   rename: (displayName: string) => api<{ user: PublicUser }>('PATCH', '/account', { displayName }),
   deleteAccount: (password: string) => api('DELETE', '/account', { password }),
+
+  // Profiles and adventurers (D-267)
+  profile: () => api<{ profile: AdventurerProfile }>('GET', '/profile'),
+  updateProfile: (patch: {
+    displayName?: string
+    bio?: string
+    avatar?: string | null
+    banner?: string | null
+  }) => api<{ profile: AdventurerProfile }>('PATCH', '/profile', patch),
+  adventurer: (id: string) =>
+    api<{ profile: AdventurerProfile }>('GET', `/adventurers/${encodeURIComponent(id)}`),
+  adventurerByCode: (code: string) =>
+    api<{ profile: AdventurerProfile }>('GET', `/adventurers/code/${encodeURIComponent(code)}`),
+  searchAdventurers: (q: string) =>
+    api<{ results: (AdventurerSummary & { relation: Relation })[] }>(
+      'GET',
+      `/adventurers?q=${encodeURIComponent(q)}`,
+    ),
+  friends: () => api<FriendsList>('GET', '/friends'),
+  befriend: (id: string) =>
+    api<{ relation: Relation }>('POST', `/friends/${encodeURIComponent(id)}`, {}),
+  befriendByCode: (code: string) =>
+    api<{ userId: string; relation: Relation }>(
+      'POST',
+      `/friends/code/${encodeURIComponent(code)}`,
+      {},
+    ),
+  unfriend: (id: string) =>
+    api<{ relation: Relation }>('DELETE', `/friends/${encodeURIComponent(id)}`),
 
   campaigns: () => api<{ campaigns: CampaignSummary[] }>('GET', '/campaigns'),
   putCampaign: (id: string, name: string) => api('PUT', `/campaigns/${id}`, { name }),

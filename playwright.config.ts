@@ -26,7 +26,13 @@ export default defineConfig({
     {
       command: 'node server/src/index.ts',
       url: `http://127.0.0.1:${API_PORT}/api/health`,
-      env: { PORT: String(API_PORT), DATABASE_URL: 'pglite:memory', NODE_ENV: 'test' },
+      env: {
+        PORT: String(API_PORT),
+        DATABASE_URL: 'pglite:memory',
+        NODE_ENV: 'test',
+        // Every scenario creates an online account (D-266).
+        CODEX_RELAX_LIMITS: 'true',
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },
