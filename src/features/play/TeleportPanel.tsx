@@ -1,15 +1,16 @@
 import * as Popover from '@radix-ui/react-popover'
-import { WandSparkles } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { MapPin, WandSparkles } from 'lucide-react'
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/Button'
 import { entityName } from '@/domain/entity'
-import { entityMapId } from '@/domain/maps'
+import { entityMapId, type Cell } from '@/domain/maps'
 import { useMapActions } from '@/features/game/useMapActions'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
-import { useMapViewStore } from '@/stores/mapViewStore'
-import { sortedMaps, teleportCandidates } from './teleport'
+import { useMapViewStore, type TeleportDraft } from '@/stores/mapViewStore'
+import { cellName, sortedMaps, teleportCandidates } from './teleport'
+import { useTeleportPick } from './useTeleportPick'
 
 const SELECT =
   'h-9 min-w-0 rounded-lg border border-line-strong bg-surface px-2 text-sm text-ink pointer-coarse:h-10'
@@ -22,7 +23,9 @@ const CHIP =
  */
 export function TeleportPanel() {
   const t = useT()
-  const [open, setOpen] = useState(false)
+  // Kept in the view store: picking a cell on the board closes it, then reopens it (D-277).
+  const open = useMapViewStore((s) => s.teleportOpen)
+  const setOpen = useMapViewStore((s) => s.setTeleportOpen)
   const maps = useCampaignStore((s) => s.maps)
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -68,31 +71,58 @@ export function TeleportForm({ onDone }: { onDone?: () => void }) {
     return map.tokens.filter((tk) => selection.ids.includes(tk.id)).map((tk) => tk.entityId)
   }, [maps, playMapId, selection])
 
-  // Opening the panel with tokens selected ticks them already.
-  const [checked, setChecked] = useState<ReadonlySet<string>>(() => new Set(selected))
-  const [dest, setDest] = useState<Record<string, string>>({})
-  const [allTo, setAllTo] = useState('')
-  const [familiarsFollow, setFamiliarsFollow] = useState(true)
+  // The choices live in the view store so they survive picking cells on the board
+  // (D-277); a fresh panel ticks the selected tokens.
+  const stored = useMapViewStore((s) => s.teleportDraft)
+  const draft: TeleportDraft = stored ?? {
+    checked: selected,
+    dest: {},
+    at: {},
+    familiarsFollow: true,
+  }
+  const update = (patch: Partial<TeleportDraft>) =>
+    useMapViewStore.getState().setTeleportDraft({ ...draft, ...patch })
+  const picker = useTeleportPick()
+  const checked = new Set(draft.checked)
+  const { dest, familiarsFollow } = draft
 
   const destOf = (id: string) => (dest[id] && maps[dest[id]] ? dest[id] : fallback)
-  const tick = (ids: string[]) => setChecked(new Set(ids))
+  /** The chosen cell, while it still belongs to the row's destination. */
+  const atOf = (id: string) => {
+    const c = draft.at[id]
+    return c && c.mapId === destOf(id) ? c : undefined
+  }
+  const tick = (ids: string[]) => update({ checked: ids })
   const toggle = (id: string, on: boolean) =>
-    setChecked((prev) => {
-      const next = new Set(prev)
-      if (on) next.add(id)
-      else next.delete(id)
-      return next
+    update({
+      checked: on ? [...new Set([...draft.checked, id])] : draft.checked.filter((x) => x !== id),
     })
+  const chosenCells = () =>
+    Object.fromEntries(
+      people.flatMap((e) => {
+        const c = checked.has(e.id) ? atOf(e.id) : undefined
+        return c ? [[e.id, c] as const] : []
+      }),
+    )
+  const pick = (ids: string[]) => {
+    const fresh = { ...draft, checked: [...new Set([...draft.checked, ...ids])] }
+    useMapViewStore.getState().setTeleportDraft(fresh)
+    picker.start(
+      ids.map((id) => ({ entityId: id, mapId: destOf(id) })),
+      'panel',
+      chosenCells(),
+    )
+  }
 
   if (mapList.length === 0) return <p className="text-sm text-ink-muted">{t.teleport.noMaps}</p>
 
   const chosen = people.filter((e) => checked.has(e.id))
   const submit = () => {
     actions.teleportCharacters(
-      chosen.map((e) => ({ entityId: e.id, toMapId: destOf(e.id) })),
+      chosen.map((e) => ({ entityId: e.id, toMapId: destOf(e.id), at: atOf(e.id)?.cell })),
       { familiarsFollow },
     )
-    setChecked(new Set())
+    useMapViewStore.getState().setTeleportDraft(null)
     onDone?.()
   }
 
@@ -140,15 +170,13 @@ export function TeleportForm({ onDone }: { onDone?: () => void }) {
       <label className="flex flex-wrap items-center gap-2 text-sm text-ink">
         <span>{t.teleport.allTo}</span>
         <select
-          value={allTo}
+          value=""
           onChange={(e) => {
             const to = e.target.value
-            setAllTo(to)
             if (to)
-              setDest((prev) => ({
-                ...prev,
-                ...Object.fromEntries([...checked].map((id) => [id, to])),
-              }))
+              update({
+                dest: { ...dest, ...Object.fromEntries([...checked].map((id) => [id, to])) },
+              })
           }}
           className={cn(SELECT, 'flex-1')}
         >
@@ -195,8 +223,10 @@ export function TeleportForm({ onDone }: { onDone?: () => void }) {
                   value={destOf(e.id)}
                   onChange={(ev) => {
                     const to = ev.target.value
-                    setDest((prev) => ({ ...prev, [e.id]: to }))
-                    toggle(e.id, true)
+                    update({
+                      dest: { ...dest, [e.id]: to },
+                      checked: [...new Set([...draft.checked, e.id])],
+                    })
                   }}
                   className={cn(SELECT, 'w-44 max-w-full')}
                 >
@@ -206,6 +236,7 @@ export function TeleportForm({ onDone }: { onDone?: () => void }) {
                     </option>
                   ))}
                 </select>
+                <SpotButton name={name} cell={atOf(e.id)?.cell} onPick={() => pick([e.id])} />
               </li>
             )
           })}
@@ -217,11 +248,20 @@ export function TeleportForm({ onDone }: { onDone?: () => void }) {
           <input
             type="checkbox"
             checked={familiarsFollow}
-            onChange={(e) => setFamiliarsFollow(e.target.checked)}
+            onChange={(e) => update({ familiarsFollow: e.target.checked })}
             className="size-4 accent-[var(--codex-accent)]"
           />
           {t.teleport.familiarsFollow}
         </label>
+        <Button
+          type="button"
+          variant="ghost"
+          icon={<MapPin className="size-4" />}
+          disabled={chosen.length === 0}
+          onClick={() => pick(chosen.map((e) => e.id))}
+        >
+          {t.teleport.pickAll}
+        </Button>
         <Button
           type="submit"
           variant="primary"
@@ -232,5 +272,46 @@ export function TeleportForm({ onDone }: { onDone?: () => void }) {
         </Button>
       </div>
     </form>
+  )
+}
+
+/** « Choisir l'emplacement », or the chosen cell and « Changer » (D-277). */
+function SpotButton({
+  name,
+  cell,
+  onPick,
+}: {
+  name: string
+  cell: Cell | undefined
+  onPick: () => void
+}) {
+  const t = useT()
+  if (!cell)
+    return (
+      <button
+        type="button"
+        className={cn(CHIP, 'inline-flex items-center gap-1')}
+        aria-label={t.teleport.pickSpotOf(name)}
+        onClick={onPick}
+      >
+        <MapPin className="size-3.5" aria-hidden />
+        {t.teleport.pickSpot}
+      </button>
+    )
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="inline-flex h-8 items-center gap-1 rounded-full bg-accent-soft px-2.5 text-xs font-medium text-accent-text">
+        <MapPin className="size-3.5" aria-hidden />
+        {t.teleport.spot(cellName(cell))}
+      </span>
+      <button
+        type="button"
+        className={CHIP}
+        aria-label={t.teleport.changeSpotOf(name)}
+        onClick={onPick}
+      >
+        {t.teleport.changeSpot}
+      </button>
+    </span>
   )
 }

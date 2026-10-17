@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { campaignRepository } from '@/db/campaigns'
 import { activeDb } from '@/db/db'
@@ -8,6 +8,7 @@ import { newMap } from '@/domain/maps'
 import { configuredRules, startLocalGame } from '@/test/fixtures'
 import { renderApp } from '@/test/renderApp'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
+import { useMapViewStore } from '@/stores/mapViewStore'
 import { useUiStore } from '@/stores/uiStore'
 
 const rules = configuredRules()
@@ -16,6 +17,7 @@ const store = () => useCampaignStore.getState()
 beforeEach(async () => {
   await store().unload()
   useUiStore.setState({ quickId: null, playSheetId: null })
+  useMapViewStore.setState({ teleportPick: null, teleportDraft: null, teleportOpen: false })
   campaignHistory.getState().clear()
   await Promise.all([activeDb().campaigns.clear(), activeDb().entities.clear()])
 })
@@ -293,5 +295,57 @@ describe('familiars and the GM’s board in play (D-269)', () => {
     expect(where(owl.id)).toBe('Cave')
     expect(where(gob.id)).toBe('Crypte')
     expect(campaignHistory.getState().past.at(-1)?.label).toBe('2 personnages téléportés')
+  })
+
+  it('the GM chooses the exact landing cell from the panel; Escape gives the view back (D-277)', async () => {
+    const { user, campaign, lyra, owl } = await withFamiliars()
+    const hall = newMap(campaign.id, { name: 'Hall', cols: 8, rows: 8 })
+    hall.tokens = [
+      { id: 'tk-lyra', entityId: lyra.id, col: 3, row: 3, size: 1, hidden: false },
+      { id: 'tk-owl', entityId: owl.id, col: 4, row: 3, size: 1, hidden: false },
+    ]
+    const crypt = newMap(campaign.id, { name: 'Crypte', cols: 8, rows: 8 })
+    store().addMap(hall, 'map')
+    store().addMap(crypt, 'map')
+    store().updatePlay((p) => ({ ...p, mapId: hall.id }), 'map')
+
+    await user.click(await screen.findByRole('button', { name: 'Téléporter des personnages' }))
+    let panel = await screen.findByRole('dialog', { name: 'Téléporter des personnages' })
+    await user.selectOptions(
+      within(panel).getByRole('combobox', { name: 'Destination de Lyra' }),
+      'Crypte',
+    )
+    await user.click(within(panel).getByRole('button', { name: 'Choisir l’emplacement de Lyra' }))
+    // The board shows the crypt for the GM only; the panel waits.
+    expect(
+      await screen.findByText('Clique la case d’arrivée de Lyra (Échap pour annuler)'),
+    ).toBeVisible()
+    expect(screen.getByText('Téléportation vers « Crypte »')).toBeVisible()
+    expect(screen.queryByRole('dialog', { name: 'Téléporter des personnages' })).toBeNull()
+    expect(store().play.mapId).toBe(hall.id)
+    await user.keyboard('{Escape}')
+    panel = await screen.findByRole('dialog', { name: 'Téléporter des personnages' })
+    expect(screen.queryByTestId('teleport-pick')).toBeNull()
+    expect(within(panel).getByRole('checkbox', { name: /Lyra/ })).toBeChecked()
+
+    // A cell picked on the board (the canvas is tested in e2e) shows in the row and is used.
+    const draft = useMapViewStore.getState().teleportDraft!
+    act(() =>
+      useMapViewStore.getState().setTeleportDraft({
+        ...draft,
+        at: { [lyra.id]: { mapId: crypt.id, cell: { col: 2, row: 3 } } },
+      }),
+    )
+    expect(within(panel).getByText('Case C4')).toBeVisible()
+    expect(
+      within(panel).getByRole('button', { name: 'Changer la case d’arrivée de Lyra' }),
+    ).toBeVisible()
+    await user.click(within(panel).getByRole('button', { name: 'Téléporter' }))
+    const landed = store().maps[crypt.id]!.tokens
+    expect(landed.find((tk) => tk.entityId === lyra.id)).toMatchObject({ col: 2, row: 3 })
+    // Its familiar lands right beside the chosen cell.
+    const fam = landed.find((tk) => tk.entityId === owl.id)!
+    expect(Math.max(Math.abs(fam.col - 2), Math.abs(fam.row - 3))).toBe(1)
+    expect(useMapViewStore.getState().teleportDraft).toBeNull()
   })
 })

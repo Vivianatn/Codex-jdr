@@ -5,6 +5,7 @@ import {
   ChevronRight,
   ChevronUp,
   EllipsisVertical,
+  MapPin,
   MapPinOff,
   PawPrint,
   Skull,
@@ -25,6 +26,7 @@ import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { sortedMaps } from './teleport'
+import { useTeleportPick } from './useTeleportPick'
 
 /** A group member order and removal, folded into the same menu (D-272). */
 export interface MemberGestures {
@@ -54,6 +56,7 @@ export function BoardMenu({
 }) {
   const t = useT()
   const actions = useMapActions()
+  const picker = useTeleportPick()
   const [confirming, setConfirming] = useState(false)
   const name = entityName(entity)
   const mapId = useCampaignStore((s) => s.play.mapId)
@@ -147,6 +150,36 @@ export function BoardMenu({
                         )}
                       </DropdownMenu.Item>
                     ))}
+                    <DropdownMenu.Separator className="my-1 h-px bg-line" />
+                    {/* Second step for the exact cell (D-277): pick it on the board, then go. */}
+                    <DropdownMenu.Sub>
+                      <DropdownMenu.SubTrigger
+                        className={MENU_ITEM}
+                        aria-label={t.teleport.pickOnLabel(name)}
+                      >
+                        <MapPin /> <span className="flex-1">{t.teleport.pickOn}</span>
+                        <ChevronRight />
+                      </DropdownMenu.SubTrigger>
+                      <DropdownMenu.Portal>
+                        <DropdownMenu.SubContent
+                          sideOffset={4}
+                          collisionPadding={16}
+                          className="z-50 max-h-[60vh] max-w-[calc(100vw-2rem)] min-w-48 overflow-y-auto rounded-xl border border-line bg-surface-raised p-1 shadow-lifted"
+                        >
+                          {mapList.map((m) => (
+                            <DropdownMenu.Item
+                              key={m.id}
+                              className={MENU_ITEM}
+                              onSelect={() =>
+                                picker.start([{ entityId: entity.id, mapId: m.id }], 'teleport')
+                              }
+                            >
+                              <span className="min-w-0 flex-1 break-words">{m.name}</span>
+                            </DropdownMenu.Item>
+                          ))}
+                        </DropdownMenu.SubContent>
+                      </DropdownMenu.Portal>
+                    </DropdownMenu.Sub>
                   </DropdownMenu.SubContent>
                 </DropdownMenu.Portal>
               </DropdownMenu.Sub>

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AreaShape, ElementKind, Point } from '@/domain/maps'
+import type { AreaShape, Cell, ElementKind, Point } from '@/domain/maps'
 import { clamp } from '@/lib/numbers'
 
 /**
@@ -44,6 +44,36 @@ export interface Ping {
   at: number
 }
 
+/** A cell the GM chose for one character's teleport (D-277). */
+export interface ChosenCell {
+  mapId: string
+  cell: Cell
+}
+
+/**
+ * Picking the exact landing cells of a teleport (D-277): the GM's board shows
+ * `queue[0].mapId` (view only) until every character of the queue has a cell.
+ * `then` = back to the teleport panel, or teleport right away (board menu).
+ */
+export interface TeleportPick {
+  queue: { entityId: string; mapId: string }[]
+  /** How many characters this pick started with (for « 2 / 3 »). */
+  total: number
+  /** Cells chosen so far, by character (also the panel's earlier choices). */
+  chosen: Record<string, ChosenCell>
+  then: 'panel' | 'teleport'
+}
+
+/** The teleport panel's choices, kept while the GM picks cells on the board (D-277). */
+export interface TeleportDraft {
+  checked: string[]
+  /** Destination map by character. */
+  dest: Record<string, string>
+  /** Chosen landing cell by character (ignored once its destination changes). */
+  at: Record<string, ChosenCell>
+  familiarsFollow: boolean
+}
+
 export const MAP_LAYERS = [
   'background',
   'grid',
@@ -79,6 +109,13 @@ interface MapViewState {
   pinPlayerSheets: boolean
   /** Size of the map viewport in screen pixels (for zoom buttons and fit). */
   viewport: { width: number; height: number }
+  teleportPick: TeleportPick | null
+  /** null = a fresh panel (it ticks the selected tokens). */
+  teleportDraft: TeleportDraft | null
+  teleportOpen: boolean
+  setTeleportPick: (pick: TeleportPick | null) => void
+  setTeleportDraft: (draft: TeleportDraft | null) => void
+  setTeleportOpen: (open: boolean) => void
   setViewport: (viewport: { width: number; height: number }) => void
   setTool: (tool: MapTool) => void
   setPlaceKind: (kind: ElementKind) => void
@@ -110,6 +147,12 @@ export const useMapViewStore = create<MapViewState>()((set) => ({
   viewport: { width: 0, height: 0 },
   sheetId: null,
   pinPlayerSheets: false,
+  teleportPick: null,
+  teleportDraft: null,
+  teleportOpen: false,
+  setTeleportPick: (teleportPick) => set({ teleportPick }),
+  setTeleportDraft: (teleportDraft) => set({ teleportDraft }),
+  setTeleportOpen: (teleportOpen) => set({ teleportOpen }),
   setViewport: (viewport) => set({ viewport }),
   setTool: (tool) => set({ tool, area: null }),
   setPlaceKind: (placeKind) => set({ placeKind, tool: 'place' }),

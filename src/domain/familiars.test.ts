@@ -171,7 +171,7 @@ describe('familiars follow a teleported master (D-276)', () => {
     // The cat is not on the board: it stays where it is.
     expect(moves).toEqual([
       { entityId: lyra.id, toMapId: 'crypt' },
-      { entityId: owl.id, toMapId: 'crypt', at: undefined, kind: 'familiar' },
+      { entityId: owl.id, toMapId: 'crypt', beside: lyra.id, kind: 'familiar' },
     ])
     // A familiar given its own destination keeps it.
     const own = withFollowingFamiliars(

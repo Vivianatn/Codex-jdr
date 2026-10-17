@@ -31,6 +31,7 @@ import { MapCanvas, type MapChange } from './MapCanvas'
 import { MapTreeMenu } from './MapTree'
 import { AreaPanel, ElementPanel, WallPanel } from './MapPanels'
 import { LayersMenu, MapToolbar, ToolOptions, ZoomControl, type ToolItem } from './MapToolbar'
+import { TeleportPickBoard } from './TeleportPickBoard'
 import { TokenSheets } from './TokenSheets'
 import { useCanvasLabels } from './useCanvasLabels'
 import { useMapKeys } from './useMapKeys'
@@ -71,6 +72,7 @@ export function PlayMap() {
   const selection = useMapViewStore((s) => s.selection)
   const area = useMapViewStore((s) => s.area)
   const followTurn = useMapViewStore((s) => s.followTurn)
+  const teleportPick = useMapViewStore((s) => s.teleportPick)
   const actions = useMapActions()
   const labels = useCanvasLabels()
   const map = play.mapId ? maps[play.mapId] : undefined
@@ -128,6 +130,12 @@ export function PlayMap() {
   useMapKeys(mapId ? onChange : null, { tokens: false })
   const setDiceOpen = useUiStore((s) => s.setDiceOpen)
   const slots = useBoardSlots()
+
+  // Leaving the board drops a pending teleport pick (D-277).
+  useEffect(() => () => useMapViewStore.getState().setTeleportPick(null), [])
+
+  // Choosing a teleport landing cell: the destination map, for the GM only (D-277).
+  if (teleportPick) return <TeleportPickBoard pick={teleportPick} />
 
   if (!map)
     return (

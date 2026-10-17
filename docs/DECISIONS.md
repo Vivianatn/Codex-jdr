@@ -4,6 +4,21 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Téléportation à la case près (2026-10-17)
+
+### D-277 · Le MJ choisit la case d'arrivée de chaque personnage téléporté
+
+Demande du MJ : « Dans la téléportation des joueurs, je veux pouvoir choisir précisément où ils sont téléportés. » Complète D-276 ; le clic unique (point d'arrivée par défaut) reste inchangé.
+
+- **Mode « choix de case »** : état de vue `teleportPick` dans `mapViewStore` (`queue` de `{ entityId, mapId }`, `chosen`, `total`, `then: 'panel' | 'teleport'`), logique dans `useTeleportPick` / `createTeleportPicker` (`src/features/play/`). Pendant le choix, `PlayMap` cède la place à `TeleportPickBoard` : la carte de destination s'affiche **pour le MJ seulement** (`play.mapId`, la fenêtre des joueurs et leur caméra ne bougent pas), bandeau « Clique la case d'arrivée de Lyra (Échap pour annuler) » avec la carte et « 2 / 3 », bouton « Annuler ». Le canevas, en mode `view` + `onCellPick` (comme `DoorDialog`), dessine l'empreinte du jeton sous le pointeur (taille comprise, `pickGhost`) et entoure en pointillés les cases déjà choisies pour les autres. Un clic ou un toucher choisit ; Échap, clic droit ou « Annuler » abandonne et rend la vue précédente (caméra par carte, rien à restaurer). Quitter le plateau abandonne aussi.
+- **Règles du choix** (`pickProblem`, pur) : l'empreinte doit tenir dans la carte et ne couvrir ni un autre jeton ni une case déjà choisie pour quelqu'un d'autre sur la même carte (toast « Case déjà prise : choisis-en une autre. ») ; murs, brouillard et passages ne comptent pas (sans condition, D-276). Cases affichées façon échiquier : « C4 » (`cellName`).
+- **Panneau** : chaque ligne a « Choisir l'emplacement » ; une fois choisie, « Case C4 » + « Changer ». « Placer tout le monde sur la carte » enchaîne le choix pour toutes les lignes cochées. Le panneau se ferme pendant le choix et se rouvre ensuite avec ses réglages : coches, destinations et cases vivent dans `teleportDraft` (vue, non sauvegardé), remis à zéro après « Téléporter ». Changer la destination d'une ligne oublie sa case.
+- **Menu du personnage** : sous « Téléporter vers… », après les cartes, « Choisir la case sur… » › carte → choix sur le plateau → téléporté aussitôt.
+- **Domaine** (`teleport`) : les cases choisies (`at`) sont réservées d'avance, quel que soit l'ordre des mouvements (un personnage sans case ou un familier ne s'y pose jamais). Un familier qui suit porte désormais `beside: maîtreId` au lieu de recopier `at` : il atterrit sur la première case libre à côté du jeton de son maître, jamais dessous (gros jetons compris). Toujours UNE entrée d'annulation.
+- **Tests** : `maps.test.ts` (case réservée, familier à côté d'un gros maître), `teleport.test.ts` (règles, file, chemins panneau / menu, annulation), `play-turns.test.tsx` (panneau, bandeau, Échap, « Case C4 »), e2e `phase3-turns.spec.ts` (clic sur le canevas via `window.__codexMap`, vérifié dans la table `maps`).
+
+---
+
 ## Téléportation par le MJ (2026-10-17)
 
 ### D-276 · Le MJ téléporte qui il veut, où il veut, sans condition
@@ -50,6 +65,7 @@ Demande du MJ : « qu'un MJ donne les mêmes droits à un autre utilisateur en M
 Raison : le MJ veut des MJ égaux ; garder un MJ principal évite qu'une campagne se retrouve sans personne pour la supprimer et qu'un MJ en écarte un autre de sa propre campagne.
 
 À suivre :
+
 - Supprimer le compte du MJ principal supprime ses campagnes en cascade, même s'il reste d'autres MJ : lui conseiller de transmettre d'abord (ou transmettre automatiquement au plus ancien MJ).
 - Si le MJ qui menait la partie est repassé joueur ou retiré, la partie reste à son nom : les autres MJ ne peuvent ni la terminer ni la reprendre (règle « seul l'opérateur termine ou transmet », D-244). Il faudra permettre à un MJ de reprendre une partie dont l'opérateur n'est plus MJ.
 

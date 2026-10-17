@@ -115,6 +115,11 @@ export interface MapCanvasProps {
   mapNames?: Record<string, string>
   /** Pick mode (D-258, session editor): a click on the board picks a cell instead of acting. */
   onCellPick?: (cell: Cell) => void
+  /**
+   * While picking a teleport landing cell (D-277): the token's footprint follows
+   * the pointer, and the cells already chosen for others are outlined.
+   */
+  pickGhost?: { size: number; marks?: readonly { cell: Cell; size: number }[] }
   className?: string
 }
 
@@ -577,11 +582,13 @@ export function MapCanvas(props: MapCanvasProps) {
   const cursor =
     gesture?.kind === 'pan'
       ? 'grabbing'
-      : tool === 'select'
-        ? 'default'
-        : tool === 'place' || tool === 'wall' || tool === 'door'
-          ? 'copy'
-          : 'crosshair'
+      : picking
+        ? 'crosshair'
+        : tool === 'select'
+          ? 'default'
+          : tool === 'place' || tool === 'wall' || tool === 'door'
+            ? 'copy'
+            : 'crosshair'
 
   return (
     <div
@@ -877,6 +884,27 @@ export function MapCanvas(props: MapCanvasProps) {
                 stroke={theme.brush}
                 strokeWidth={1 / camera.scale}
                 dash={[4 / camera.scale, 4 / camera.scale]}
+              />
+            )}
+            {props.pickGhost?.marks?.map((m) => (
+              <Footprint
+                key={`${m.cell.col},${m.cell.row}`}
+                map={map}
+                cell={m.cell}
+                size={m.size}
+                stroke={theme.brush}
+                scale={camera.scale}
+                dashed
+              />
+            ))}
+            {props.pickGhost && pointer && !gesture && (
+              <Footprint
+                map={map}
+                cell={cellAt(map.grid, pointer)}
+                size={props.pickGhost.size}
+                stroke={theme.brush}
+                fill={theme.area.fill}
+                scale={camera.scale}
               />
             )}
             {shownArea && <AreaNode area={shownArea} scale={camera.scale} theme={theme} />}
@@ -1604,6 +1632,44 @@ const TokenNode = memo(function TokenNode({
     </>
   )
 }, sameData)
+
+/** The cells a token of `size` covers from `cell` (teleport picking, D-277). */
+function Footprint({
+  map,
+  cell,
+  size,
+  stroke,
+  fill,
+  scale,
+  dashed = false,
+}: {
+  map: GameMap
+  cell: Cell
+  size: number
+  stroke: string
+  fill?: string
+  scale: number
+  dashed?: boolean
+}) {
+  const cells: Cell[] = []
+  for (let dr = 0; dr < size; dr++)
+    for (let dc = 0; dc < size; dc++) cells.push({ col: cell.col + dc, row: cell.row + dr })
+  return (
+    <>
+      {cells.map((c) => (
+        <Line
+          key={`${c.col},${c.row}`}
+          points={cellPolygon(map.grid, c).flatMap((p) => [p.x, p.y])}
+          closed
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={2 / scale}
+          dash={dashed ? [6 / scale, 4 / scale] : undefined}
+        />
+      ))}
+    </>
+  )
+}
 
 function AreaNode({ area, scale, theme }: { area: AreaShape; scale: number; theme: BoardTheme }) {
   const style = {

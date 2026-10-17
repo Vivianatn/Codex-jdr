@@ -871,8 +871,10 @@ export function withToken(map: GameMap, entity: { id: string; kind: string }, at
 export interface TeleportMove {
   entityId: string
   toMapId: string
-  /** Where to land; by default beside the target's arrival point. */
+  /** Where to land (chosen by the GM); by default beside the target's arrival point. */
   at?: Cell
+  /** Land beside this character's token once it has landed (a familiar following its master). */
+  beside?: string
   /** Kind of a character with no token yet (enemies start hidden under fog). */
   kind?: string
 }
@@ -891,6 +893,13 @@ export function teleport(
 ): Record<string, GameMap> {
   const next: Record<string, GameMap> = { ...maps }
   const anchors = new Map<string, Cell>()
+  // Cells the GM chose: nobody else lands there, whatever the order of the moves.
+  const reserved = new Map<string, string>()
+  for (const move of moves) {
+    const target = maps[move.toMapId]
+    if (target && move.at && !move.beside && inBounds(target, move.at))
+      reserved.set(`${target.id}:${move.at.col},${move.at.row}`, move.entityId)
+  }
   for (const move of moves) {
     if (!next[move.toMapId]) continue
     let token: Token | undefined
@@ -905,9 +914,23 @@ export function teleport(
       next[map.id] = { ...map, tokens: map.tokens.filter((tk) => tk.entityId !== move.entityId) }
     }
     const target = next[move.toMapId]!
-    const avoid = (cell: Cell) => passageAt(target, cell) !== undefined
+    const othersChose = (cell: Cell) => {
+      const owner = reserved.get(`${target.id}:${cell.col},${cell.row}`)
+      return owner !== undefined && owner !== move.entityId
+    }
+    const avoid = (cell: Cell) => othersChose(cell) || passageAt(target, cell) !== undefined
+    const master = move.beside ? target.tokens.find((tk) => tk.entityId === move.beside) : undefined
     let cell: Cell
-    if (move.at && inBounds(target, move.at)) cell = freeCellNear(target, move.at)
+    if (master) {
+      // Beside its master, never under it (a big token covers several cells).
+      const covers = (c: Cell) =>
+        c.col >= master.col &&
+        c.col < master.col + master.size &&
+        c.row >= master.row &&
+        c.row < master.row + master.size
+      cell = freeCellNear(target, master, { avoid: (c) => covers(c) || avoid(c) })
+    } else if (move.at && !move.beside && inBounds(target, move.at))
+      cell = freeCellNear(target, move.at, { avoid: othersChose })
     else {
       const anchor = anchors.get(target.id) ?? arrivalCell(target, fromId ?? target.id)
       anchors.set(target.id, anchor)
@@ -918,11 +941,12 @@ export function teleport(
       tokens: [
         ...target.tokens,
         token
-          ? { ...token, ...cell }
+          ? { ...token, col: cell.col, row: cell.row }
           : {
               id: crypto.randomUUID(),
               entityId: move.entityId,
-              ...cell,
+              col: cell.col,
+              row: cell.row,
               size: 1,
               hidden: move.kind === 'enemy' && target.fog.enabled,
             },

@@ -229,7 +229,7 @@ test('every roll of a live game shows big, in the roller colour (D-268)', async 
   await expect(stage).toHaveCount(0, { timeout: 6000 })
 })
 
-test('the GM teleports characters to other maps, one by menu or several at once (D-276)', async ({
+test('the GM teleports characters to other maps, one by menu or several at once, to the exact cell (D-276, D-277)', async ({
   page,
 }) => {
   test.setTimeout(150_000)
@@ -310,4 +310,69 @@ test('the GM teleports characters to other maps, one by menu or several at once 
   await panel.getByRole('button', { name: 'Téléporter (2)' }).click()
   await expect.poll(() => mapOf(lyra!.id as string)).toBe('Cave')
   await expect.poll(() => mapOf(goblinId)).toBe('Crypte')
+
+  // Exact cell (D-277): Lyra's menu › Choisir la case sur… › Crypte, then a click on the board.
+  const tokenOf = async (entityId: string) => {
+    const maps = (await dumpTable(page, 'maps')) as {
+      name: string
+      tokens: { entityId: string; col: number; row: number }[]
+    }[]
+    for (const m of maps) {
+      const tk = m.tokens.find((x) => x.entityId === entityId)
+      if (tk) return `${m.name} ${tk.col},${tk.row}`
+    }
+    return null
+  }
+  const clickCell = async (col: number, row: number) => {
+    await expect(page.getByTestId('teleport-pick').locator('canvas').first()).toBeVisible()
+    await page.waitForFunction(() =>
+      Boolean((window as unknown as { __codexMap?: unknown }).__codexMap),
+    )
+    const at = await page.evaluate(
+      ([c, r]) => {
+        const hook = (
+          window as unknown as {
+            __codexMap: {
+              cellCenter: (c: number, r: number) => { x: number; y: number }
+              toScreen: (p: { x: number; y: number }) => { x: number; y: number }
+            }
+          }
+        ).__codexMap
+        return hook.toScreen(hook.cellCenter(c!, r!))
+      },
+      [col, row],
+    )
+    await page.mouse.click(at.x, at.y)
+  }
+  await page.getByRole('button', { name: 'Plateau et tours : Lyra' }).first().click()
+  await page.getByRole('menuitem', { name: 'Téléporter Lyra vers…' }).click()
+  await page.getByRole('menuitem', { name: 'Choisir la case d’arrivée de Lyra sur…' }).click()
+  await page
+    .getByRole('menu', { name: /Choisir la case/ })
+    .getByRole('menuitem', { name: 'Crypte' })
+    .click()
+  await expect(
+    page.getByText('Clique la case d’arrivée de Lyra (Échap pour annuler)'),
+  ).toBeVisible()
+  await expectNoSeriousA11yViolations(page)
+  await clickCell(6, 12)
+  await expect.poll(() => tokenOf(lyra!.id as string)).toBe('Crypte 6,12')
+  await expect(page.getByTestId('teleport-pick')).toHaveCount(0)
+  // The GM's board came back to the hall.
+  await expect(page.getByTestId('map-tree')).toContainText('Hall')
+
+  // From the panel: the goblin's cell on the hall, shown in its row, then teleported.
+  await page.getByRole('button', { name: 'Téléporter des personnages' }).click()
+  await panel.getByRole('button', { name: 'Aucun' }).click()
+  await panel
+    .getByRole('combobox', { name: 'Destination de Gobelin' })
+    .selectOption({ label: 'Hall' })
+  await panel.getByRole('button', { name: 'Choisir l’emplacement de Gobelin' }).click()
+  await expect(
+    page.getByText('Clique la case d’arrivée de Gobelin (Échap pour annuler)'),
+  ).toBeVisible()
+  await clickCell(20, 14)
+  await expect(panel.getByText('Case U15')).toBeVisible()
+  await panel.getByRole('button', { name: 'Téléporter', exact: true }).click()
+  await expect.poll(() => tokenOf(goblinId)).toBe('Hall 20,14')
 })

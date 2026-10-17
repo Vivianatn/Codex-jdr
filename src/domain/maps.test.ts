@@ -392,6 +392,32 @@ describe('teleportation by the GM (D-276)', () => {
     expect(cells(crypt).filter((c) => c === '5,4')).toHaveLength(1)
   })
 
+  it('keeps every chosen cell for its owner, whatever the order of the moves', () => {
+    // Gorak goes to the default spot first; the centre is Lyra's chosen cell.
+    const next = teleport(world(), [
+      { entityId: 'gorak', toMapId: 'cave' },
+      { entityId: 'lyra', toMapId: 'cave', at: { col: 5, row: 4 } },
+    ])
+    const cave = next.cave!
+    expect(cave.tokens.find((t) => t.entityId === 'lyra')).toMatchObject({ col: 5, row: 4 })
+    expect(cave.tokens.find((t) => t.entityId === 'gorak')).not.toMatchObject({ col: 5, row: 4 })
+  })
+
+  it('a following familiar lands beside its master’s chosen cell, never under a big master', () => {
+    const maps = world()
+    maps.hall = { ...maps.hall!, tokens: [tk('lyra', 1, 1, { size: 2 }), tk('owl', 3, 1)] }
+    const next = teleport(maps, [
+      { entityId: 'lyra', toMapId: 'cave', at: { col: 7, row: 2 } },
+      { entityId: 'owl', toMapId: 'cave', beside: 'lyra' },
+    ])
+    const cave = next.cave!
+    expect(cave.tokens.find((t) => t.entityId === 'lyra')).toMatchObject({ col: 7, row: 2 })
+    const owl = cave.tokens.find((t) => t.entityId === 'owl')!
+    const under = owl.col >= 7 && owl.col <= 8 && owl.row >= 2 && owl.row <= 3
+    expect(under).toBe(false)
+    expect(Math.max(Math.abs(owl.col - 7), Math.abs(owl.row - 2))).toBeLessThanOrEqual(2)
+  })
+
   it('places a character with no token yet; an enemy starts hidden under fog', () => {
     const next = teleport(world(), [
       { entityId: 'newbie', toMapId: 'cave', kind: 'player' },

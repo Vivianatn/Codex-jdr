@@ -704,6 +704,23 @@ export const fr = {
     nobody: 'Aucun personnage dans la campagne.',
     noMaps: 'Crée d’abord une carte dans Préparation › Cartes.',
     nowhere: 'hors plateau',
+    // Choosing the exact landing cell (D-277).
+    pickSpot: 'Choisir l’emplacement',
+    pickSpotOf: (name: string) => `Choisir l’emplacement de ${name}`,
+    spot: (cell: string) => `Case ${cell}`,
+    changeSpot: 'Changer',
+    changeSpotOf: (name: string) => `Changer la case d’arrivée de ${name}`,
+    pickAll: 'Placer tout le monde sur la carte',
+    pickOn: 'Choisir la case sur…',
+    pickOnLabel: (name: string) => `Choisir la case d’arrivée de ${name} sur…`,
+    pickBanner: (name: string) => `Clique la case d’arrivée de ${name} (Échap pour annuler)`,
+    pickWhere: (map: string, index: number, total: number) =>
+      total > 1
+        ? `Téléportation vers « ${map} » · ${index} / ${total}`
+        : `Téléportation vers « ${map} »`,
+    pickCancel: 'Annuler',
+    pickOccupied: 'Case déjà prise : choisis-en une autre.',
+    pickOutside: 'Le jeton ne tient pas ici : choisis une autre case.',
   },
   /** The players at the table, always in view (D-272). */
   party: {

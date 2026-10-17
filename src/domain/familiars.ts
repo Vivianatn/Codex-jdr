@@ -142,7 +142,8 @@ export function playableFamiliars(entities: EntityList): FamiliarChoice[] {
 /**
  * Teleport moves with the familiars that follow their master (D-276): those
  * attached to a moved character and standing on a map go with it, right after
- * it so they land beside it. A familiar moved on its own keeps its own move.
+ * it so they land beside it (beside the cell the GM chose for it, if any). A
+ * familiar moved on its own keeps its own move.
  */
 export function withFollowingFamiliars(
   moves: readonly TeleportMove[],
@@ -157,7 +158,7 @@ export function withFollowingFamiliars(
     move,
     ...familiarsOf(list, move.entityId)
       .filter((f) => !chosen.has(f.id) && onBoard(f.id))
-      .map((f) => ({ entityId: f.id, toMapId: move.toMapId, at: move.at, kind: f.kind })),
+      .map((f) => ({ entityId: f.id, toMapId: move.toMapId, beside: move.entityId, kind: f.kind })),
   ])
 }
 
