@@ -4,8 +4,8 @@ const PORT = 4173
 /** The online server (D-262), on an in-memory PostgreSQL; both app servers proxy /api to it. */
 const API_PORT = 3100
 const api = { CODEX_API: `http://127.0.0.1:${API_PORT}` }
-/** Production build (with its Content Security Policy), for the security scenarios. */
-export const BUILD_PORT = 4174
+/** Production build (with its Content Security Policy), for the security scenarios (CODEX_BUILD_PORT: another port when 4174 is taken). */
+export const BUILD_PORT = Number(process.env.CODEX_BUILD_PORT ?? 4174)
 
 export default defineConfig({
   testDir: './e2e',

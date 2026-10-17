@@ -1,27 +1,28 @@
 import { toast } from 'sonner'
 import { activeDb, type CodexDB } from '@/db/db'
 import type { Campaign } from '@/db/types'
+import { controlledBy } from '@/domain/familiars'
 import { blockingWall, inBounds, tokenCenter } from '@/domain/maps'
 import { normalizePlayState, type PlayState } from '@/domain/turns'
 import type { Entity } from '@/domain/types'
 import { createGameActions } from '@/features/game/gameActions'
 import { createMapActions } from '@/features/game/mapActions'
+import { ensurePlayerColor } from '@/features/characters/playerColorActions'
 import type { Messages } from '@/i18n/locales/fr'
 import { withDefaultRules } from '@/rules'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { withActivityAuthor } from '@/stores/activityLog'
 import type { Link } from './link'
 import { useOnlineStore, type PeerInfo } from './onlineStore'
-import { loadCampaignData, projectForPlayer, Replica, type CampaignData } from './projection'
+import { HostFeed } from './hostFeed'
+import { projectForPlayer, Replica, type CampaignData } from './projection'
 import {
   parseGuestMessage,
   PROTOCOL_VERSION,
-  SYNC_TABLES,
   type GuestMessage,
   type HostMessage,
   type Intent,
   type RejectReason,
-  type SyncTable,
 } from './protocol'
 
 interface Peer {
@@ -33,7 +34,12 @@ interface Peer {
   assigned: boolean
 }
 
-const SYNC_DELAY = 50
+/**
+ * Players are synced at most this often (D-270): a lone action goes out at once,
+ * a burst (painting fog, several quick moves) is grouped, and the relay's frame
+ * budget is never exceeded.
+ */
+const SYNC_INTERVAL = 33
 
 export interface HostOptions {
   campaignId: string
@@ -54,23 +60,15 @@ export class HostSession {
   private readonly peers = new Map<string, Peer>()
   private readonly db: () => CodexDB
   private data: CampaignData | null = null
-  private readonly dirty = new Set<SyncTable>(SYNC_TABLES)
+  private readonly feed: HostFeed
   private timer: ReturnType<typeof setTimeout> | null = null
+  private lastSync = -Infinity
   private queue: Promise<void> = Promise.resolve()
-  private readonly unsubscribe: () => void
   private stopped = false
 
   constructor(private readonly options: HostOptions) {
     this.db = options.db ?? activeDb
-    this.unsubscribe = this.db().onChanges((changes) => {
-      let relevant = false
-      for (const c of changes)
-        if ((SYNC_TABLES as readonly string[]).includes(c.table)) {
-          this.dirty.add(c.table as SyncTable)
-          relevant = true
-        }
-      if (relevant) this.scheduleSync()
-    })
+    this.feed = new HostFeed(this.db, options.campaignId, () => this.scheduleSync())
     this.publish()
   }
 
@@ -98,6 +96,9 @@ export class HostSession {
       assigned: player.characterId !== null,
     }
     this.peers.set(player.id, peer)
+    // A player joining with a character gets their colour (D-268).
+    if (player.characterId)
+      ensurePlayerColor(this.options.t, this.options.campaignId, player.characterId)
     link.onMessage((raw) => {
       const message = parseGuestMessage(raw)
       if (message) this.enqueue(() => this.handle(peer, message))
@@ -124,7 +125,7 @@ export class HostSession {
       peer.link?.close()
     }
     this.peers.clear()
-    this.unsubscribe()
+    this.feed.stop()
     if (this.timer) clearTimeout(this.timer)
     useOnlineStore.setState({ peers: [] })
   }
@@ -210,6 +211,7 @@ export class HostSession {
         return reject()
     }
     peer.info = { ...peer.info, characterIds: characterId ? [characterId] : [] }
+    if (characterId) ensurePlayerColor(this.options.t, this.options.campaignId, characterId)
     this.publish()
     this.broadcastPeers()
     this.scheduleSync()
@@ -221,12 +223,13 @@ export class HostSession {
     if (!record) return 'forbidden'
     const play = await this.currentPlay()
     if (!play.live || play.live.mode !== 'online') return 'notOnline'
-    const own = intent.type === 'move' ? null : intent.entityId
-    if (own && !peer.info.characterIds.includes(own)) return 'notYours'
-
     // Intents act through the operator's own store, like the GM would.
     const store = useCampaignStore.getState()
     if (store.campaignId !== this.options.campaignId) await store.load(this.options.campaignId)
+    // A player acts for their character and the familiars attached to it, nothing else (D-269).
+    const controlled = controlledBy(useCampaignStore.getState().entities, peer.info.characterIds)
+    const own = intent.type === 'move' ? null : intent.entityId
+    if (own && !controlled.has(own)) return 'notYours'
     const campaign: Campaign = { ...record, rules: withDefaultRules(record.rules) }
     const game = createGameActions(this.options.t, campaign)
     // What follows is synchronous: the activity log signs it with the player's name.
@@ -238,7 +241,7 @@ export class HostSession {
       const token = map?.tokens.find((t) => t.id === intent.tokenId)
       // A player moves on the map where their character is (D-256), not only the GM's board.
       if (!map || !token || token.hidden) return 'invalid'
-      if (!peer.info.characterIds.includes(token.entityId)) return 'notYours'
+      if (!controlled.has(token.entityId)) return 'notYours'
       const cell = { col: intent.col, row: intent.row }
       if (!inBounds(map, cell)) return 'invalid'
       if (
@@ -273,23 +276,20 @@ export class HostSession {
   }
 
   private async refresh(): Promise<void> {
-    if (!this.dirty.size && this.data) return
-    const tables = [...this.dirty]
-    this.dirty.clear()
-    this.data = await loadCampaignData(
-      this.db(),
-      this.options.campaignId,
-      tables,
-      this.data ?? undefined,
-    )
+    this.data = await this.feed.current()
   }
 
+  /** Called on every change: the whole synchronous action is done before the sync runs. */
   private scheduleSync(): void {
     if (this.timer || this.stopped) return
-    this.timer = setTimeout(() => {
+    const wait = this.lastSync + SYNC_INTERVAL - performance.now()
+    const run = () => {
       this.timer = null
+      this.lastSync = performance.now()
       this.enqueue(() => this.sync())
-    }, SYNC_DELAY)
+    }
+    if (wait <= 0) run()
+    else this.timer = setTimeout(run, wait)
   }
 
   private async sync(): Promise<void> {

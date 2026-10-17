@@ -40,6 +40,28 @@ interface UiState {
   /** Character in the quick manipulation panel (not persisted). */
   quickId: string | null
   openQuick: (id: string | null) => void
+  /** Play screen panels, remembered per device (D-272). */
+  play: PlayPanels
+  setPlayPanels: (patch: Partial<PlayPanels>) => void
+}
+
+/** Which play panels are open on this device (D-272). */
+export interface PlayPanels {
+  /** Turns and groups rail (desktop; on small screens it opens on demand). */
+  rail: boolean
+  /** Party strip with names and HP bars, or portraits only. */
+  partyCompact: boolean
+  /** Lower section of the quick panel. */
+  quickTab: 'items' | 'conditions'
+  /** The player's sheet panel on small screens (online player). */
+  playerSheet: boolean
+}
+
+const PLAY_PANELS: PlayPanels = {
+  rail: true,
+  partyCompact: false,
+  quickTab: 'items',
+  playerSheet: true,
 }
 
 export const useUiStore = create<UiState>()(
@@ -54,6 +76,8 @@ export const useUiStore = create<UiState>()(
       openPlaySheet: (playSheetId) => set({ playSheetId, quickId: null }),
       quickId: null,
       openQuick: (quickId) => set({ quickId, playSheetId: null }),
+      play: PLAY_PANELS,
+      setPlayPanels: (patch) => set((s) => ({ play: { ...s.play, ...patch } })),
       rememberPrepSection: (campaignId, section) =>
         set((s) =>
           s.lastPrepSection[campaignId] === section
@@ -70,7 +94,12 @@ export const useUiStore = create<UiState>()(
       name: 'codex.ui',
       version: 1,
       storage: createJSONStorage(() => localStorage),
-      partialize: ({ lastPrepSection, homeMode }) => ({ lastPrepSection, homeMode }),
+      partialize: ({ lastPrepSection, homeMode, play }) => ({ lastPrepSection, homeMode, play }),
+      // Older saves have no play panels; new keys get their default.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<UiState>
+        return { ...current, ...p, play: { ...PLAY_PANELS, ...p.play } }
+      },
     },
   ),
 )

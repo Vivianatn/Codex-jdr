@@ -154,6 +154,11 @@ test('scenario 7: export, delete and re-import a campaign with its characters', 
       ...e,
       id: 'entity',
       campaignId: 'campaign',
+      // Library skills get new ids too: the synced copies point to them.
+      skills: (e.skills as Record<string, unknown>[]).map((s) => ({
+        ...s,
+        sourceId: s.sourceId ? 'skill' : null,
+      })),
     })),
   })
   const before = await dump()

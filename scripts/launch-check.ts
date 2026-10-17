@@ -1,5 +1,6 @@
 /**
- * Launch checklist (D-248): the 20 points to check before putting Codex online,
+ * Launch checklist (D-248): the 20 points to check before putting Codex online, plus the
+ * legal points 21–24 of the public alpha (D-271),
  * verified on the production build (`dist/`). Points that need a browser
  * (contrast, responsive, forms, the notice) are checked by e2e/site.spec.ts,
  * run by `npm run launch:check` right after this script.
@@ -91,8 +92,23 @@ check(1, 'Page RGPD (confidentialité)', () => {
       out.push(`${p.file} : pas de lien vers /confidentialite`)
   if (!existsSync(join(dist, 'confidentialite.html'))) return out
   const html = pageHtml('confidentialite.html')
-  for (const needed of ['Tes droits', 'cnil.fr', 'Combien de temps', 'id="audience"'])
+  for (const needed of [
+    'Tes droits',
+    'cnil.fr',
+    'Combien de temps',
+    'id="audience"',
+    // D-271: every cookie and tracker listed, portability in the product, recipients, legal bases.
+    'id="cookies"',
+    'codex_session',
+    'Télécharger mes données',
+    'sous-traitants',
+    'Base légale',
+    'art. 85',
+  ])
     if (!html.includes(needed)) out.push(`la notice ne contient pas « ${needed} »`)
+  for (const p of sitePages)
+    if (!pageHtml(p.file).includes('href="/confidentialite#cookies"'))
+      out.push(`${p.file} : pas de lien « Cookies » vers /confidentialite#cookies`)
   return out
 })
 
@@ -102,6 +118,20 @@ check(2, 'Page de CGU', () => {
   for (const p of sitePages)
     if (!pageHtml(p.file).includes('href="/cgu"')) out.push(`${p.file} : pas de lien vers /cgu`)
   if (!existsSync(join(dist, 'mentions-legales.html'))) out.push('mentions-legales.html absente')
+  if (!existsSync(join(dist, 'cgu.html'))) return out
+  // D-271: alpha status, age, notice and action (DSA art. 16), statement of reasons (art. 17),
+  // points of contact (art. 11-12), governing law.
+  const cgu = pageHtml('cgu.html')
+  for (const needed of [
+    'id="alpha"',
+    'id="signaler"',
+    'id="moderation"',
+    'id="contact"',
+    '15 ans',
+    'exposé des motifs',
+    'droit français',
+  ])
+    if (!cgu.includes(needed)) out.push(`les CGU ne contiennent pas « ${needed} »`)
   return out
 })
 
@@ -391,6 +421,79 @@ check(20, 'Un seul appel à l’action par page', () => {
     if (count > 1) out.push(`${p.file} : ${count} appels à l’action`)
     if (p.path === '/' && count !== 1) out.push('accueil : il faut exactement un appel à l’action')
   }
+  return out
+})
+
+// ---- legal points added for the public alpha (D-271) ------------------------------
+
+check(21, 'Mentions légales complètes (LCEN, crédits)', () => {
+  const out: string[] = []
+  if (!existsSync(join(dist, 'mentions-legales.html'))) return ['mentions-legales.html absente']
+  const html = pageHtml('mentions-legales.html')
+  for (const needed of [
+    'Éditeur',
+    'Directeur ou directrice de la publication',
+    'Hébergeur',
+    'game-icons.net',
+    'Creative Commons BY 3.0',
+    'SIL Open Font License',
+    'Lucide',
+  ])
+    if (!html.includes(needed)) out.push(`mentions légales : « ${needed} » absent`)
+  // Publisher and host each need an address and a phone number (art. 6-III).
+  if ((html.match(/<dt>Téléphone<\/dt>/g) ?? []).length < 2)
+    out.push('mentions légales : téléphone de l’éditeur ou de l’hébergeur absent')
+  for (const p of sitePages)
+    if (!pageHtml(p.file).includes('href="/mentions-legales"'))
+      out.push(`${p.file} : pas de lien vers /mentions-legales`)
+  return out
+})
+
+check(22, 'Déclaration d’accessibilité (RGAA)', () => {
+  const out: string[] = []
+  if (!existsSync(join(dist, 'accessibilite.html'))) return ['accessibilite.html absente']
+  const html = pageHtml('accessibilite.html')
+  for (const needed of [
+    'État de conformité',
+    'Contenus non accessibles',
+    'Environnement de test',
+    'Défenseur des droits',
+  ])
+    if (!html.includes(needed)) out.push(`déclaration : « ${needed} » absent`)
+  // The status is a mandatory mention on every page (décret 2019-768, art. 4).
+  const mention =
+    /href="\/accessibilite">Accessibilité : (non conforme|partiellement conforme|totalement conforme)</
+  for (const p of sitePages)
+    if (!mention.test(pageHtml(p.file)))
+      out.push(`${p.file} : mention « Accessibilité : … conforme » absente du pied de page`)
+  return out
+})
+
+check(23, 'Signalement et point de contact (DSA)', () => {
+  const out: string[] = []
+  if (!existsSync(join(dist, 'contact.html'))) return ['contact.html absente']
+  const html = pageHtml('contact.html')
+  for (const needed of ['id="signaler"', 'id="autorites"', 'art. 16', 'internet-signalement'])
+    if (!html.includes(needed)) out.push(`contact : « ${needed} » absent`)
+  for (const p of sitePages)
+    if (!pageHtml(p.file).includes('href="/contact"'))
+      out.push(`${p.file} : pas de lien vers /contact`)
+  const server = resolve(root, 'server/src')
+  if (!existsSync(join(server, 'moderate.ts'))) out.push('serveur : outil de modération absent')
+  const code = existsSync(join(server, 'compliance.ts')) ? read(join(server, 'compliance.ts')) : ''
+  for (const route of ["'/api/reports'", "'/api/account/export'", "'/api/account/terms'"])
+    if (!code.includes(route)) out.push(`serveur : route ${route} absente`)
+  return out
+})
+
+check(24, 'Version alpha signalée', () => {
+  const out: string[] = []
+  for (const p of sitePages)
+    if (!/class="site-alpha" href="\/cgu#alpha"/.test(pageHtml(p.file)))
+      out.push(`${p.file} : badge « Alpha » absent de l’en-tête`)
+  const app = resolve(root, 'src/features/shell/AppHeader.tsx')
+  if (!existsSync(app) || !read(app).includes('<AlphaBadge'))
+    out.push('application : badge « Alpha » absent de la barre du haut')
   return out
 })
 

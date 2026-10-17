@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify'
 import type { ApiErrorCode } from '../../shared/sync.ts'
 import { registerAuth } from './auth.ts'
 import { registerCampaigns } from './campaigns.ts'
+import { registerCompliance } from './compliance.ts'
 import type { Config } from './config.ts'
 import type { Db } from './db.ts'
 import { Hub, registerHub } from './hub.ts'
@@ -99,6 +100,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   })
 
   app.get('/api/health', async () => ({ ok: true }))
+  registerCompliance(app, ctx)
   registerAuth(app, ctx)
   registerCampaigns(app, ctx)
   registerRecords(app, ctx)

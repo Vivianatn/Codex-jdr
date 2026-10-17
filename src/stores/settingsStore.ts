@@ -19,6 +19,8 @@ export interface SettingsState {
   locale: Locale
   /** Animated dice in the roll feed (results are shown either way). */
   diceAnimation: boolean
+  /** Big roll animation in the middle of the screen during a live game (D-268). On by default. */
+  diceStage: boolean
   /** The play screen is always dark (« table à la chandelle », DA §10.6). */
   playDark: boolean
   /** Barely visible paper grain behind the preparation screens (DA §6.5). */
@@ -41,6 +43,7 @@ export interface SettingsState {
   setAnimations: (level: AnimationLevel) => void
   setLocale: (locale: Locale) => void
   setDiceAnimation: (on: boolean) => void
+  setDiceStage: (on: boolean) => void
   setPlayDark: (on: boolean) => void
   setPaperGrain: (on: boolean) => void
   setTextSize: (size: TextSize) => void
@@ -63,6 +66,7 @@ export const useSettingsStore = create<SettingsState>()(
       animations: 'full',
       locale: 'fr',
       diceAnimation: true,
+      diceStage: true,
       playDark: true,
       paperGrain: true,
       textSize: 100,
@@ -76,6 +80,7 @@ export const useSettingsStore = create<SettingsState>()(
       setAnimations: (animations) => set({ animations }),
       setLocale: (locale) => set({ locale }),
       setDiceAnimation: (diceAnimation) => set({ diceAnimation }),
+      setDiceStage: (diceStage) => set({ diceStage }),
       setPlayDark: (playDark) => set({ playDark }),
       setPaperGrain: (paperGrain) => set({ paperGrain }),
       setTextSize: (textSize) => set({ textSize }),
@@ -95,6 +100,7 @@ export const useSettingsStore = create<SettingsState>()(
         animations,
         locale,
         diceAnimation,
+        diceStage,
         playDark,
         paperGrain,
         textSize,
@@ -108,6 +114,7 @@ export const useSettingsStore = create<SettingsState>()(
         animations,
         locale,
         diceAnimation,
+        diceStage,
         playDark,
         paperGrain,
         textSize,

@@ -7,6 +7,8 @@ import { server } from '@/online/server/api'
 import { registerOnline, signInOnline } from '@/online/server/signIn'
 import type { AccountSummary } from '@/security/accounts'
 import { checkPassword } from '@/security/passwords'
+import { consentComplete, legalApi, type ConsentValue } from '@/features/legal/legalApi'
+import { TermsConsent } from '@/features/legal/TermsConsent'
 import { signInErrorMessage } from './signInErrors'
 import { PasswordField } from './PasswordField'
 
@@ -100,6 +102,8 @@ export function OnlineRegisterForm({
   const [confirm, setConfirm] = useState('')
   // Honeypot (launch checklist point 18): people never see it, bots fill it in.
   const [website, setWebsite] = useState('')
+  // Terms accepted and age declared (D-271), recorded on the server right after sign-up.
+  const [consent, setConsent] = useState<ConsentValue>({ accepted: false, age: null })
   const [sent, setSent] = useState(false)
   const { busy, error, run } = useSubmit()
   return (
@@ -109,7 +113,10 @@ export function OnlineRegisterForm({
       onSubmit={run(async () => {
         setSent(true)
         if (checkPassword(password, displayName) || password !== confirm || website) return
+        if (!consentComplete(consent)) return
         const { account, key } = await registerOnline({ email, displayName, password })
+        // If this fails, the terms gate asks again once inside (never a lost account).
+        await legalApi.acceptTerms(consent.age).catch(() => null)
         await onEntered(account, key)
       })}
     >
@@ -151,6 +158,7 @@ export function OnlineRegisterForm({
         username: displayName,
         showErrors: sent,
       })}
+      <TermsConsent value={consent} onChange={setConsent} showErrors={sent} />
       {error && (
         <p role="alert" className="text-sm font-medium text-hp-text">
           {error}

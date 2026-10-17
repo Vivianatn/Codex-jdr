@@ -86,4 +86,26 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX friendships_addressee ON friendships (addressee)
   `,
+  // 3: legal (D-271): terms accepted and age declared, moderation flags, reports (DSA art. 16).
+  `
+  ALTER TABLE users ADD COLUMN terms_version text;
+  ALTER TABLE users ADD COLUMN terms_accepted_at timestamptz;
+  ALTER TABLE users ADD COLUMN age_declaration text;
+  ALTER TABLE users ADD COLUMN profile_hidden_at timestamptz;
+  ALTER TABLE users ADD COLUMN suspended_at timestamptz;
+  CREATE TABLE reports (
+    id uuid PRIMARY KEY,
+    reporter_id uuid REFERENCES users ON DELETE SET NULL,
+    target_type text NOT NULL CHECK (target_type IN ('profile')),
+    target_id text NOT NULL,
+    snapshot jsonb NOT NULL,
+    category text NOT NULL,
+    explanation text NOT NULL,
+    status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'actioned', 'dismissed')),
+    decision text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    decided_at timestamptz
+  );
+  CREATE INDEX reports_status ON reports (status, created_at)
+  `,
 ]

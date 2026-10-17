@@ -35,6 +35,7 @@ services:
       CODEX_SITE_URL: https://${CODEX_DOMAIN}
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      MODERATION_EMAIL: ${MODERATION_EMAIL:-}
     depends_on:
       codex-db:
         condition: service_healthy

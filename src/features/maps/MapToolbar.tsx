@@ -162,7 +162,7 @@ export function MapToolbar({
       className={cn(
         'flex gap-1 p-1',
         orientation === 'bar'
-          ? 'codex-glass items-center !rounded-lg'
+          ? 'codex-glass flex-wrap items-center justify-center !rounded-lg'
           : 'w-[60px] flex-col items-center border-r border-line bg-surface py-2',
       )}
     >

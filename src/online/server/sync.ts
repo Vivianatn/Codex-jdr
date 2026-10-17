@@ -96,6 +96,8 @@ export class SyncEngine {
   private unsubscribe: (() => void) | null = null
   private queue: Promise<void> = Promise.resolve()
   private pushing = false
+  /** Campaigns with a pull waiting in the queue. */
+  private readonly pulls = new Set<string>()
   private online = false
   private stopped = false
   private readonly db: () => CodexDB
@@ -182,10 +184,17 @@ export class SyncEngine {
     })
   }
 
-  /** Someone changed this campaign: fetch it. */
-  pullSoon(campaignId: string): void {
+  /**
+   * Someone changed this campaign (up to revision `rev`): fetch it. Notices
+   * arriving while a pull waits are covered by it; one already read is skipped (D-270).
+   */
+  pullSoon(campaignId: string, rev?: number): void {
+    if (this.pulls.has(campaignId)) return
+    this.pulls.add(campaignId)
     void this.enqueue(async () => {
+      this.pulls.delete(campaignId)
       const state = this.states.get(campaignId)
+      if (rev !== undefined && state && state.rev >= rev) return
       if (state && this.isSynced(campaignId)) await this.pullNow(campaignId, state)
     })
   }

@@ -17,6 +17,8 @@ export interface Config {
   /** `smtp://user:password@host:587` (or smtps://…); empty = no e-mail. */
   smtpUrl: string
   mailFrom: string
+  /** Where new reports are announced (DSA notice and action, D-271); empty = nowhere. */
+  moderationEmail: string
   /** End-to-end tests only (`CODEX_RELAX_LIMITS=true`): account routes allow many more tries. */
   relaxLimits: boolean
   /** Session cookie only over HTTPS (off for the local dev server). */
@@ -53,6 +55,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     publicUrl: (env.CODEX_SITE_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
     smtpUrl: env.SMTP_URL ?? '',
     mailFrom: env.MAIL_FROM ?? 'Codex <ne-pas-repondre@codex.invalid>',
+    moderationEmail: env.MODERATION_EMAIL ?? '',
     relaxLimits: dev && env.CODEX_RELAX_LIMITS === 'true',
     secureCookies: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : !dev,
     dev,

@@ -3,6 +3,8 @@ import { activeDb } from '@/db/db'
 import { emptyLibrary, type Campaign } from '@/db/types'
 import { createEntity } from '@/domain/entity'
 import { isRevealed, newElement, newMap, type GameMap } from '@/domain/maps'
+import { withOwner } from '@/domain/familiars'
+import { addGroup, addMember } from '@/domain/turns'
 import type { Entity } from '@/domain/types'
 import { getMessages } from '@/i18n'
 import { configuredRules } from '@/test/fixtures'
@@ -226,5 +228,113 @@ describe('passages (D-256)', () => {
     campaignHistory.getState().undo()
     expect(mapOf(hall.id).tokens).toHaveLength(2)
     expect(mapOf(cellar.id).tokens).toHaveLength(0)
+  })
+})
+
+describe('the GM’s board in play (D-269)', () => {
+  function crew() {
+    const lyra = character('player', 'Lyra')
+    const ogre = character('enemy', 'Ogre')
+    const owl = withOwner(
+      createEntity('familiar', 'c1', rules, { identity: { pseudo: 'Hibou' } }),
+      lyra.id,
+    )
+    const wolf = withOwner(
+      createEntity('familiar', 'c1', rules, { identity: { pseudo: 'Loup' } }),
+      ogre.id,
+    )
+    const map = newMap('c1', { name: 'Crypte', cols: 10, rows: 10 })
+    map.tokens = [
+      { id: 'tk-lyra', entityId: lyra.id, col: 2, row: 2, size: 1, hidden: false },
+      { id: 'tk-owl', entityId: owl.id, col: 3, row: 2, size: 1, hidden: false },
+      { id: 'tk-ogre', entityId: ogre.id, col: 7, row: 7, size: 1, hidden: false },
+      { id: 'tk-wolf', entityId: wolf.id, col: 7, row: 8, size: 1, hidden: false },
+    ]
+    return { lyra, ogre, owl, wolf, map }
+  }
+  const labels = () => campaignHistory.getState().past.map((e) => e.label)
+
+  it('takes a player character off the board with its familiar and out of the turns, never deleting it', async () => {
+    const { lyra, ogre, owl, wolf, map } = crew()
+    const actions = await setup([lyra, ogre, owl, wolf], map)
+    store().updatePlay((p) => addMember(addGroup(p, 'Héros', 'h'), 'h', lyra.id), 'groups')
+    campaignHistory.getState().clear()
+
+    actions.removeFromBoard(lyra.id, { fromTurns: true })
+    expect(mapOf(map.id).tokens.map((tk) => tk.id)).toEqual(['tk-ogre', 'tk-wolf'])
+    expect(store().play.groups[0]!.memberIds).toEqual([])
+    expect(store().entities[lyra.id]).toBeDefined()
+    expect(labels()).toEqual([t.crew.removedFromBoard('Lyra')])
+
+    campaignHistory.getState().undo()
+    expect(mapOf(map.id).tokens).toHaveLength(4)
+    expect(store().play.groups[0]!.memberIds).toEqual([lyra.id])
+  })
+
+  it('keeps the character in the turns unless asked', async () => {
+    const { lyra, ogre, owl, wolf, map } = crew()
+    const actions = await setup([lyra, ogre, owl, wolf], map)
+    store().updatePlay((p) => addMember(addGroup(p, 'Héros', 'h'), 'h', lyra.id), 'groups')
+    actions.removeFromBoard(lyra.id)
+    expect(store().play.groups[0]!.memberIds).toEqual([lyra.id])
+  })
+
+  it('deletes an enemy everywhere in one undoable step, its familiar leaving the board', async () => {
+    const { lyra, ogre, owl, wolf, map } = crew()
+    const actions = await setup([lyra, ogre, owl, wolf], map)
+    store().updatePlay((p) => addMember(addGroup(p, 'Monstres', 'm'), 'm', ogre.id), 'groups')
+    campaignHistory.getState().clear()
+
+    actions.deleteEnemy(ogre.id)
+    expect(store().entities[ogre.id]).toBeUndefined()
+    expect(store().entities[wolf.id]).toBeDefined()
+    expect(mapOf(map.id).tokens.map((tk) => tk.id)).toEqual(['tk-lyra', 'tk-owl'])
+    expect(store().play.groups[0]!.memberIds).toEqual([])
+    expect(labels()).toEqual([t.crew.enemyDeleted('Ogre')])
+
+    campaignHistory.getState().undo()
+    expect(store().entities[ogre.id]).toBeDefined()
+    expect(mapOf(map.id).tokens).toHaveLength(4)
+    expect(store().play.groups[0]!.memberIds).toEqual([ogre.id])
+  })
+
+  it('never deletes a player character as an enemy', async () => {
+    const { lyra, ogre, owl, wolf, map } = crew()
+    const actions = await setup([lyra, ogre, owl, wolf], map)
+    actions.deleteEnemy(lyra.id)
+    expect(store().entities[lyra.id]).toBeDefined()
+  })
+
+  it('brings a familiar next to its master, sharing its turn', async () => {
+    const { lyra, ogre, owl, wolf, map } = crew()
+    map.tokens = map.tokens.filter((tk) => tk.id !== 'tk-owl' && tk.id !== 'tk-wolf')
+    map.tokens[1] = { ...map.tokens[1]!, hidden: true } // a hidden ogre
+    const actions = await setup([lyra, ogre, owl, wolf], map)
+    store().updatePlay((p) => addMember(addGroup(p, 'Tous', 'g'), 'g', owl.id), 'groups')
+    campaignHistory.getState().clear()
+
+    actions.addFamiliar(map.id, owl.id)
+    const placed = mapOf(map.id).tokens.find((tk) => tk.entityId === owl.id)!
+    expect(Math.max(Math.abs(placed.col - 2), Math.abs(placed.row - 2))).toBe(1)
+    expect(placed.hidden).toBe(false)
+    expect(store().play.groups[0]!.memberIds).toEqual([])
+    expect(labels()).toEqual([t.crew.familiarPlaced('Hibou', 'Lyra')])
+
+    actions.addFamiliar(map.id, wolf.id)
+    expect(mapOf(map.id).tokens.find((tk) => tk.entityId === wolf.id)!.hidden).toBe(true)
+
+    campaignHistory.getState().undo()
+    campaignHistory.getState().undo()
+    expect(mapOf(map.id).tokens).toHaveLength(2)
+    expect(store().play.groups[0]!.memberIds).toEqual([owl.id])
+  })
+
+  it('refuses a free familiar', async () => {
+    const { lyra, map } = crew()
+    const stray = createEntity('familiar', 'c1', rules)
+    map.tokens = []
+    const actions = await setup([lyra, stray], map)
+    actions.addFamiliar(map.id, stray.id)
+    expect(mapOf(map.id).tokens).toHaveLength(0)
   })
 })

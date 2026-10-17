@@ -8,8 +8,9 @@ import { activeDb } from '@/db/db'
 import { CandleOrnament, Ornament } from '@/components/Brand'
 import { entityName, normalizeEntityShape } from '@/domain/entity'
 import { normalizeMap } from '@/domain/maps'
-import { galleryPosition, normalizePlayState } from '@/domain/turns'
+import { galleryPosition, normalizePlayState, turnActors } from '@/domain/turns'
 import type { Entity } from '@/domain/types'
+import { LiveDiceStage } from '@/features/dice/DiceStage'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { withDefaultRules } from '@/rules'
@@ -124,6 +125,7 @@ export function PlayerView() {
               mode="view"
               labels={labels}
               activeEntityId={turn.status === 'playing' ? turn.memberId : null}
+              activeEntityIds={turnActors(play, entities)}
               camera={camera}
               className="relative size-full overflow-hidden"
             />
@@ -181,6 +183,9 @@ export function PlayerView() {
           {t.maps.fullscreen}
         </button>
       </div>
+
+      {/* Every roll of the game, big, in the roller's colour (D-268). */}
+      <LiveDiceStage campaignId={campaignId} entities={entities} active={Boolean(play.live)} />
     </div>
   )
 }

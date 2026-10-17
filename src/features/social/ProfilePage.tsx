@@ -17,6 +17,7 @@ import { AdventurersPanel } from './AdventurersPanel'
 import { ProfileCard } from './ProfileCard'
 import { ProfileEditor } from './ProfileEditor'
 import { RelationButton } from './RelationButton'
+import { ReportButton } from './ReportDialog'
 import { usePendingAdventurers, useRelation } from './socialState'
 
 /** `#/profil`: one's own profile, adventurers and account; `#/profil/:userId`: someone else's (D-267). */
@@ -137,7 +138,11 @@ function OtherProfile({ userId }: { userId: string }) {
   return (
     <div className="space-y-6">
       <ProfileCard profile={profile} actions={<RelationButton user={profile} />} />
-      <BackToMine />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <BackToMine />
+        {/* Notice and action on a public profile (DSA art. 16, D-271). */}
+        <ReportButton userId={profile.id} name={profile.displayName} />
+      </div>
     </div>
   )
 }

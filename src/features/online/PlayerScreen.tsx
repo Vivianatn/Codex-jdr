@@ -1,22 +1,30 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { UserRound } from 'lucide-react'
+import { ChevronDown, ChevronUp, UserRound } from 'lucide-react'
 import { GameIcon } from '@/components/GameIcon'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router'
-import { Button } from '@/components/ui/Button'
+import { Button, IconButton } from '@/components/ui/Button'
 import { TextField } from '@/components/ui/TextField'
 import { activeDb } from '@/db/db'
 import { effectiveStats, entityHpMax, entityName, normalizeEntityShape } from '@/domain/entity'
+import { controlledBy } from '@/domain/familiars'
+import { playerColorOf } from '@/domain/playerColors'
 import { normalizeMap } from '@/domain/maps'
-import { galleryPosition, normalizePlayState, type PlayerDisplay } from '@/domain/turns'
+import { galleryPosition, normalizePlayState, turnActors, type PlayerDisplay } from '@/domain/turns'
 import { STAT_KEYS, type Entity } from '@/domain/types'
+import { HpBar } from '@/features/characters/HpBar'
 import { Portrait } from '@/features/characters/Portrait'
+import { STAT_STYLES } from '@/features/characters/statStyles'
+import { PartyStrip, type Presence } from '@/features/play/PartyStrip'
+import { LiveDiceStage } from '@/features/dice/DiceStage'
 import { AppHeader } from '@/features/shell/AppHeader'
 import { useSurface } from '@/app/useSurface'
 import { useIntlLocale, useT } from '@/i18n'
 import { chooseCharacter, sendIntent } from '@/online/controller'
 import { useOnlineStore } from '@/online/onlineStore'
 import { withDefaultRules } from '@/rules'
+import { useUiStore } from '@/stores/uiStore'
+import { cn } from '@/lib/cn'
 import { GuestBadge } from './JoinDialog'
 
 // Konva loads with the board only.
@@ -41,6 +49,21 @@ export function PlayerScreen() {
   const play = useMemo(() => normalizePlayState(campaign?.play), [campaign?.play])
   const mine = online.peers.find((p) => p.id === online.selfId)?.characterIds ?? []
   const character = entities?.find((e) => e.id === mine[0])
+  // The player rolls and moves for their character and its familiars, nothing else (D-269).
+  const controlled = [...controlledBy(entities ?? [], mine)]
+  const familiars = (entities ?? []).filter(
+    (e) => controlled.includes(e.id) && !mine.includes(e.id),
+  )
+  const entityMap = useMemo(
+    () => Object.fromEntries((entities ?? []).map((e) => [e.id, e])),
+    [entities],
+  )
+  const players = useMemo(
+    () => (entities ?? []).filter((e) => e.kind === 'player').map(normalizeEntityShape),
+    [entities],
+  )
+  const sheetOpen = useUiStore((s) => s.play.playerSheet)
+  const setPanels = useUiStore((s) => s.setPlayPanels)
 
   if (online.role !== 'guest' || online.guestRole !== 'player' || online.campaignId !== campaignId)
     return <Navigate to="/" replace />
@@ -56,6 +79,13 @@ export function PlayerScreen() {
       : t.online.dragHint
   const turn = play.turn
   const active = turn.status === 'playing' ? turn.memberId : null
+  const actors = turnActors(play, entities ?? [])
+  // Who else is at the table (D-272): the players connected to this game.
+  const presence = (id: string): Presence => {
+    const peer = online.peers.find((p) => p.characterIds.includes(id))
+    if (peer?.status === 'connected' || mine.includes(id)) return 'online'
+    return live?.mode === 'online' ? 'offline' : null
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -67,10 +97,11 @@ export function PlayerScreen() {
         <ChooseCharacter characters={(entities ?? []).filter((e) => e.kind === 'player')} />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+          {/* Board first (D-272): the map takes every pixel the sheet leaves. */}
           <main
             id="main"
             aria-label={t.play.mapRegion}
-            className="relative min-h-[50vh] flex-1 bg-bg"
+            className="@container/board relative min-h-0 flex-1 bg-bg"
           >
             <ShownPicture campaignId={campaignId} display={play.display} />
             {map ? (
@@ -79,8 +110,9 @@ export function PlayerScreen() {
                   map={map}
                   entities={entities ?? []}
                   rules={rules}
-                  mine={mine}
+                  mine={controlled}
                   activeEntityId={active}
+                  activeEntityIds={actors}
                   canMove={canMove}
                 />
               </Suspense>
@@ -89,18 +121,74 @@ export function PlayerScreen() {
                 {t.online.noMap}
               </p>
             )}
+            <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex sm:inset-x-3 sm:top-3">
+              <PartyStrip
+                players={players}
+                entities={entities ?? []}
+                rules={rules}
+                activeIds={actors}
+                presence={presence}
+                selfIds={mine}
+                className="pointer-events-auto w-fit"
+              />
+            </div>
           </main>
           <aside
             aria-label={t.online.sheet}
-            className="w-full shrink-0 space-y-5 overflow-y-auto border-l border-line bg-surface p-4 lg:w-80"
+            className={cn(
+              'flex shrink-0 flex-col border-t border-line bg-surface lg:max-h-none lg:w-80 lg:border-t-0 lg:border-l',
+              sheetOpen ? 'max-h-[45%]' : '',
+            )}
             data-testid="player-panel"
           >
-            <p role="status" className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-ink-muted">
-              {active === character.id ? t.online.yourTurn : status}
-            </p>
-            <Sheet character={normalizeEntityShape(character)} rules={rules} canAct={canMove} />
-            <Rolls campaignId={campaignId} entities={entities ?? []} />
+            <div className="flex shrink-0 items-center gap-2 p-2 sm:px-3">
+              <p
+                role="status"
+                className={cn(
+                  'min-w-0 flex-1 rounded-lg px-3 py-2 text-sm',
+                  active === character.id
+                    ? 'border border-gold-line bg-gold-soft font-semibold text-gold-text'
+                    : 'bg-surface-2 text-ink-muted',
+                )}
+              >
+                {active === character.id ? t.online.yourTurn : status}
+              </p>
+              <IconButton
+                label={sheetOpen ? t.party.sheetHide : t.party.sheetShow}
+                icon={sheetOpen ? <ChevronDown /> : <ChevronUp />}
+                aria-expanded={sheetOpen}
+                aria-controls="player-sheet"
+                onClick={() => setPanels({ playerSheet: !sheetOpen })}
+                className="lg:hidden"
+              />
+            </div>
+            <div
+              id="player-sheet"
+              className={cn(
+                'min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3 pb-4',
+                !sheetOpen && 'max-lg:hidden',
+              )}
+            >
+              <Sheet character={normalizeEntityShape(character)} rules={rules} canAct={canMove} />
+              {familiars.length > 0 && (
+                <section aria-label={t.crew.yourFamiliars} className="space-y-4">
+                  <h2 className="type-eyebrow text-ink-muted">{t.crew.yourFamiliars}</h2>
+                  {familiars.map((f) => (
+                    <Sheet
+                      key={f.id}
+                      character={normalizeEntityShape(f)}
+                      rules={rules}
+                      canAct={canMove}
+                      heading="h3"
+                    />
+                  ))}
+                </section>
+              )}
+              <Rolls campaignId={campaignId} entities={entities ?? []} />
+            </div>
           </aside>
+          {/* Every roll of the game, big, in the roller's colour (D-268). */}
+          <LiveDiceStage campaignId={campaignId} entities={entityMap} active={Boolean(live)} />
         </div>
       )}
     </div>
@@ -177,45 +265,73 @@ function Sheet({
   character,
   rules,
   canAct,
+  heading: Heading = 'h1',
 }: {
   character: Entity
   rules: ReturnType<typeof withDefaultRules>
   canAct: boolean
+  /** The player's character is the page title; their familiars come under it (D-269). */
+  heading?: 'h1' | 'h3'
 }) {
   const t = useT()
   const [expression, setExpression] = useState('')
   const stats = effectiveStats(character, rules)
   const max = entityHpMax(character, rules)
   return (
-    <section className="space-y-4">
+    <section className="space-y-3" data-player-color={playerColorOf(character) ?? undefined}>
       <div className="flex items-center gap-3">
-        <Portrait src={character.identity.portrait} name={entityName(character)} size="md" />
+        <Portrait
+          src={character.identity.portrait}
+          name={entityName(character)}
+          size={Heading === 'h1' ? 'md' : 'sm'}
+          className={Heading === 'h1' ? 'size-12 text-lg' : undefined}
+        />
         <div className="min-w-0">
-          <h1 className="truncate type-section text-ink">{entityName(character)}</h1>
+          <Heading className="truncate type-section text-ink">{entityName(character)}</Heading>
           <p className="text-xs text-ink-muted">
             {character.identity.className} · Nv {character.level}
           </p>
         </div>
       </div>
-      <p className="text-sm text-ink tabular-nums">
-        <strong>{character.hp.current}</strong> / {max} PV
-        {character.hp.temp > 0 && <span className="text-ink-muted"> (+{character.hp.temp})</span>}
-      </p>
-      <ul className="grid grid-cols-2 gap-2">
+      <HpBar
+        current={character.hp.current}
+        max={max}
+        temp={character.hp.temp}
+        thresholds={rules.hp}
+        entityId={character.id}
+      />
+      {/* One tap per test, four per row (D-272): the whole sheet fits a phone. */}
+      <ul className="grid grid-cols-4 gap-1.5">
         {STAT_KEYS.map((stat) => (
           <li key={stat}>
-            <Button
-              size="sm"
-              className="w-full justify-between"
+            <button
+              type="button"
+              className={cn(
+                'flex h-11 w-full flex-col items-center justify-center rounded-md leading-tight hover:brightness-95 disabled:opacity-60',
+                STAT_STYLES[stat].soft,
+              )}
               disabled={!canAct}
               onClick={() =>
                 sendIntent({ type: 'check', entityId: character.id, stat, mode: 'normal' })
               }
-              aria-label={t.online.test(t.stats.names[stat])}
+              aria-label={
+                Heading === 'h1'
+                  ? t.online.test(t.stats.names[stat])
+                  : t.crew.test(t.stats.names[stat], entityName(character))
+              }
             >
-              <span>{t.stats.abbr[stat]}</span>
-              <span className="tabular-nums">{stats[stat].total}</span>
-            </Button>
+              <span
+                className={cn(
+                  'text-[0.625rem] font-bold tracking-[0.08em]',
+                  STAT_STYLES[stat].text,
+                )}
+              >
+                {t.stats.abbr[stat]}
+              </span>
+              <span className="text-sm font-semibold text-ink tabular-nums">
+                {stats[stat].total}
+              </span>
+            </button>
           </li>
         ))}
       </ul>
@@ -230,7 +346,7 @@ function Sheet({
       >
         <TextField
           className="flex-1"
-          label={t.online.rollLabel}
+          label={Heading === 'h1' ? t.online.rollLabel : t.crew.rollFor(entityName(character))}
           placeholder={t.online.rollPlaceholder}
           value={expression}
           maxLength={60}
@@ -257,7 +373,7 @@ function Rolls({ campaignId, entities }: { campaignId: string; entities: Entity[
     async () =>
       (await activeDb().rolls.where('campaignId').equals(campaignId).toArray())
         .sort((a, b) => b.at - a.at)
-        .slice(0, 15),
+        .slice(0, 10),
     [campaignId],
   )
   const name = (id: string | null) => {
@@ -266,7 +382,7 @@ function Rolls({ campaignId, entities }: { campaignId: string; entities: Entity[
   }
   return (
     <section>
-      <h2 className="text-sm font-semibold text-ink">{t.online.rolls}</h2>
+      <h2 className="type-eyebrow text-ink-muted">{t.online.rolls}</h2>
       {!rolls?.length ? (
         <p className="mt-1 text-xs text-ink-muted">{t.online.noRolls}</p>
       ) : (

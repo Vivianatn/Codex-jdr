@@ -20,7 +20,7 @@ describe('createEntity', () => {
     const e = createEntity('player', 'c1', rules, { hpRoll: 14, identity: { pseudo: 'Gorak' } })
     expect(entityHpMax(e, rules)).toBe(25)
     expect(e.hp).toMatchObject({ roll: 14, fixedMax: null, current: 25, temp: 0 })
-    expect(e.details).toEqual({ xp: 0 })
+    expect(e.details).toEqual({ xp: 0, color: null })
     expect(entityName(e)).toBe('Gorak')
   })
 

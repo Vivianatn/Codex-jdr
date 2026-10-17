@@ -10,6 +10,7 @@ import { useT } from '@/i18n'
 import { whenIdle } from '@/lib/dom'
 import { lockSession, onLock, useSessionStore } from '@/security/session'
 import { announceLock, followSession, serveSession } from '@/security/sessionChannel'
+import { TermsGate } from '@/features/legal/TermsGate'
 import { LockScreen } from './LockScreen'
 
 // Loaded on demand: it pulls the online code, kept out of the lock screen (D-255).
@@ -78,7 +79,12 @@ function UnlockedApp() {
         <LinkRequired />
       </Suspense>
     )
-  return <Outlet />
+  // The current terms, accepted once per version (D-271).
+  return (
+    <TermsGate userId={onlineUser}>
+      <Outlet />
+    </TermsGate>
+  )
 }
 
 /** Players' window: never asks for the password in front of the players. */

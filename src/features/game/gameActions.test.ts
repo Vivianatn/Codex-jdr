@@ -5,6 +5,8 @@ import { conditionFromTemplate } from '@/domain/conditions'
 import { defaultRules } from '@/rules'
 import { configuredRules, TEST_CONDITIONS } from '@/test/fixtures'
 import { createEntity, normalizeSkill } from '@/domain/entity'
+import { withOwner } from '@/domain/familiars'
+import { addGroup, addMember } from '@/domain/turns'
 import { equip, newItem } from '@/domain/items'
 import type { Entity } from '@/domain/types'
 import { getMessages } from '@/i18n'
@@ -114,6 +116,40 @@ describe('game actions', () => {
     campaignHistory.getState().undo()
     expect(entity(g.id).hp.current).toBe(25)
     expect(entity(g.id).conditions).toHaveLength(1)
+  })
+
+  it('a familiar plays during its master’s turn, with its start-of-turn effects (D-269)', async () => {
+    const g = hero('Gorak')
+    const other = hero('Lyra')
+    const owl = withOwner(
+      createEntity('familiar', 'c1', rules, { identity: { pseudo: 'Hibou' }, hpMax: 20 }),
+      g.id,
+    )
+    owl.conditions = [{ ...conditionFromTemplate(TEST_CONDITIONS.poisoned), remaining: 3 }]
+    await setup(g, other, owl)
+    // A saved game where the owl still has its own slot.
+    useCampaignStore
+      .getState()
+      .updatePlay(
+        (p) =>
+          addMember(
+            addMember(addMember(addGroup(p, 'Tous', 'all'), 'all', g.id), 'all', owl.id),
+            'all',
+            other.id,
+          ),
+        'groups',
+      )
+    campaignHistory.getState().clear()
+    const actions = createGameActions(t, campaign, d20(20))
+    const before = entity(owl.id).hp.current
+    actions.startTurns()
+    expect(useCampaignStore.getState().play.turn).toMatchObject({ memberId: g.id })
+    expect(entity(owl.id).hp.current).toBe(before - 4)
+    expect(useCampaignStore.getState().play.groups[0]!.memberIds).toEqual([g.id, other.id])
+    actions.nextTurn()
+    expect(useCampaignStore.getState().play.turn).toMatchObject({ memberId: other.id })
+    // One undo per step.
+    expect(campaignHistory.getState().past).toHaveLength(2)
   })
 
   it('uses a consumable: heals, spends one unit, single undo', async () => {

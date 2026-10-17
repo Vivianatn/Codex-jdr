@@ -18,7 +18,16 @@ import {
   transferItem,
   unequip,
 } from '@/domain/items'
-import { nextTurn, resumeTurns, startTurns, stopTurns, type TurnState } from '@/domain/turns'
+import { turnFamiliars } from '@/domain/familiars'
+import {
+  nextTurn,
+  resumeTurns,
+  startTurns,
+  stopTurns,
+  withoutAttachedFamiliars,
+  type PlayState,
+  type TurnState,
+} from '@/domain/turns'
 import {
   levelForXp,
   longRest,
@@ -61,6 +70,8 @@ export function createGameActions(t: Messages, campaign: Campaign, rng?: Rng) {
   const store = () => useCampaignStore.getState()
   const get = (id: string) => store().entities[id]
   const statName = (stat: StatKey) => t.stats.names[stat]
+  /** The play state without slots for attached familiars (D-269): they play with their master. */
+  const playNow = (): PlayState => withoutAttachedFamiliars(store().play, store().entities)
 
   function record(input: NewRoll): RollRecord {
     const saved = useRollStore.getState().add(input)
@@ -688,8 +699,9 @@ export function createGameActions(t: Messages, campaign: Campaign, rng?: Rng) {
 
     /** Round 1: the first character of the first group plays. */
     startTurns() {
-      const play = startTurns(store().play)
-      if (play === store().play) return
+      const current = playNow()
+      const play = startTurns(current)
+      if (play === current) return
       campaignHistory.getState().transaction(t.turns.started, () => {
         store().updatePlay(() => play, t.turns.started)
         beginTurn(play.turn)
@@ -698,20 +710,21 @@ export function createGameActions(t: Messages, campaign: Campaign, rng?: Rng) {
 
     /** The next character plays; after the last group comes the GM's turn. */
     nextTurn() {
-      const current = store().play
+      const current = playNow()
       const { turn } = nextTurn(current)
       if (turn === current.turn) return
       const label = turn.status === 'gm' ? t.turns.gmTurn : t.turns.next
       campaignHistory.getState().transaction(label, () => {
-        store().updatePlay((p) => ({ ...p, turn }), label)
+        store().updatePlay(() => ({ ...current, turn }), label)
         beginTurn(turn)
       })
     },
 
     /** The GM gives the hand back: next round, from the first group. */
     resumeTurns() {
-      const play = resumeTurns(store().play)
-      if (play === store().play) return
+      const current = playNow()
+      const play = resumeTurns(current)
+      if (play === current) return
       const label = t.turns.resumed(play.turn.status === 'playing' ? play.turn.round : 0)
       campaignHistory.getState().transaction(label, () => {
         store().updatePlay(() => play, label)
@@ -808,8 +821,17 @@ export function createGameActions(t: Messages, campaign: Campaign, rng?: Rng) {
     if (turn.status === 'playing') {
       const entity = get(turn.memberId)
       if (!entity) return
+      // Its familiars play with it (D-269): their start-of-turn effects apply too.
+      const familiars = turnFamiliars(store().entities, entity.id)
       actions.passTurn(turn.memberId)
-      toast(t.turns.yourTurn(entityName(entity)), { duration: 4000 })
+      for (const f of familiars) actions.passTurn(f.id)
+      const names = familiars.map((f) => entityName(f))
+      toast(
+        names.length
+          ? t.crew.yourTurnWith(entityName(entity), new Intl.ListFormat('fr').format(names))
+          : t.turns.yourTurn(entityName(entity)),
+        { duration: 4000 },
+      )
     } else if (turn.status === 'gm') {
       toast(t.turns.gmTurnToast, { duration: 6000 })
     }

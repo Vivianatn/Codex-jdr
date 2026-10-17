@@ -67,6 +67,36 @@ export const fr = {
     remove: (name: string) => `Suppression de ${name}`,
     spawn: (count: number, name: string) => `Ajout de ${count} × ${name}`,
   },
+  diceStage: {
+    region: 'Lancer de dés en cours',
+    announce: (who: string, label: string, total: number, outcome: string | null) =>
+      `${who}, ${label} : ${total}${outcome ? `, ${outcome}` : ''}`,
+    moreDice: (n: number) => `+${n} dé${n > 1 ? 's' : ''}`,
+    skip: 'Échap pour passer',
+    secret: 'Jet secret',
+  },
+  playerColors: {
+    title: 'Couleur du joueur',
+    hint: 'Elle colore ses lancers, son pion et ceux de ses familiers. Codex en attribue une quand le joueur rejoint une partie.',
+    names: {
+      crimson: 'Cramoisi',
+      azure: 'Azur',
+      emerald: 'Émeraude',
+      copper: 'Cuivre',
+      plum: 'Prune',
+      teal: 'Sarcelle',
+      rose: 'Rose',
+      moss: 'Mousse',
+      indigo: 'Indigo',
+      ice: 'Glacier',
+      gm: 'Or du MJ',
+    },
+    none: 'Aucune couleur',
+    takenBy: (name: string) => `aussi portée par ${name}`,
+    of: (name: string) => `Couleur de ${name}`,
+    assigned: (name: string) => `Couleur attribuée à ${name}`,
+    changed: (name: string) => `Couleur de ${name} modifiée`,
+  },
   dice: {
     title: 'Dés',
     open: 'Dés et historique des jets',
@@ -613,6 +643,58 @@ export const fr = {
     ungrouped: 'Sans groupe',
     noneUngrouped: 'Tous les personnages sont dans un groupe.',
     open: (name: string) => `Manipuler ${name}`,
+    groupActions: (name: string) => `Actions du groupe ${name}`,
+  },
+  /** Who acts with whom, who rolls, the GM's board in play (D-269). */
+  crew: {
+    sharesTurn: (master: string) => `Joue au tour de ${master}`,
+    yourTurnWith: (name: string, familiars: string) => `Au tour de ${name}, avec ${familiars}`,
+    actors: 'Qui joue',
+    rollFor: (name: string) => `Lancer les dés pour ${name}`,
+    tests: 'Tests',
+    test: (stat: string, name: string) => `Tester ${stat} pour ${name}`,
+    removeFromBoard: 'Retirer du plateau',
+    boardMenu: (name: string) => `Plateau et tours : ${name}`,
+    removeFromBoardAndTurns: 'Retirer du plateau et des tours',
+    removeFromTurns: 'Retirer des tours',
+    removedFromBoard: (name: string) => `${name} retiré du plateau`,
+    familiarsFollow: (n: number) =>
+      n === 1
+        ? 'Son familier quitte le plateau avec lui.'
+        : `Ses ${n} familiers quittent le plateau avec lui.`,
+    deleteEnemy: 'Supprimer l’ennemi',
+    deleteEnemyTitle: (name: string) => `Supprimer ${name} ?`,
+    deleteEnemyBody:
+      'L’ennemi disparaît de la campagne, des cartes et des groupes. Ctrl+Z l’annule.',
+    enemyDeleted: (name: string) => `${name} supprimé`,
+    addFamiliar: 'Ajouter un familier',
+    addFamiliarHint:
+      'Familiers reliés à un personnage joueur ou à un ennemi. Ils jouent au tour de leur maître.',
+    noFamiliars:
+      'Aucun familier n’est relié à un personnage joueur ou à un ennemi. Relie-le depuis sa fiche (Identité).',
+    noMapInPlay: 'Mets une carte en jeu pour y placer un familier.',
+    onBoard: 'déjà sur le plateau',
+    placeFamiliar: (name: string) => `Placer ${name}`,
+    place: 'Placer',
+    familiarPlaced: (name: string, master: string) => `${name} rejoint ${master}`,
+    yourFamiliars: 'Tes familiers',
+  },
+  /** The players at the table, always in view (D-272). */
+  party: {
+    title: 'Joueurs à la table',
+    card: (name: string, hp: number, max: number, extra: string) =>
+      `${name} : ${hp} / ${max} PV${extra}`,
+    online: 'en ligne',
+    offline: 'hors ligne',
+    playing: 'à son tour',
+    you: 'toi',
+    conditions: (names: string) => `états : ${names}`,
+    familiar: (name: string, master: string) => `${name}, familier de ${master}`,
+    compact: 'Réduire la bande des joueurs',
+    expand: 'Déplier la bande des joueurs',
+    none: 'Aucun personnage joueur dans la campagne.',
+    sheetShow: 'Afficher ta fiche',
+    sheetHide: 'Masquer ta fiche',
   },
   quick: {
     title: (name: string) => `Manipulation rapide : ${name}`,
@@ -634,6 +716,10 @@ export const fr = {
     conditions: 'États',
     addCondition: 'Ajouter un état',
     fullSheet: 'Fiche complète',
+    testsAndStats: 'Tests et caractéristiques',
+    sections: 'Objets ou états',
+    itemsTab: (n: number) => (n ? `Objets (${n})` : 'Objets'),
+    conditionsTab: (n: number) => (n ? `États (${n})` : 'États'),
   },
   levelUp: {
     xp: 'Expérience',
@@ -1757,6 +1843,10 @@ export const fr = {
     noMapBody: 'Prépare une carte dans Préparation › Cartes pour la retrouver ici.',
     goToMaps: 'Aller aux cartes',
     quickAccess: 'Accès rapide',
+    railShow: 'Afficher les tours et groupes',
+    railHide: 'Masquer les tours et groupes',
+    railButton: 'Tours',
+    boardOptions: 'Options du plateau',
     party: 'Groupe',
     partyEmpty: 'Aucun joueur dans le groupe.',
     enemies: 'Ennemis présents',
@@ -1785,6 +1875,9 @@ export const fr = {
     animationsHint: 'Le réglage « réduire les animations » de ton système est toujours respecté.',
     diceAnimation: 'Animation des dés',
     diceAnimationHint: 'Coupe-la pour afficher les résultats immédiatement.',
+    diceStage: 'Grande animation des dés',
+    diceStageHint:
+      'Pendant une partie, chaque lancer s’affiche en grand au milieu de l’écran, à la couleur du joueur.',
     language: 'Langue',
     languageFrench: 'Français',
   },
@@ -1812,7 +1905,7 @@ export const fr = {
   credits: {
     title: 'Crédits',
     icons: 'Icônes de jeu dessinées par Lorc, Delapouite et les autres auteurs de',
-    iconsLicence: '(licence CC BY 3.0).',
+    iconsLicence: '(licence CC BY 3.0 ; fond retiré et couleur adaptée par Codex).',
     fonts:
       'Polices Alegreya, Alegreya SC et Source Sans 3, sous licence SIL Open Font License 1.1.',
     lucide: 'Icônes d’interface Lucide, sous licence ISC.',
@@ -1839,7 +1932,7 @@ export const fr = {
       'Si tu y notes des informations sur de vraies personnes (prénoms, pseudos Discord, portraits), informe-les et n’en garde que le nécessaire.',
       'Partage : tes co-MJ voient toute la campagne ; les joueurs ne reçoivent que ce qui est visible à la table, et leur copie est effacée quand ils quittent la partie. Supprimer ton compte en ligne efface aussi ses campagnes du serveur.',
       'Durée : les données restent tant que tu ne les supprimes pas. Supprimer une campagne efface tout ce qui lui appartient.',
-      'Tes droits : accès et portabilité avec « Tout exporter » (fichier JSON lisible), effacement avec « Tout effacer » ou « Supprimer le compte ».',
+      'Tes droits : accès et portabilité avec « Télécharger mes données » (tout ce que le serveur garde sur ton compte) et « Tout exporter » (campagnes réimportables), effacement avec « Tout effacer » ou « Supprimer mon compte en ligne ». Pour le reste, écris à l’adresse de la page Contact du site.',
       'Les fichiers exportés ne sont pas chiffrés : ils quittent la protection de Codex, range-les en lieu sûr.',
     ],
     exportAll: 'Tout exporter',
@@ -2090,6 +2183,88 @@ export const fr = {
     restoreBody:
       'Tes campagnes actuelles seront remplacées par celles de la sauvegarde. Une copie de l’état actuel est faite juste avant, pour pouvoir revenir en arrière.',
     restored: 'Sauvegarde restaurée.',
+  },
+  // Legal texts, consent, reports and data export (D-271)
+  legal: {
+    alpha: 'Alpha',
+    alphaLabel: 'Version alpha : ce que cela implique (s’ouvre dans un nouvel onglet)',
+    acceptBefore: 'J’accepte les ',
+    terms: 'conditions d’utilisation',
+    acceptMiddle: ' et j’ai lu la ',
+    privacy: 'politique de confidentialité',
+    acceptAfter: '.',
+    newTab: '(nouvel onglet)',
+    acceptRequired: 'Accepte les conditions d’utilisation pour créer ton compte.',
+    ageLegend: 'Ton âge',
+    ageAdult: 'J’ai 15 ans ou plus',
+    ageParental:
+      'J’ai moins de 15 ans et un parent ou responsable légal est d’accord pour que j’utilise Codex',
+    ageRequired: 'Indique ton âge pour créer ton compte.',
+    gateTitle: 'Conditions d’utilisation',
+    gateNew: 'Pour continuer, accepte les conditions d’utilisation de Codex.',
+    gateChanged:
+      'Les conditions d’utilisation de Codex ont changé. Lis-les et accepte-les pour continuer.',
+    gateContinue: 'Continuer',
+    gateLock: 'Plus tard (verrouiller)',
+    gateFailed: 'Le serveur n’a pas enregistré ton accord. Réessaie dans un instant.',
+    gateRefuseHint:
+      'Tu ne veux pas les accepter ? Télécharge tes données ci-dessous, puis écris-nous (page Contact du site) pour supprimer ton compte.',
+    suspended:
+      'Ce compte est suspendu. Tu as reçu les motifs par e-mail ; pour contester, écris à l’adresse de la page Contact du site.',
+    profileHidden:
+      'Ton profil a été masqué par la modération : la devise et les images ne peuvent pas être modifiées pour le moment.',
+    // Data export (GDPR art. 15 and 20)
+    downloadData: 'Télécharger mes données',
+    downloadDataHint:
+      'Tout ce que le serveur garde sur ton compte en ligne (profil, aventuriers, adhésions, demandes, signalements) et le contenu complet des campagnes dont tu es le MJ, dans un fichier JSON.',
+    downloaded: 'Tes données sont téléchargées.',
+    downloadFailed: 'Téléchargement impossible : vérifie ta connexion et réessaie.',
+    // About
+    aboutTitle: 'À propos',
+    version: (v: string) => `Codex ${v} · version alpha`,
+    alphaNotice:
+      'Codex est en alpha : des fonctions peuvent changer et des données peuvent être perdues. Exporte régulièrement tes campagnes.',
+    links: {
+      terms: 'Conditions d’utilisation',
+      privacy: 'Confidentialité et cookies',
+      legal: 'Mentions légales',
+      accessibility: 'Accessibilité',
+      contact: 'Contact et signalement',
+    },
+    // Reports (DSA art. 16)
+    report: 'Signaler',
+    reportTitle: 'Signaler ce profil',
+    reportIntro:
+      'Ton signalement est examiné par une personne. Le compte signalé ne saura pas qui l’a signalé.',
+    reportCategory: 'Motif',
+    categories: {
+      hate: 'Haine, discrimination, apologie de la violence',
+      harassment: 'Harcèlement, menaces, insultes',
+      childAbuse: 'Abus sexuel sur mineur (pédocriminalité)',
+      terrorism: 'Terrorisme',
+      privacy: 'Atteinte à la vie privée ou au droit à l’image',
+      impersonation: 'Usurpation d’identité',
+      intellectualProperty: 'Contrefaçon, droit d’auteur',
+      scam: 'Arnaque, fraude, spam',
+      otherIllegal: 'Autre contenu illégal',
+      terms: 'Contraire aux conditions d’utilisation (sans être illégal)',
+    },
+    reportExplanation: 'Explique pourquoi ce contenu pose problème',
+    reportExplanationHint: (min: number, max: number) => `${min} à ${max} caractères`,
+    reportExplanationShort: (min: number) =>
+      `Explique en ${min} caractères au moins ce qui pose problème.`,
+    reportGoodFaith:
+      'Je déclare de bonne foi que les informations de ce signalement sont exactes et complètes.',
+    reportGoodFaithRequired: 'Confirme que tu signales de bonne foi.',
+    reportAnonymous: 'Ne pas transmettre mon identité avec ce signalement',
+    reportAnonymousHint:
+      'Possible pour ce motif uniquement. Tu ne recevras alors ni accusé de réception ni décision par e-mail.',
+    reportSend: 'Envoyer le signalement',
+    reportSent: (reference: string) =>
+      `Signalement reçu (référence ${reference}). Tu recevras la décision par e-mail.`,
+    reportSentAnonymous: (reference: string) => `Signalement reçu (référence ${reference}).`,
+    reportPharos:
+      'Contenu pédocriminel, terroriste ou menace grave : signale-le aussi sur internet-signalement.gouv.fr (Pharos).',
   },
   time: {
     justNow: 'à l’instant',

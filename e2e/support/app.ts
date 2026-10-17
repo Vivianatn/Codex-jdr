@@ -55,6 +55,9 @@ export async function createAccount(
   await page.getByLabel(/Nom affiché/).fill(username)
   await page.getByLabel(/^Mot de passe/).fill(E2E_PASSWORD)
   await page.getByLabel('Confirme le mot de passe').fill(E2E_PASSWORD)
+  // Age and terms (D-271).
+  await page.getByRole('radio', { name: 'J’ai 15 ans ou plus' }).check()
+  await page.getByRole('checkbox', { name: /J’accepte les conditions d’utilisation/ }).check()
   await page.getByRole('button', { name: 'Créer mon compte en ligne' }).click()
   await expect(page.getByTestId('lock-screen')).toBeHidden({ timeout: 20_000 })
 }

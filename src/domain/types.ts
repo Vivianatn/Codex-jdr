@@ -1,5 +1,7 @@
 /** Core game data model. Pure types: no React, no storage. */
 
+import type { PlayerColorKey } from './playerColors'
+
 export const ENTITY_KINDS = ['player', 'enemy', 'familiar', 'ally'] as const
 export type EntityKind = (typeof ENTITY_KINDS)[number]
 
@@ -282,6 +284,8 @@ export type Disposition = (typeof DISPOSITIONS)[number]
 
 export interface PlayerDetails {
   xp: number
+  /** Colour of the player at the table (D-268): set when they join a game, the GM can change it. */
+  color: PlayerColorKey | null
 }
 export interface EnemyDetails {
   /** Bestiary template it was created from. */

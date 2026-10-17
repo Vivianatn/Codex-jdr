@@ -43,6 +43,7 @@ import {
   type Token,
   type Wall,
 } from '@/domain/maps'
+import { colorIn } from '@/domain/playerColors'
 import type { Entity } from '@/domain/types'
 import { hpBand, type RulesConfig } from '@/rules'
 import { useResolvedTheme } from '@/app/usePreferences'
@@ -91,6 +92,8 @@ export interface MapCanvasProps {
   mode: 'edit' | 'play' | 'view'
   labels: MapCanvasLabels
   activeEntityId?: string | null
+  /** Also highlighted as playing: the familiars sharing the active turn (D-269). */
+  activeEntityIds?: readonly string[]
   /** Controlled camera (players' window following the GM). */
   camera?: Camera | null
   onChange?: MapChange
@@ -715,11 +718,15 @@ export function MapCanvas(props: MapCanvasProps) {
                   token={t}
                   map={map}
                   entity={props.entities[t.entityId]!}
+                  playerColor={playerRing(props.entities, t.entityId, theme)}
                   rules={props.rules}
                   gm={isGm}
                   theme={theme}
                   selected={selectedTokens.includes(t.id) || areaTargets.has(t.id)}
-                  active={props.activeEntityId === t.entityId}
+                  active={
+                    props.activeEntityId === t.entityId ||
+                    Boolean(props.activeEntityIds?.includes(t.entityId))
+                  }
                   draggable={
                     (mode !== 'view' && tool === 'select' && Boolean(props.onChange)) ||
                     (props.movableEntityIds?.includes(t.entityId) ?? false)
@@ -1292,10 +1299,17 @@ function tokenPath(c: Ctx2D, square: boolean, r: number) {
   return 8 * (r - k) + 2 * Math.PI * k
 }
 
+/** Ring colour of a player's token and of their familiars (D-268), or null. */
+function playerRing(entities: Record<string, Entity>, entityId: string, theme: BoardTheme) {
+  const key = colorIn(entities, entityId)
+  return key === 'gm' ? null : theme.token.players[key]
+}
+
 const TokenNode = memo(function TokenNode({
   token,
   map,
   entity,
+  playerColor,
   rules,
   gm,
   theme,
@@ -1310,6 +1324,7 @@ const TokenNode = memo(function TokenNode({
   token: Token
   map: GameMap
   entity: Entity
+  playerColor: string | null
   rules: RulesConfig
   gm: boolean
   theme: BoardTheme
@@ -1341,7 +1356,7 @@ const TokenNode = memo(function TokenNode({
   const band = hpBand(entity.hp.current, max, rules.hp)
   const down = entity.hp.current <= 0
   const showHp = gm || entity.kind !== 'enemy'
-  const fill = T.kinds[entity.kind]
+  const fill = entity.kind === 'player' && playerColor ? playerColor : T.kinds[entity.kind]
   const bandColor = { healthy: T.healthy, wounded: T.wounded, critical: T.critical, down: T.down }[
     band
   ]
@@ -1446,6 +1461,15 @@ const TokenNode = memo(function TokenNode({
           c.lineWidth = edge
           c.strokeStyle = token.hidden && gm ? T.hiddenEdge : T.edge
           c.stroke()
+          // The player's colour, all around (D-268).
+          if (playerColor) {
+            c.setLineDash([])
+            const width = T.playerRingWidth * u
+            tokenPath(c, square, r + width / 2)
+            c.lineWidth = width
+            c.strokeStyle = playerColor
+            c.stroke()
+          }
           c.restore()
           ctx.fillStrokeShape(shape)
         }}

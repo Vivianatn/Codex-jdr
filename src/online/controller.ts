@@ -48,7 +48,12 @@ interface Guest {
   campaignId: string
   session: GuestSession
   end: RelayEnd
+  /** The connection dropped: the game is resumed when it comes back, or given up (D-270). */
+  away: ReturnType<typeof setTimeout> | null
 }
+
+/** How long a player whose connection dropped waits to get back into the game. */
+const RESUME_TIMEOUT = 45_000
 let guest: Guest | null = null
 let entering: {
   campaignId: string
@@ -97,6 +102,7 @@ export async function connectOnline(account: AccountSummary): Promise<void> {
   socket.start()
   stopOnLock = onLock(disconnectOnline)
   window.addEventListener('online', retrySoon)
+  document.addEventListener('visibilitychange', checkOnReturn)
 }
 
 /** Stops everything online (lock, unlink). Local work goes on. */
@@ -109,13 +115,22 @@ export function disconnectOnline(): void {
   socket = null
   stopOnLock?.()
   stopOnLock = null
-  if (typeof window !== 'undefined') window.removeEventListener('online', retrySoon)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('online', retrySoon)
+    document.removeEventListener('visibilitychange', checkOnReturn)
+  }
   useServerStore.setState(initialServerState)
   useOnlineStore.setState({ selfId: HOST_ID, peers: [] })
 }
 
+/** The network came back: reconnect now, or check that the connection still answers. */
 function retrySoon() {
-  socket?.retryNow()
+  socket?.probe()
+}
+
+/** Back on the tab (a phone woke up): the connection may have died meanwhile. */
+function checkOnReturn() {
+  if (document.visibilityState === 'visible') socket?.probe()
 }
 
 function onOpen() {
@@ -126,6 +141,8 @@ function onOpen() {
   void refreshSessions()
   void refreshSocial()
   if (host) socket?.send({ t: 'serve', campaignId: host.campaignId })
+  // A player whose connection dropped gets back into the game.
+  if (guest?.away) socket?.send({ t: 'enter', campaignId: guest.campaignId })
 }
 
 function onDown(reason: 'signedOut' | 'dropped') {
@@ -140,13 +157,19 @@ function onDown(reason: 'signedOut' | 'dropped') {
     for (const end of host.links.values()) end.end()
     host.links.clear()
   }
-  guest?.end.end()
+  if (guest && !guest.away) {
+    // The player keeps their table and gets back in when the connection returns (D-270).
+    const current = guest
+    current.session.suspend()
+    current.end.end()
+    current.away = setTimeout(() => void current.session.leave(), RESUME_TIMEOUT)
+  }
 }
 
 function onFrame(frame: ServerFrame) {
   switch (frame.t) {
     case 'changed':
-      return engine?.pullSoon(frame.campaignId)
+      return engine?.pullSoon(frame.campaignId, frame.rev)
     case 'campaigns':
       void engine?.reconcile()
       void refreshRequests()
@@ -186,9 +209,12 @@ function onFrame(frame: ServerFrame) {
       return
     case 'entered':
       if (entering?.campaignId === frame.campaignId) entering.resolve()
+      else if (guest?.campaignId === frame.campaignId) resumeGuest(guest)
       return
     case 'enterFailed':
       if (entering?.campaignId === frame.campaignId) entering.reject(new EnterError(frame.reason))
+      // The game ended while the player was away.
+      else if (guest?.away && guest.campaignId === frame.campaignId) void guest.session.leave()
       return
     case 'down':
       return guest?.end.deliver(frame.data)
@@ -439,10 +465,7 @@ export async function enterGame(campaignId: string): Promise<Welcome> {
     }
   }).finally(() => (entering = null))
 
-  const end = relayLink(
-    (data) => socket?.send({ t: 'up', data }),
-    () => socket?.send({ t: 'leave' }),
-  )
+  const end = guestLink()
   const session = new GuestSession(end.link, selfName(), {
     onPeers: (peers) => useOnlineStore.setState({ peers }),
     onRejected: (reason) => toast.error(t().online.rejected[reason]),
@@ -452,7 +475,7 @@ export async function enterGame(campaignId: string): Promise<Welcome> {
       void leaveGuest()
     },
   })
-  guest = { campaignId, session, end }
+  guest = { campaignId, session, end, away: null }
   const timeout = setTimeout(() => void session.leave(), 20_000)
   try {
     const welcome = await session.ready
@@ -473,11 +496,31 @@ export async function enterGame(campaignId: string): Promise<Welcome> {
   }
 }
 
+/**
+ * Back in the game after a dropped connection (new link), or the operator's
+ * device came back (same link): the player says hello again and gets a fresh copy.
+ */
+function resumeGuest(current: Guest): void {
+  if (!current.away) return current.session.rejoin()
+  clearTimeout(current.away)
+  current.away = null
+  current.end = guestLink()
+  current.session.resume(current.end.link)
+}
+
+function guestLink(): RelayEnd {
+  return relayLink(
+    (data) => socket?.send({ t: 'up', data }),
+    () => socket?.send({ t: 'leave' }),
+  )
+}
+
 /** Leaves the game: the copy is deleted, the account's data is back. */
 export async function leaveGuest(): Promise<void> {
   const current = guest
   if (!current) return
   guest = null
+  if (current.away) clearTimeout(current.away)
   const wasIn = useOnlineStore.getState().role === 'guest'
   if (wasIn) {
     await useCampaignStore.getState().unload()

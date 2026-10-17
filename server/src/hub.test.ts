@@ -8,6 +8,7 @@ import {
   testServer,
   type Agent,
 } from './testing.ts'
+import { Hub } from './hub.ts'
 
 let server: Awaited<ReturnType<typeof testServer>>
 let gm: Agent
@@ -250,5 +251,56 @@ describe('real time', () => {
     expect(await catalogue(bran)).toEqual([])
     g.close()
     b.close()
+  })
+})
+
+describe('the operator reconnects (D-270)', () => {
+  async function inGame() {
+    await startGame(gm, 'Gm')
+    const g = await socket(server.app, gm)
+    const l = await socket(server.app, lyra)
+    g.send({ t: 'serve', campaignId: 'camp-1' })
+    expect((await g.next('serving')).ok).toBe(true)
+    l.send({ t: 'enter', campaignId: 'camp-1' })
+    await l.next('entered')
+    await g.next('peer')
+    return { g, l }
+  }
+
+  it('players wait for the operator whose connection dropped, then say hello again', async () => {
+    const { g, l } = await inGame()
+    g.close()
+    await new Promise((r) => setTimeout(r, 100))
+    expect(l.frames.some((f) => f.t === 'hostGone')).toBe(false)
+
+    const back = await socket(server.app, gm)
+    back.send({ t: 'serve', campaignId: 'camp-1' })
+    expect((await back.next('serving')).ok).toBe(true)
+    expect(await back.next('peer')).toMatchObject({ peerId: lyra.userId, characterId: 'char-lyra' })
+    await l.next('entered')
+    l.send({ t: 'up', data: { type: 'hello', protocol: 3, name: 'Lyra' } })
+    expect((await back.next('up')).peerId).toBe(lyra.userId)
+    back.close()
+    l.close()
+  })
+
+  it('a player may come back while the operator is away; the wait has an end', async () => {
+    const grace = Hub.hostGrace
+    Hub.hostGrace = 300
+    try {
+      const { g, l } = await inGame()
+      g.close()
+      l.close()
+      await new Promise((r) => setTimeout(r, 50))
+      const again = await socket(server.app, lyra)
+      again.send({ t: 'enter', campaignId: 'camp-1' })
+      await again.next('entered')
+      await again.next('hostGone')
+      again.send({ t: 'enter', campaignId: 'camp-1' })
+      expect((await again.next('enterFailed')).reason).toBe('notLive')
+      again.close()
+    } finally {
+      Hub.hostGrace = grace
+    }
   })
 })

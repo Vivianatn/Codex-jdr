@@ -37,9 +37,20 @@ interface Conn {
 const FRAMES_PER_SECOND = 200
 
 export class Hub {
+  /**
+   * How long the players of a game wait for the operator's device when its
+   * connection drops (D-270): it reconnects and serves them again, they stay in.
+   */
+  static hostGrace = 30_000
+
   private readonly conns = new Set<Conn>()
   /** campaignId → the operator's connection serving its players. */
   private readonly hosts = new Map<string, Conn>()
+  /** campaignId → operator whose connection dropped, and the end of the wait. */
+  private readonly away = new Map<
+    string,
+    { userId: string; timer: ReturnType<typeof setTimeout> }
+  >()
   /** campaignId → userId → player connection. */
   private readonly players = new Map<string, Map<string, Conn>>()
   private readonly db: Db
@@ -72,7 +83,7 @@ export class Hub {
 
   async remove(conn: Conn): Promise<void> {
     if (!this.conns.delete(conn)) return
-    for (const campaignId of conn.serving) this.dropHost(campaignId, conn)
+    for (const campaignId of conn.serving) this.hostAway(campaignId, conn)
     this.leave(conn)
     if (!this.byUser(conn.user.id).length) {
       await this.presenceOfUser(conn.user.id)
@@ -107,8 +118,13 @@ export class Hub {
     }
   }
 
+  /** The operator's device sends one frame per player for each change: its budget grows with them. */
   refill(): void {
-    for (const conn of this.conns) conn.budget = FRAMES_PER_SECOND
+    for (const conn of this.conns) {
+      let players = 0
+      for (const campaignId of conn.serving) players += this.players.get(campaignId)?.size ?? 0
+      conn.budget = FRAMES_PER_SECOND * (1 + players)
+    }
   }
 
   closeSession(tokenHash: string): void {
@@ -122,6 +138,8 @@ export class Hub {
   closeAll(): void {
     for (const conn of this.conns) conn.ws.terminate()
     this.conns.clear()
+    for (const { timer } of this.away.values()) clearTimeout(timer)
+    this.away.clear()
   }
 
   private byUser(userId: string): Conn[] {
@@ -197,13 +215,15 @@ export class Hub {
   async liveChanged(campaignId: string): Promise<void> {
     const host = this.hosts.get(campaignId)
     if (host && !(await this.mayServe(campaignId, host.user.id))) this.dropHost(campaignId, host)
+    const away = this.away.get(campaignId)
+    if (away && !(await this.mayServe(campaignId, away.userId))) this.awayOver(campaignId)
     this.notifyCampaigns(await this.membersOf([campaignId]))
     this.sessionsChanged()
   }
 
   /** Is the operator's device of this campaign serving its players right now? */
   isServing(campaignId: string): boolean {
-    return this.hosts.has(campaignId)
+    return this.hosts.has(campaignId) || this.away.has(campaignId)
   }
 
   /** Everyone connected reads the catalogue of open sessions again (it is small). */
@@ -215,6 +235,7 @@ export class Hub {
   endCampaign(campaignId: string): void {
     const host = this.hosts.get(campaignId)
     if (host) this.dropHost(campaignId, host)
+    this.awayOver(campaignId)
   }
 
   /** A player removed, or whose role or character changed, leaves the game. */
@@ -245,12 +266,56 @@ export class Hub {
     if (this.hosts.get(campaignId) !== host) return
     this.hosts.delete(campaignId)
     this.send(host, { t: 'serving', campaignId, ok: false })
+    this.endGame(campaignId)
+  }
+
+  /** The players are out: the game is over here. */
+  private endGame(campaignId: string): void {
     for (const player of this.players.get(campaignId)?.values() ?? []) {
       player.entered = null
       this.send(player, { t: 'hostGone' })
     }
     this.players.delete(campaignId)
     this.sessionsChanged()
+  }
+
+  /** The operator's connection dropped: its players wait a little for it to come back (D-270). */
+  private hostAway(campaignId: string, host: Conn): void {
+    host.serving.delete(campaignId)
+    if (this.hosts.get(campaignId) !== host) return
+    this.hosts.delete(campaignId)
+    const timer = setTimeout(() => this.awayOver(campaignId), Hub.hostGrace)
+    timer.unref?.()
+    this.away.set(campaignId, { userId: host.user.id, timer })
+  }
+
+  private awayOver(campaignId: string): void {
+    const away = this.away.get(campaignId)
+    if (!away) return
+    clearTimeout(away.timer)
+    this.away.delete(campaignId)
+    this.endGame(campaignId)
+  }
+
+  /** The operator serves again: the players who waited are introduced to it and say hello again. */
+  private async welcomeBack(campaignId: string, host: Conn): Promise<void> {
+    const players = [...(this.players.get(campaignId)?.values() ?? [])]
+    if (!players.length) return
+    const rows = await this.db.query<{ user_id: string; character_id: string | null }>(
+      'SELECT user_id, character_id FROM members WHERE campaign_id = $1',
+      [campaignId],
+    )
+    for (const player of players) {
+      if (this.hosts.get(campaignId) !== host || player.entered !== campaignId) continue
+      this.send(host, {
+        t: 'peer',
+        campaignId,
+        peerId: player.user.id,
+        name: player.user.displayName,
+        characterId: rows.find((r) => r.user_id === player.user.id)?.character_id ?? null,
+      })
+      this.send(player, { t: 'entered', campaignId })
+    }
   }
 
   private leave(conn: Conn): void {
@@ -279,14 +344,20 @@ export class Hub {
       case 'serve': {
         const { campaignId } = frame
         const ok = await this.mayServe(campaignId, conn.user.id)
+        const away = this.away.get(campaignId)
         if (ok) {
           const previous = this.hosts.get(campaignId)
           if (previous && previous !== conn) this.dropHost(campaignId, previous)
           this.hosts.set(campaignId, conn)
           conn.serving.add(campaignId)
+          if (away) {
+            clearTimeout(away.timer)
+            this.away.delete(campaignId)
+          }
         }
         this.send(conn, { t: 'serving', campaignId, ok })
         if (ok) {
+          if (away) await this.welcomeBack(campaignId, conn)
           this.notifyCampaigns(await this.membersOf([campaignId], ['player']))
           this.sessionsChanged()
         }
@@ -303,7 +374,9 @@ export class Hub {
         if (member?.role !== 'player')
           return this.send(conn, { t: 'enterFailed', campaignId, reason: 'forbidden' })
         const host = this.hosts.get(campaignId)
-        if (!host) return this.send(conn, { t: 'enterFailed', campaignId, reason: 'notLive' })
+        // While the operator's device reconnects, players enter and wait for it.
+        if (!host && !this.away.has(campaignId))
+          return this.send(conn, { t: 'enterFailed', campaignId, reason: 'notLive' })
         this.leave(conn)
         // The same player from another tab or device: the newest one plays.
         const players = this.players.get(campaignId) ?? new Map<string, Conn>()
@@ -315,13 +388,14 @@ export class Hub {
         players.set(conn.user.id, conn)
         this.players.set(campaignId, players)
         conn.entered = campaignId
-        this.send(host, {
-          t: 'peer',
-          campaignId,
-          peerId: conn.user.id,
-          name: conn.user.displayName,
-          characterId: member.character_id,
-        })
+        if (host)
+          this.send(host, {
+            t: 'peer',
+            campaignId,
+            peerId: conn.user.id,
+            name: conn.user.displayName,
+            characterId: member.character_id,
+          })
         return this.send(conn, { t: 'entered', campaignId })
       }
       case 'leave':

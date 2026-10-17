@@ -162,6 +162,14 @@ export function registerSocial(app: FastifyInstance, ctx: Ctx): void {
     }
     const avatar = imageField(body, 'avatar', AVATAR_MAX)
     const banner = imageField(body, 'banner', BANNER_MAX)
+    // A profile hidden by moderation (D-271) keeps no motto or picture until the operator restores it.
+    if (body.bio || avatar || banner) {
+      const [row] = await ctx.db.query<{ hidden: boolean }>(
+        'SELECT profile_hidden_at IS NOT NULL AS hidden FROM users WHERE id = $1',
+        [self],
+      )
+      if (row?.hidden) throw new ApiError(403, 'forbidden', { profileHidden: true })
+    }
     if (avatar !== undefined) set('avatar', avatar)
     if (banner !== undefined) set('banner', banner)
     if (avatar !== undefined || banner !== undefined) sets.push('profile_rev = profile_rev + 1')

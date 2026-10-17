@@ -1,3 +1,4 @@
+import type { PlayerColorKey } from '@/domain/playerColors'
 import type { Entity } from '@/domain/types'
 
 /**
@@ -35,6 +36,10 @@ export interface BoardTheme {
   brush: string
   token: {
     kinds: Record<Entity['kind'] | 'npc', string>
+    /** Player colours (D-268, same values as --codex-player-*): ring of their tokens and familiars. */
+    players: Record<PlayerColorKey, string>
+    /** u: width of the player colour ring, around the token's edge. */
+    playerRingWidth: number
     edge: string
     edgeWidth: number
     ringTrack: string
@@ -99,6 +104,31 @@ const KINDS_LIGHT = {
 }
 const KINDS_DARK = { ...KINDS_LIGHT, player: '#4D86C9' }
 
+const PLAYERS_LIGHT: Record<PlayerColorKey, string> = {
+  crimson: '#B8322C',
+  azure: '#2F64C0',
+  emerald: '#2E8B57',
+  copper: '#B8632A',
+  plum: '#96407A',
+  teal: '#178A87',
+  rose: '#D0587A',
+  moss: '#7D8A24',
+  indigo: '#5651B8',
+  ice: '#4A9FC4',
+}
+const PLAYERS_DARK: Record<PlayerColorKey, string> = {
+  crimson: '#D9524A',
+  azure: '#5A8BE0',
+  emerald: '#3FAE6E',
+  copper: '#D27D3E',
+  plum: '#C066A3',
+  teal: '#26AAA5',
+  rose: '#E46F90',
+  moss: '#9FAE3A',
+  indigo: '#7F79DE',
+  ice: '#6CBDE0',
+}
+
 export const BOARD_LIGHT: BoardTheme = {
   name: 'light',
   bg: '#E6DFD0',
@@ -123,6 +153,8 @@ export const BOARD_LIGHT: BoardTheme = {
   brush: '#9A2A23',
   token: {
     kinds: KINDS_LIGHT,
+    players: PLAYERS_LIGHT,
+    playerRingWidth: 4,
     edge: '#FFFDF8',
     edgeWidth: 2,
     ringTrack: 'rgba(33,28,38,0.18)',
@@ -207,6 +239,8 @@ export const BOARD_DARK: BoardTheme = {
   brush: '#E2B45C',
   token: {
     kinds: KINDS_DARK,
+    players: PLAYERS_DARK,
+    playerRingWidth: 4,
     edge: '#15110D',
     edgeWidth: 2,
     ringTrack: 'rgba(0,0,0,0.35)',
@@ -291,6 +325,7 @@ export const BOARD_PLAYERS: BoardTheme = {
     edgeWidth: 3,
     ringWidth: 5,
     active: { color: '#E0AE4E', width: 5, glow: 'rgba(224,174,78,0.50)', blur: 28 },
+    playerRingWidth: 5,
     selection: null,
     condition: { ...BOARD_DARK.token.condition, size: 24 },
     moveFill: null,

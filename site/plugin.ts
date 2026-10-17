@@ -57,18 +57,27 @@ const HEADER = `<header class="site-header">
         <img src="/favicon.svg" alt="" width="28" height="28" />
         <span>Codex</span>
       </a>
+      <a class="site-alpha" href="/cgu#alpha" title="Version alpha : ce que cela implique">Alpha</a>
     </header>`
 
+/**
+ * Every page links to the legal pages (LCEN, RGPD, CNIL cookies, RGAA: the
+ * accessibility status is a mandatory mention, décret 2019-768 art. 4) and to
+ * the single point of contact for reports (DSA art. 11, 12 and 16).
+ */
 const FOOTER = `<footer class="site-footer">
       <nav aria-label="Informations légales">
         <ul>
-          <li><a href="/confidentialite">Confidentialité</a></li>
-          <li><a href="/cgu">Conditions d’utilisation</a></li>
           <li><a href="/mentions-legales">Mentions légales</a></li>
+          <li><a href="/confidentialite">Confidentialité</a></li>
+          <li><a href="/confidentialite#cookies">Cookies</a></li>
+          <li><a href="/cgu">Conditions d’utilisation</a></li>
+          <li><a href="/accessibilite">Accessibilité : ${escape(SITE.accessibility.status)}</a></li>
+          <li><a href="/contact">Contact et signalement</a></li>
           <li><button type="button" class="site-link" data-consent-open>Mesure d’audience</button></li>
         </ul>
       </nav>
-      <p>© ${new Date().getFullYear()} ${SITE.name}, ${SITE.tagline.toLowerCase()}.</p>
+      <p>© ${new Date().getFullYear()} ${SITE.name}, ${SITE.tagline.toLowerCase()}. Version ${escape(SITE.version)}.</p>
     </footer>`
 
 /** `{{site.publisher.email}}` → the value from SITE (escaped). */

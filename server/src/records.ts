@@ -33,7 +33,8 @@ import type { Queryable } from './db.ts'
 const PAGE_RECORDS = 1000
 const PAGE_BYTES = 16 * 1024 * 1024
 
-const aad = (table: string, id: string, campaignId: string) => `${table}|${id}|${campaignId}`
+/** Additional data binding a sealed record to its place (also read by the account export, D-271). */
+export const aad = (table: string, id: string, campaignId: string) => `${table}|${id}|${campaignId}`
 
 /** Pictures from a device must be raster images (D-243). */
 function sanitize(table: SyncTable, record: Record<string, unknown>): Record<string, unknown> {

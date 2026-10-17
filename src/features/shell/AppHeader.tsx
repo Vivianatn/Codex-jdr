@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { LockKeyhole } from 'lucide-react'
 import { IconButton } from '@/components/ui/Button'
 import { SettingsButton, ThemeToggle } from '@/features/settings/SettingsDialog'
+import { AlphaBadge } from '@/features/legal/AlphaBadge'
 import { ProfileButton } from '@/features/social/ProfileButton'
 import { useT } from '@/i18n'
 import { lockSession } from '@/security/session'
@@ -26,7 +27,10 @@ export function AppHeader({
         className,
       )}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2">{start}</div>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {start}
+        <AlphaBadge />
+      </div>
       {center && (
         <div className="order-last flex basis-full justify-center sm:order-none sm:shrink-0 sm:basis-auto">
           {center}

@@ -1,14 +1,23 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { ExternalLink, ImagePlus, Map as MapIcon, MonitorPlay } from 'lucide-react'
+import {
+  Crosshair,
+  ExternalLink,
+  IdCard,
+  ImagePlus,
+  Map as MapIcon,
+  MonitorPlay,
+} from 'lucide-react'
 import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { buttonClasses } from '@/components/ui/buttonStyles'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { assetRepository } from '@/db/assets'
-import type { PlayerDisplay } from '@/domain/turns'
+import { turnActors, type PlayerDisplay } from '@/domain/turns'
 import { useMapActions } from '@/features/game/useMapActions'
+import { useBoardSlots } from '@/features/play/boardSlots'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import { fitImage, imageFromFile } from '@/lib/images'
@@ -66,6 +75,8 @@ export function PlayMap() {
   const map = play.mapId ? maps[play.mapId] : undefined
   const channel = useRef<ReturnType<typeof openViewChannel> | null>(null)
   const activeEntityId = play.turn.status === 'playing' ? play.turn.memberId : null
+  // Familiars play with their master (D-269): highlighted with it.
+  const actors = useMemo(() => turnActors(play, entities), [play, entities])
   const hasMaps = Object.keys(maps).length > 0
 
   useEffect(() => {
@@ -115,6 +126,7 @@ export function PlayMap() {
   // Same shortcuts as in the editor: Delete removes the selection, R turns an element (D-260).
   useMapKeys(mapId ? onChange : null, { tokens: false })
   const setDiceOpen = useUiStore((s) => s.setDiceOpen)
+  const slots = useBoardSlots()
 
   if (!map)
     return (
@@ -125,18 +137,18 @@ export function PlayMap() {
             title={t.play.noMapTitle}
             body={hasMaps ? t.maps.noMapBody : t.play.noMapBody}
             actions={
-              hasMaps ? (
-                <MapTreeMenu />
-              ) : (
-                <Link to={`/c/${campaign.id}/prep/maps`} className={buttonClasses('secondary')}>
-                  {t.play.goToMaps}
-                </Link>
-              )
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {hasMaps ? (
+                  <MapTreeMenu />
+                ) : (
+                  <Link to={`/c/${campaign.id}/prep/maps`} className={buttonClasses('secondary')}>
+                    {t.play.goToMaps}
+                  </Link>
+                )}
+                <PlayerViewMenu campaignId={campaign.id} display={play.display} />
+              </div>
             }
           />
-        </div>
-        <div className="absolute top-2 right-2">
-          <PlayerViewMenu campaignId={campaign.id} display={play.display} />
         </div>
       </div>
     )
@@ -145,8 +157,57 @@ export function PlayMap() {
     selection.type === 'element' ? map.elements.find((e) => e.id === selection.id) : undefined
   const wall = selection.type === 'wall' ? map.walls.find((w) => w.id === selection.id) : undefined
 
+  // Compact toggles: icon + checkbox, the words from wide screens on (D-272).
   const toggle =
-    'flex h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-muted hover:bg-surface-2 hover:text-ink'
+    'flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-muted hover:bg-surface-2 hover:text-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus pointer-coarse:h-10'
+  const controls = (
+    <div
+      role="group"
+      aria-label={t.play.boardOptions}
+      className="codex-glass flex flex-wrap items-center gap-0.5 !rounded-xl p-1"
+    >
+      <MapTreeMenu />
+      <label className={toggle} title={t.maps.followTurn}>
+        <input
+          type="checkbox"
+          checked={followTurn}
+          onChange={(e) => useMapViewStore.getState().setFollowTurn(e.target.checked)}
+          className="size-4 accent-[var(--codex-accent)]"
+        />
+        <Crosshair className="size-4 @5xl/board:hidden" aria-hidden />
+        <span className="sr-only @5xl/board:not-sr-only">{t.maps.followTurn}</span>
+      </label>
+      <label className={toggle} title={t.mini.pinPlayersHint}>
+        <input
+          type="checkbox"
+          checked={pinSheets}
+          onChange={(e) => useMapViewStore.getState().setPinPlayerSheets(e.target.checked)}
+          className="size-4 accent-[var(--codex-accent)]"
+        />
+        <IdCard className="size-4 @5xl/board:hidden" aria-hidden />
+        <span className="sr-only @5xl/board:not-sr-only">{t.mini.pinPlayers}</span>
+      </label>
+      <LayersMenu />
+    </div>
+  )
+  const tools = (
+    <div className="flex min-w-0 flex-col items-center gap-2">
+      <ToolOptions />
+      <MapToolbar tools={PLAY_TOOLS}>
+        <span className="mx-0.5 h-7 w-px bg-line" aria-hidden />
+        <button
+          type="button"
+          onClick={() => setDiceOpen(true)}
+          aria-label={t.maps.rollDice}
+          title={t.maps.rollDice}
+          className="inline-flex size-11 items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-ink [&_svg]:size-5"
+        >
+          <GameIcon name="rolling-dices" aria-hidden />
+        </button>
+        <PlayerViewMenu campaignId={campaign.id} display={play.display} />
+      </MapToolbar>
+    </div>
+  )
   return (
     <div className="relative size-full">
       <MapCanvas
@@ -158,6 +219,7 @@ export function PlayMap() {
         labels={labels}
         mapNames={mapNames}
         activeEntityId={activeEntityId}
+        activeEntityIds={actors}
         onChange={onChange}
         onTokenOpen={(id) => {
           const view = useMapViewStore.getState()
@@ -174,50 +236,32 @@ export function PlayMap() {
       />
       <TokenSheets map={map} entities={entities} />
 
-      {/* Map controls, top right (DA §10.6: everything floats over the board). */}
-      <div className="codex-glass absolute top-4 right-4 z-10 flex flex-wrap items-center gap-0.5 !rounded-xl p-1 pl-2">
-        <MapTreeMenu />
-        <label className={toggle}>
-          <input
-            type="checkbox"
-            checked={followTurn}
-            onChange={(e) => useMapViewStore.getState().setFollowTurn(e.target.checked)}
-            className="size-4 accent-[var(--codex-accent)]"
-          />
-          {t.maps.followTurn}
-        </label>
-        <label className={toggle} title={t.mini.pinPlayersHint}>
-          <input
-            type="checkbox"
-            checked={pinSheets}
-            onChange={(e) => useMapViewStore.getState().setPinPlayerSheets(e.target.checked)}
-            className="size-4 accent-[var(--codex-accent)]"
-          />
-          {t.mini.pinPlayers}
-        </label>
-        <LayersMenu />
-      </div>
-
-      {/* Tools, bottom centre. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-5 z-10 flex flex-col items-center gap-2 px-4">
-        <ToolOptions className="pointer-events-auto" />
-        <div className="pointer-events-auto">
-          <MapToolbar tools={PLAY_TOOLS}>
-            <span className="mx-0.5 h-7 w-px bg-line" aria-hidden />
-            <button
-              type="button"
-              onClick={() => setDiceOpen(true)}
-              aria-label={t.maps.rollDice}
-              title={t.maps.rollDice}
-              className="inline-flex size-11 items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-ink [&_svg]:size-5"
-            >
-              <GameIcon name="rolling-dices" aria-hidden />
-            </button>
-            <PlayerViewMenu campaignId={campaign.id} display={play.display} />
-          </MapToolbar>
-        </div>
-      </div>
-      <ZoomControl map={map} className="absolute right-4 bottom-5 z-10 hidden md:flex" />
+      {/* Board chrome: in the play layout slots (D-272), else floating over the board (DA §10.6). */}
+      {slots?.top ? (
+        createPortal(controls, slots.top)
+      ) : (
+        <div className="absolute top-4 right-4 z-10">{controls}</div>
+      )}
+      {slots?.bottom ? (
+        createPortal(
+          <div className="grid w-full grid-cols-[1fr_minmax(0,auto)_1fr] items-end gap-2">
+            <span aria-hidden />
+            <div className="pointer-events-auto min-w-0">{tools}</div>
+            <ZoomControl
+              map={map}
+              className="pointer-events-auto hidden justify-self-end @4xl/board:flex"
+            />
+          </div>,
+          slots.bottom,
+        )
+      ) : (
+        <>
+          <div className="pointer-events-none absolute inset-x-0 bottom-5 z-10 flex justify-center px-4">
+            <div className="pointer-events-auto min-w-0">{tools}</div>
+          </div>
+          <ZoomControl map={map} className="absolute right-4 bottom-5 z-10 hidden md:flex" />
+        </>
+      )}
 
       {area ? (
         <AreaPanel map={map} area={area} />
@@ -269,7 +313,7 @@ function PlayerViewMenu({ campaignId, display }: { campaignId: string; display: 
             )}
           >
             <MonitorPlay aria-hidden />
-            {t.maps.playerView}
+            <span className="sr-only @2xl/board:not-sr-only">{t.maps.playerView}</span>
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>

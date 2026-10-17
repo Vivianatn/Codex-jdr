@@ -38,14 +38,18 @@ export function AnimatedDie({
   rolling = false,
   tone = 'default',
   size = 40,
+  rollMs = ROLL_MS,
   onLanded,
 }: {
   value: number
   sides: number
   kept?: boolean
   rolling?: boolean
-  tone?: 'default' | 'gold' | 'red'
+  /** `player`: the colour of the nearest data-player-color ancestor (D-268). */
+  tone?: 'default' | 'gold' | 'red' | 'player'
   size?: number
+  /** How long the faces flicker before the die lands. */
+  rollMs?: number
   onLanded?: () => void
 }) {
   // Start on another face; the real value only appears when the die lands.
@@ -60,14 +64,14 @@ export function AnimatedDie({
       setShown(value)
       setLanded(true)
       onLanded?.()
-    }, ROLL_MS)
+    }, rollMs)
     return () => {
       clearInterval(tick)
       clearTimeout(stop)
     }
     // Runs once per roll; `onLanded` is a callback that may change identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rolling, sides, value])
+  }, [rolling, sides, value, rollMs])
 
   const display = landed || !rolling ? value : shown
   return (
@@ -100,14 +104,22 @@ export function AnimatedDie({
               ? 'fill-gold-soft stroke-gold-line'
               : tone === 'red'
                 ? 'fill-hp-soft stroke-hp'
-                : 'fill-surface-raised stroke-gold-line',
+                : tone === 'player'
+                  ? 'fill-player-soft stroke-player'
+                  : 'fill-surface-raised stroke-gold-line',
           )}
         />
       </svg>
       <span
         className={cn(
           'tabular relative font-display font-bold',
-          tone === 'gold' ? 'text-gold-text' : tone === 'red' ? 'text-hp-text' : 'text-ink',
+          tone === 'gold'
+            ? 'text-gold-text'
+            : tone === 'red'
+              ? 'text-hp-text'
+              : tone === 'player'
+                ? 'text-player-text'
+                : 'text-ink',
           sides === 4 && 'mt-2',
           !kept && 'line-through',
         )}

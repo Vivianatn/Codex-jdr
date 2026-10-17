@@ -7,6 +7,9 @@ import { GameIcon } from '@/components/GameIcon'
 import { Button, IconButton } from '@/components/ui/Button'
 import { CheckboxField, SelectField } from '@/components/ui/fields'
 import { createLiveActions } from '@/features/game/liveActions'
+import { PlayerColorDot, PlayerColorPicker } from '@/features/characters/PlayerColorPicker'
+import { ensurePlayerColor, setPlayerColor } from '@/features/characters/playerColorActions'
+import { playerColorOf } from '@/domain/playerColors'
 import { RelationButton } from '@/features/social/RelationButton'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
@@ -204,8 +207,20 @@ function LiveSection() {
                 {p.characterIds.map(
                   (id) =>
                     entities[id] && (
-                      <span key={id} className="block text-xs text-ink-muted">
-                        {t.online.playsAs(entities[id].identity.pseudo)}
+                      <span key={id} className="block space-y-1">
+                        <span className="flex items-center gap-1.5 text-xs text-ink-muted">
+                          <PlayerColorDot color={playerColorOf(entities[id])} />
+                          {t.online.playsAs(entities[id].identity.pseudo)}
+                        </span>
+                        <PlayerColorPicker
+                          compact
+                          label={t.playerColors.of(entities[id].identity.pseudo)}
+                          value={playerColorOf(entities[id])}
+                          onChange={(color) => setPlayerColor(t, id, color)}
+                          others={Object.values(entities).filter(
+                            (e) => e.kind === 'player' && e.id !== id,
+                          )}
+                        />
                       </span>
                     ),
                 )}
@@ -346,16 +361,12 @@ function RequestRow({
           variant="primary"
           disabled={busy}
           onClick={() =>
-            act(
-              () =>
-                server.accept(
-                  campaignId,
-                  request.id,
-                  as,
-                  as === 'player' && character ? character : null,
-                ),
-              t.online.accepted(request.displayName),
-            )
+            act(async () => {
+              const assigned = as === 'player' && character ? character : null
+              await server.accept(campaignId, request.id, as, assigned)
+              // The player's colour at the table (D-268).
+              if (assigned) ensurePlayerColor(t, campaignId, assigned)
+            }, t.online.accepted(request.displayName))
           }
         >
           {t.online.accept}
@@ -547,9 +558,10 @@ function Members({ campaignId, role }: { campaignId: string; role: MemberRole })
                     label={t.online.characterOf(m.displayName)}
                     value={m.characterId ?? ''}
                     onChange={(id) =>
-                      run(() =>
-                        server.updateMember(campaignId, m.userId, { characterId: id || null }),
-                      )
+                      run(async () => {
+                        await server.updateMember(campaignId, m.userId, { characterId: id || null })
+                        if (id) ensurePlayerColor(t, campaignId, id)
+                      })
                     }
                     options={characters}
                   />

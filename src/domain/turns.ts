@@ -1,4 +1,6 @@
+import { attachedFamiliarIds, turnFamiliars } from './familiars'
 import type { PlayMode } from './sessions'
+import type { Entity } from './types'
 
 /**
  * Turns by groups (D-226), replacing the combat tracker of the original spec.
@@ -213,6 +215,34 @@ export function pruneMembers(state: PlayState, existing: ReadonlySet<string>): P
       memberIds: g.memberIds.filter((id) => existing.has(id)),
     })),
   }
+}
+
+/**
+ * Familiars attached to a master never have a slot of their own (D-269): they
+ * leave the groups (saved games, a master given after grouping). Removing one
+ * that was playing hands the turn on.
+ */
+export function withoutAttachedFamiliars(
+  state: PlayState,
+  entities: readonly Entity[] | Readonly<Record<string, Entity>>,
+): PlayState {
+  const attached = attachedFamiliarIds(entities)
+  let next = state
+  for (const group of state.groups)
+    for (const id of group.memberIds) if (attached.has(id)) next = removeMember(next, id)
+  return next
+}
+
+/**
+ * Who acts right now (D-269): the character whose turn it is, then the
+ * familiars attached to it. Empty outside a character's turn.
+ */
+export function turnActors(
+  state: PlayState,
+  entities: readonly Entity[] | Readonly<Record<string, Entity>>,
+): string[] {
+  if (state.turn.status !== 'playing') return []
+  return [state.turn.memberId, ...turnFamiliars(entities, state.turn.memberId).map((f) => f.id)]
 }
 
 export function groupOf(state: PlayState, entityId: string): PlayGroup | undefined {

@@ -11,6 +11,10 @@ import { BodyPicker } from '../BodyPicker'
 import { canOwnFamiliars, type OwnerOption } from '@/domain/familiars'
 import type { SheetEditor } from '../useSheetEditor'
 import { FamiliarLinks } from './FamiliarLinks'
+import { useShallow } from 'zustand/react/shallow'
+import { playerColorOf, type PlayerColorKey } from '@/domain/playerColors'
+import { useCampaignStore } from '@/stores/campaignStore'
+import { PlayerColorPicker } from '../PlayerColorPicker'
 
 export interface SheetContext {
   /** Possible familiar masters (players, allies and enemies of the campaign). */
@@ -100,13 +104,16 @@ function KindDetails({
   switch (entity.kind) {
     case 'player':
       return (
-        <NumberInput
-          label={t.details.xp}
-          value={entity.details.xp}
-          min={0}
-          className="max-w-48"
-          onCommit={(xp) => editor.details({ xp })}
-        />
+        <div className="space-y-4">
+          <NumberInput
+            label={t.details.xp}
+            value={entity.details.xp}
+            min={0}
+            className="max-w-48"
+            onCommit={(xp) => editor.details({ xp })}
+          />
+          <PlayerColorField entity={entity} onChange={(color) => editor.details({ color })} />
+        </div>
       )
     case 'enemy':
       return (
@@ -176,4 +183,20 @@ function KindDetails({
         </div>
       )
   }
+}
+
+/** The player's colour at the table (D-268), with who else wears each one. */
+function PlayerColorField({
+  entity,
+  onChange,
+}: {
+  entity: Entity
+  onChange: (color: PlayerColorKey | null) => void
+}) {
+  const others = useCampaignStore(
+    useShallow((s) =>
+      Object.values(s.entities).filter((e) => e.kind === 'player' && e.id !== entity.id),
+    ),
+  )
+  return <PlayerColorPicker value={playerColorOf(entity)} onChange={onChange} others={others} />
 }

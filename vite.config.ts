@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import type { Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
+import { APP_VERSION } from './site/config.ts'
 import { siteInputs, sitePlugin } from './site/plugin.ts'
 
 /**
@@ -56,6 +57,8 @@ export default defineConfig({
   // Several pages (D-248): the public site at /, the app at /app/. No SPA fallback:
   // unknown paths get the 404 page.
   appType: 'mpa',
+  // Version shown in Settings › À propos, from package.json (D-271).
+  define: { __CODEX_VERSION__: JSON.stringify(APP_VERSION) },
   server: {
     proxy: apiProxy,
     // Build outputs and test reports are not sources: watching them also locks them on Windows.

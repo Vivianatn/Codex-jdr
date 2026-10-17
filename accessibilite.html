@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- site:head -->
+    <!-- site:icons -->
+    <meta name="theme-color" content="#ece0c6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#110d0a" media="(prefers-color-scheme: dark)" />
+    <script>
+      document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    </script>
+    <script type="module" src="/site/site.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <!-- site:header -->
+    <main id="contenu" class="prose">
+      <p class="eyebrow">RGAA</p>
+      <h1>Déclaration d’accessibilité</h1>
+      <p class="updated">Établie le {{site.legalUpdated}}</p>
+
+      <p>
+        {{site.publisher.name}} s’engage à rendre Codex accessible, conformément à l’article 47 de
+        la loi n° 2005-102 du 11 février 2005. Cette déclaration s’applique au site public et à
+        l’application Codex (version {{site.version}}).
+      </p>
+
+      <h2>État de conformité</h2>
+      <p>
+        Codex est <strong>{{site.accessibility.status}}</strong> avec le référentiel général
+        d’amélioration de l’accessibilité (RGAA), version 4.1.
+      </p>
+      <p>
+        Aucun audit complet selon la méthode du RGAA n’a encore été réalisé : en l’absence d’audit,
+        le RGAA impose de déclarer le service non conforme, même lorsque, comme ici, de nombreux
+        critères sont vérifiés. Un audit RGAA complet est prévu ; cette déclaration sera alors mise
+        à jour.
+      </p>
+
+      <h2>Ce qui est vérifié aujourd’hui</h2>
+      <ul>
+        <li>
+          Tests automatiques à chaque version avec axe-core (aucune violation grave ou critique
+          tolérée) sur les pages publiques et les écrans principaux de l’application, en thème clair
+          et en thème sombre : contrastes, noms accessibles, structure des titres, champs de
+          formulaire étiquetés.
+        </li>
+        <li>
+          Aucun défilement horizontal de 320 à 1 440 pixels de large ; affichage vérifié avec le
+          texte agrandi à 125 % et 150 %.
+        </li>
+        <li>
+          Navigation au clavier avec focus visible, lien d’évitement vers le contenu, messages
+          d’erreur des formulaires reliés à leur champ et annoncés aux lecteurs d’écran.
+        </li>
+        <li>Réglage pour réduire les animations, respect de la préférence du système.</li>
+      </ul>
+
+      <h2>Contenus non accessibles</h2>
+      <p>Non-conformités connues :</p>
+      <ul>
+        <li>
+          Le plateau de jeu (carte, jetons, brouillard de guerre) est dessiné dans un canevas : il
+          n’est pas utilisable avec un lecteur d’écran et demande une souris ou un écran tactile
+          pour déplacer les jetons. Les fiches et les actions de jeu restent accessibles en dehors
+          du plateau.
+        </li>
+        <li>
+          Les images importées par les utilisateurs (portraits, cartes, bannières) n’ont pas
+          toujours d’alternative textuelle pertinente.
+        </li>
+        <li>
+          Certaines animations de dés et de moments de jeu ne sont pas toutes décrites aux lecteurs
+          d’écran (le résultat, lui, est annoncé).
+        </li>
+      </ul>
+
+      <h2>Établissement de cette déclaration</h2>
+      <dl>
+        <dt>Technologies utilisées</dt>
+        <dd>HTML5, CSS, JavaScript, WAI-ARIA, React, SVG, Canvas.</dd>
+        <dt>Environnement de test</dt>
+        <dd>
+          Chromium (Playwright) avec axe-core, aux largeurs de 320 à 1 440 pixels, thèmes clair et
+          sombre. Pas encore de test avec lecteur d’écran (NVDA, VoiceOver) dans le cadre d’un
+          audit.
+        </dd>
+        <dt>Pages vérifiées</dt>
+        <dd>
+          Accueil, Confidentialité, Conditions d’utilisation, Mentions légales, Accessibilité,
+          Contact, page d’erreur, et dans l’application : connexion, campagnes, fiches, préparation,
+          plateau, paramètres.
+        </dd>
+      </dl>
+
+      <h2>Retour d’information et contact</h2>
+      <p>
+        Si tu n’arrives pas à accéder à un contenu ou à un service, écris à
+        <a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a> : nous te proposerons
+        une alternative accessible ou t’enverrons le contenu sous une autre forme.
+      </p>
+
+      <h2>Voies de recours</h2>
+      <p>
+        Si tu nous as signalé un défaut d’accessibilité qui t’empêche d’accéder à un contenu ou à un
+        service, et que tu n’as pas obtenu de réponse satisfaisante, tu peux saisir le Défenseur des
+        droits :
+      </p>
+      <ul>
+        <li>
+          par le formulaire en ligne :
+          <a href="https://formulaire.defenseurdesdroits.fr/">formulaire.defenseurdesdroits.fr</a>
+          ;
+        </li>
+        <li>
+          auprès d’un délégué de ta région :
+          <a href="https://www.defenseurdesdroits.fr/carte-des-delegues"
+            >defenseurdesdroits.fr/carte-des-delegues</a
+          >
+          ;
+        </li>
+        <li>
+          par courrier gratuit, sans timbre : Défenseur des droits, Libre réponse 71120, 75342 Paris
+          CEDEX 07.
+        </li>
+      </ul>
+    </main>
+    <!-- site:footer -->
+  </body>
+</html>

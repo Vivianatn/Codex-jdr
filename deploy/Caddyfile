@@ -50,7 +50,7 @@
 		# Hashed bundle files never change: cache them for a year (point 12).
 		@hashed path /assets/*
 		header @hashed Cache-Control "public, max-age=31536000, immutable"
-		@pages path / /app/ *.html /confidentialite /cgu /mentions-legales
+		@pages path / /app/ *.html /confidentialite /cgu /mentions-legales /accessibilite /contact
 		header @pages Cache-Control "no-cache"
 		# Pretty URLs: /cgu serves cgu.html.
 		try_files {path} {path}.html {path}/index.html

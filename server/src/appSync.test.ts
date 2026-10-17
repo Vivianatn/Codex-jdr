@@ -275,3 +275,21 @@ describe('sync engine against the server', () => {
     await until(async () => expect(await a.api.campaigns()).toEqual([]))
   })
 })
+
+describe('change notices (D-270)', () => {
+  it('pulls once for a burst of notices, and not at all for one already read', async () => {
+    const gm = await signUp(server.app, 'Gm')
+    const a = await device(gm, 'Gm', (db) => db.campaigns.put(campaign('c1')))
+    await a.sync()
+    const pulls = vi.spyOn(a.api, 'pull')
+    const rev = (await a.db.syncState.get('c1'))!.rev
+    a.engine.pullSoon('c1', rev)
+    await a.engine.flush()
+    expect(pulls).not.toHaveBeenCalled()
+    a.engine.pullSoon('c1', rev + 1)
+    a.engine.pullSoon('c1', rev + 2)
+    a.engine.pullSoon('c1', rev + 3)
+    await a.engine.flush()
+    expect(pulls).toHaveBeenCalledOnce()
+  })
+})

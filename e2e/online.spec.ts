@@ -7,6 +7,7 @@ import {
   E2E_PASSWORD,
   importCharacter,
   putRows,
+  reloadAndUnlock,
 } from './support/app'
 
 /**
@@ -63,6 +64,8 @@ async function gmOnline(browser: Browser, address = 'MJ'): Promise<Page> {
   await putRows(gm, 'campaigns', [
     { ...record, play: { ...(record!.play as object), mapId: map!.id } },
   ])
+  // Written behind the open campaign's back: reopen it, the game is served from it (D-270).
+  await reloadAndUnlock(gm)
 
   // The campaign goes to the server by itself (D-266).
   await expect(gm.getByTestId('campaign-online')).toHaveText('En ligne', { timeout: 20_000 })

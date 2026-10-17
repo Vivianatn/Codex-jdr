@@ -1,15 +1,18 @@
 import { MapTokenBlock } from '@/features/maps/MapTokenBlock'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { FileText, Minus, Plus, X } from 'lucide-react'
 import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button, IconButton } from '@/components/ui/Button'
 import { CheckboxField, SelectField } from '@/components/ui/fields'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { TextField } from '@/components/ui/TextField'
 import { validateDice } from '@/dice'
 import { allConditionTemplates } from '@/domain/conditions'
 import { effectiveStats, entityHpMax, entityName } from '@/domain/entity'
+import { masterOf } from '@/domain/familiars'
 import { newItem, slotsFor } from '@/domain/items'
+import { colorOfEntity } from '@/domain/playerColors'
 import { STAT_KEYS, type Entity } from '@/domain/types'
 import { BodyImage } from '@/features/characters/BodyPicker'
 import { HpBar } from '@/features/characters/HpBar'
@@ -27,10 +30,15 @@ import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
 import { useUiStore } from '@/stores/uiStore'
 
+/** Touch screens get 40 px targets (D-272). */
+const TOUCH = 'pointer-coarse:size-10'
+
 /**
- * Quick manipulation of any character during play (D-227): HP, the seven
- * characteristics in ±1 steps, items and weapons, conditions. Every click is
- * one undoable step; the full sheet is one click away.
+ * Quick manipulation of any character during play (D-227): HP, tests and the
+ * seven characteristics in one grid, the token, items and conditions. Every
+ * click is one undoable step; the full sheet is one click away. A column next
+ * to the board on tablets and computers, a bottom sheet on phones (D-272): the
+ * header stays put, the body scrolls only when the screen is really short.
  */
 export function QuickPanel() {
   const t = useT()
@@ -38,6 +46,8 @@ export function QuickPanel() {
   const close = useUiStore((s) => s.openQuick)
   const openSheet = useUiStore((s) => s.openPlaySheet)
   const entity = useCampaignStore((s) => (id ? s.entities[id] : undefined))
+  const color = useCampaignStore((s) => (id ? colorOfEntity(id, (x) => s.entities[x]) : 'gm'))
+  const reduce = useReducedMotion()
 
   useEffect(() => {
     if (!id) return
@@ -55,11 +65,18 @@ export function QuickPanel() {
     <motion.aside
       key={entity.id}
       aria-label={t.quick.title(name)}
-      className="codex-glass fixed top-[7.5rem] right-4 bottom-4 z-30 w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
-      initial={{ x: 40, opacity: 0 }}
+      data-player-color={color}
+      className={cn(
+        'codex-glass pointer-events-auto relative flex flex-col overflow-hidden',
+        'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-30 max-sm:max-h-[72dvh] max-sm:rounded-b-none',
+        'sm:max-h-full sm:w-[21rem] sm:shrink-0 sm:self-start xl:w-[23rem]',
+      )}
+      initial={reduce ? { opacity: 0 } : { x: 40, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: reduce ? 0.1 : 0.2, ease: [0.22, 1, 0.36, 1] }}
     >
+      {/* Whose character this is: the player colour, gold for the GM (D-268). */}
+      <span className="absolute inset-x-0 top-0 h-1 bg-player" aria-hidden />
       <Header
         entity={entity}
         onClose={() => close(null)}
@@ -68,11 +85,10 @@ export function QuickPanel() {
           openSheet(entity.id)
         }}
       />
-      <div className="mt-4 space-y-5">
-        <MapTokenBlock entity={entity} />
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3">
         <StatsBlock entity={entity} />
-        <ItemsBlock entity={entity} />
-        <ConditionsBlock entity={entity} />
+        <MapTokenBlock entity={entity} />
+        <LowerTabs entity={entity} />
       </div>
     </motion.aside>
   )
@@ -90,20 +106,44 @@ function Header({
   const t = useT()
   const campaign = useCampaign()
   const name = entityName(entity)
+  const master = useCampaignStore((s) => masterOf(s.entities, entity))
   return (
-    <header className="flex gap-3">
+    <header className="flex shrink-0 gap-3 border-b border-line p-3 pt-3.5">
       {entity.identity.body ? (
-        <BodyImage src={entity.identity.body} className="h-28 w-20 shrink-0" />
+        <BodyImage src={entity.identity.body} className="h-20 w-14 shrink-0" />
       ) : (
-        <Portrait src={entity.identity.portrait} name={name} square={entity.kind === 'enemy'} />
+        <Portrait
+          src={entity.identity.portrait}
+          name={name}
+          size="sm"
+          square={entity.kind === 'enemy'}
+          className="size-12 text-base"
+        />
       )}
-      <div className="min-w-0 flex-1 space-y-2">
-        <div className="flex items-start gap-2">
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="flex items-start gap-0.5">
           <div className="min-w-0 flex-1">
-            <p className="type-eyebrow">{t.kinds[entity.kind]}</p>
-            <h2 className="truncate font-title text-xl font-semibold text-ink">{name}</h2>
+            <p className="type-eyebrow text-player-text">
+              {master ? t.familiars.of(entityName(master)) : t.kinds[entity.kind]}
+            </p>
+            <h2 className="truncate font-title text-lg leading-tight font-semibold text-ink">
+              {name}
+            </h2>
           </div>
-          <IconButton size="sm" label={t.quick.close} icon={<X />} onClick={onClose} />
+          <IconButton
+            size="sm"
+            label={t.quick.fullSheet}
+            icon={<FileText />}
+            onClick={onFull}
+            className={TOUCH}
+          />
+          <IconButton
+            size="sm"
+            label={t.quick.close}
+            icon={<X />}
+            onClick={onClose}
+            className={TOUCH}
+          />
         </div>
         <HpBar
           current={entity.hp.current}
@@ -112,67 +152,105 @@ function Header({
           thresholds={campaign.rules.hp}
           entityId={entity.id}
         />
-        <div className="flex items-start gap-2">
-          <HpQuickInput entityId={entity.id} name={name} compact className="flex-1" />
-          <Button size="sm" variant="ghost" icon={<FileText />} onClick={onFull}>
-            {t.quick.fullSheet}
-          </Button>
-        </div>
+        <HpQuickInput entityId={entity.id} name={name} compact />
       </div>
     </header>
   )
 }
 
+/**
+ * Tests and characteristics in one grid (D-272, was two lists showing the same
+ * values): the name rolls the test (D-269), minus and plus change the value.
+ */
 function StatsBlock({ entity }: { entity: Entity }) {
   const t = useT()
   const campaign = useCampaign()
   const actions = useGameActions()
   const stats = effectiveStats(entity, campaign.rules)
+  const name = entityName(entity)
   return (
     <section aria-labelledby="quick-stats">
-      <h3
-        id="quick-stats"
-        className="mb-2 font-sans text-sm font-semibold tracking-normal text-ink"
-      >
-        {t.quick.stats}
+      <h3 id="quick-stats" className="mb-1.5 type-eyebrow text-ink-muted">
+        {t.quick.testsAndStats}
       </h3>
-      <ul className="grid grid-cols-1 gap-1.5">
+      <ul className="grid grid-cols-2 gap-1.5">
         {STAT_KEYS.map((key) => {
           const label = t.stats.names[key]
           const { base, total } = stats[key]
+          const test = t.crew.test(label, name)
           return (
             <li
               key={key}
-              className="flex items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-1"
+              className={cn('flex items-center gap-0.5 rounded-md p-0.5', STAT_STYLES[key].soft)}
             >
-              <span className={cn('size-2 rounded-full', STAT_STYLES[key].dot)} aria-hidden />
-              <span className="min-w-0 flex-1 truncate text-sm text-ink">{label}</span>
+              <button
+                type="button"
+                onClick={() => actions.check(entity.id, key)}
+                aria-label={test}
+                title={total !== base ? `${test} (${t.sheet.base} ${base})` : test}
+                className="flex h-8 min-w-0 flex-1 items-center gap-1 rounded-sm px-1.5 hover:bg-surface/60 pointer-coarse:h-10"
+              >
+                <GameIcon
+                  name="rolling-dices"
+                  className="size-3 shrink-0 text-ink-muted"
+                  aria-hidden
+                />
+                <span
+                  className={cn(
+                    'text-[0.6875rem] font-bold tracking-[0.08em]',
+                    STAT_STYLES[key].text,
+                  )}
+                >
+                  {t.stats.abbr[key]}
+                </span>
+                <span className="tabular ml-auto font-display text-base font-semibold text-ink">
+                  {total}
+                </span>
+              </button>
               <IconButton
                 size="sm"
                 label={t.quick.less(label)}
                 icon={<Minus />}
                 disabled={base <= campaign.rules.stats.min}
                 onClick={() => actions.nudgeStat(entity.id, key, -1)}
+                className={cn('size-7', TOUCH)}
               />
-              <span
-                className="tabular w-8 text-center font-display text-lg font-semibold text-ink"
-                aria-label={`${label} : ${total}`}
-                title={total !== base ? `${t.sheet.base} ${base}` : undefined}
-              >
-                {total}
-              </span>
               <IconButton
                 size="sm"
                 label={t.quick.more(label)}
                 icon={<Plus />}
                 disabled={base >= campaign.rules.stats.max}
                 onClick={() => actions.nudgeStat(entity.id, key, 1)}
+                className={cn('size-7', TOUCH)}
               />
             </li>
           )
         })}
       </ul>
     </section>
+  )
+}
+
+/** Items or conditions: one at a time, the choice remembered on this device (D-272). */
+function LowerTabs({ entity }: { entity: Entity }) {
+  const t = useT()
+  const tab = useUiStore((s) => s.play.quickTab)
+  const setPanels = useUiStore((s) => s.setPlayPanels)
+  return (
+    <div className="space-y-2">
+      <SegmentedControl
+        label={t.quick.sections}
+        size="sm"
+        value={tab}
+        onValueChange={(quickTab) => setPanels({ quickTab })}
+        options={[
+          { value: 'items', label: t.quick.itemsTab(entity.inventory.length) },
+          { value: 'conditions', label: t.quick.conditionsTab(entity.conditions.length) },
+        ]}
+        className="grid w-full grid-cols-2 [&>button]:justify-center"
+      />
+      {tab === 'items' ? <ItemsBlock entity={entity} /> : <ConditionsBlock entity={entity} />}
+    </div>
   )
 }
 
@@ -207,27 +285,21 @@ function ItemsBlock({ entity }: { entity: Entity }) {
   }
 
   return (
-    <section aria-labelledby="quick-items">
-      <h3
-        id="quick-items"
-        className="mb-2 font-sans text-sm font-semibold tracking-normal text-ink"
-      >
-        {t.quick.items}
-      </h3>
+    <section aria-label={t.quick.items} className="space-y-2">
       {entity.inventory.length === 0 ? (
-        <p className="mb-2 text-sm text-ink-muted">{t.quick.noItems}</p>
+        <p className="text-sm text-ink-muted">{t.quick.noItems}</p>
       ) : (
-        <ul className="mb-3 space-y-1.5">
+        <ul className="space-y-1">
           {entity.inventory.map((item) => {
             const equippable = slotsFor(item.type).length > 0
             return (
               <li
                 key={item.id}
-                className="flex items-center gap-2 rounded-md border border-line bg-surface p-1.5"
+                className="flex items-center gap-2 rounded-md border border-line bg-surface px-1.5 py-1"
               >
                 <span
                   className={cn(
-                    'size-8 shrink-0 rounded-sm border-2',
+                    'size-7 shrink-0 rounded-sm border-2',
                     RARITY_FRAME[item.rarity].frame,
                   )}
                 >
@@ -262,6 +334,7 @@ function ItemsBlock({ entity }: { entity: Entity }) {
                     }
                     aria-pressed={Boolean(item.slot)}
                     onClick={() => actions.toggleEquip(entity.id, item.id)}
+                    className={TOUCH}
                   />
                 )}
                 <IconButton
@@ -269,22 +342,35 @@ function ItemsBlock({ entity }: { entity: Entity }) {
                   label={t.quick.remove(item.name)}
                   icon={<X />}
                   onClick={() => actions.quickRemoveItem(entity.id, item.id)}
+                  className={TOUCH}
                 />
               </li>
             )
           })}
         </ul>
       )}
+      {/* One line to add an item; the weapon fields appear only for a weapon. */}
       <form onSubmit={submit} className="space-y-2 rounded-md border border-dashed border-line p-2">
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
           <TextField
             label={t.quick.itemName}
+            hideLabel
             value={name}
-            placeholder={t.quick.itemPlaceholder}
+            placeholder={`${t.quick.itemName} : ${t.quick.itemPlaceholder}`}
             onChange={(e) => setName(e.target.value)}
             className="min-w-0 flex-1"
           />
-          {weapon && (
+          <CheckboxField label={t.quick.weapon} checked={weapon} onChange={setWeapon} />
+          <IconButton
+            type="submit"
+            variant="primary"
+            label={t.quick.add}
+            icon={<Plus />}
+            disabled={!name.trim()}
+          />
+        </div>
+        {weapon && (
+          <div className="flex items-center gap-3">
             <TextField
               label={t.quick.damage}
               value={damage}
@@ -295,26 +381,11 @@ function ItemsBlock({ entity }: { entity: Entity }) {
                 setDamage(e.target.value)
                 setError(null)
               }}
-              className="w-24"
+              className="w-28"
             />
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <CheckboxField label={t.quick.weapon} checked={weapon} onChange={setWeapon} />
-          {weapon && (
             <CheckboxField label={t.quick.equipNow} checked={equipNow} onChange={setEquipNow} />
-          )}
-          <Button
-            type="submit"
-            size="sm"
-            variant="primary"
-            icon={<Plus />}
-            disabled={!name.trim()}
-            className="ml-auto"
-          >
-            {t.quick.add}
-          </Button>
-        </div>
+          </div>
+        )}
       </form>
     </section>
   )
@@ -329,15 +400,12 @@ function ConditionsBlock({ entity }: { entity: Entity }) {
   const [chosen, setChosen] = useState('')
   const selected = library.some((c) => c.id === chosen) ? chosen : (library[0]?.id ?? '')
   return (
-    <section aria-labelledby="quick-conditions">
-      <h3
-        id="quick-conditions"
-        className="mb-2 font-sans text-sm font-semibold tracking-normal text-ink"
-      >
-        {t.quick.conditions}
-      </h3>
+    <section aria-label={t.quick.conditions} className="space-y-2">
+      {entity.conditions.length === 0 && (
+        <p className="text-sm text-ink-muted">{t.mini.noConditions}</p>
+      )}
       {entity.conditions.length > 0 && (
-        <ul className="mb-2 flex flex-wrap gap-1.5">
+        <ul className="flex flex-wrap gap-1.5">
           {entity.conditions.map((c) => (
             <li key={c.id} className="flex items-center gap-0.5">
               <ConditionPill condition={c} />
@@ -352,6 +420,7 @@ function ConditionsBlock({ entity }: { entity: Entity }) {
                     t.journal.conditionRemoved(c.name),
                   )
                 }
+                className={TOUCH}
               />
             </li>
           ))}
@@ -367,6 +436,7 @@ function ConditionsBlock({ entity }: { entity: Entity }) {
         >
           <SelectField<string>
             label={t.quick.addCondition}
+            hideLabel
             value={selected}
             onChange={setChosen}
             options={library.map((c) => ({ value: c.id, label: c.name }))}

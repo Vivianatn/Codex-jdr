@@ -89,6 +89,12 @@
   --color-token-foe: var(--codex-token-foe);
   --color-token-npc: var(--codex-token-npc);
 
+  /* The colour of whoever an element belongs to (D-268): set with data-player-color. */
+  --color-player: var(--codex-player);
+  --color-player-soft: var(--codex-player-soft);
+  --color-player-text: var(--codex-player-text);
+  --color-player-glow: var(--codex-player-glow);
+
   --radius-sm: var(--codex-radius-sm);
   --radius-md: var(--codex-radius);
   --radius-lg: var(--codex-radius-lg);
@@ -168,6 +174,70 @@
 
   :root[data-grain='on'][data-theme='dark'] body::before {
     mix-blend-mode: screen;
+  }
+
+  /*
+   * Player colours (D-268): an element with data-player-color="<key>" and its
+   * children use bg-player, bg-player-soft, text-player-text, border-player…
+   * "gm" is the GM's gold.
+   */
+  [data-player-color] {
+    --codex-player-glow: color-mix(in srgb, var(--codex-player) 45%, transparent);
+  }
+  [data-player-color='gm'] {
+    --codex-player: var(--codex-gold);
+    --codex-player-soft: var(--codex-gold-soft);
+    --codex-player-text: var(--codex-gold-text);
+  }
+  [data-player-color='crimson'] {
+    --codex-player: var(--codex-player-crimson);
+    --codex-player-soft: var(--codex-player-crimson-soft);
+    --codex-player-text: var(--codex-player-crimson-text);
+  }
+  [data-player-color='azure'] {
+    --codex-player: var(--codex-player-azure);
+    --codex-player-soft: var(--codex-player-azure-soft);
+    --codex-player-text: var(--codex-player-azure-text);
+  }
+  [data-player-color='emerald'] {
+    --codex-player: var(--codex-player-emerald);
+    --codex-player-soft: var(--codex-player-emerald-soft);
+    --codex-player-text: var(--codex-player-emerald-text);
+  }
+  [data-player-color='copper'] {
+    --codex-player: var(--codex-player-copper);
+    --codex-player-soft: var(--codex-player-copper-soft);
+    --codex-player-text: var(--codex-player-copper-text);
+  }
+  [data-player-color='plum'] {
+    --codex-player: var(--codex-player-plum);
+    --codex-player-soft: var(--codex-player-plum-soft);
+    --codex-player-text: var(--codex-player-plum-text);
+  }
+  [data-player-color='teal'] {
+    --codex-player: var(--codex-player-teal);
+    --codex-player-soft: var(--codex-player-teal-soft);
+    --codex-player-text: var(--codex-player-teal-text);
+  }
+  [data-player-color='rose'] {
+    --codex-player: var(--codex-player-rose);
+    --codex-player-soft: var(--codex-player-rose-soft);
+    --codex-player-text: var(--codex-player-rose-text);
+  }
+  [data-player-color='moss'] {
+    --codex-player: var(--codex-player-moss);
+    --codex-player-soft: var(--codex-player-moss-soft);
+    --codex-player-text: var(--codex-player-moss-text);
+  }
+  [data-player-color='indigo'] {
+    --codex-player: var(--codex-player-indigo);
+    --codex-player-soft: var(--codex-player-indigo-soft);
+    --codex-player-text: var(--codex-player-indigo-text);
+  }
+  [data-player-color='ice'] {
+    --codex-player: var(--codex-player-ice);
+    --codex-player-soft: var(--codex-player-ice-soft);
+    --codex-player-text: var(--codex-player-ice-text);
   }
 }
 

@@ -1,10 +1,11 @@
-import { Download, ShieldCheck, Trash2 } from 'lucide-react'
+import { Download, FileDown, ShieldCheck, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { CheckboxField } from '@/components/ui/fields'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { useCampaignActions } from '@/features/campaigns/useCampaignActions'
+import { downloadAccountData } from '@/features/legal/legalApi'
 import { useT } from '@/i18n'
 import {
   ANALYTICS_WEBSITE_ID,
@@ -19,6 +20,7 @@ export function PrivacySection() {
   const actions = useCampaignActions()
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const [measured, setMeasured] = useState(() => analyticsChoice() !== 'refused')
 
   return (
@@ -52,6 +54,27 @@ export function PrivacySection() {
         />
       )}
 
+      <div className="space-y-1">
+        <Button
+          icon={<FileDown />}
+          disabled={downloading}
+          onClick={async () => {
+            setDownloading(true)
+            try {
+              await downloadAccountData()
+              toast.success(t.legal.downloaded)
+            } catch {
+              toast.error(t.legal.downloadFailed)
+            } finally {
+              setDownloading(false)
+            }
+          }}
+          data-testid="download-my-data"
+        >
+          {t.legal.downloadData}
+        </Button>
+        <p className="text-xs text-ink-muted">{t.legal.downloadDataHint}</p>
+      </div>
       <div className="space-y-1">
         <Button icon={<Download />} onClick={() => void actions.exportAllToFile()}>
           {t.privacy.exportAll}

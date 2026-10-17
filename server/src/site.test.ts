@@ -35,6 +35,15 @@ describe('the server serves the built site (Plesk, D-263)', () => {
     expect((await get('/cgu')).headers['cache-control']).toBe('no-cache')
   })
 
+  it('sends the same security headers as Caddy (D-271)', async () => {
+    const page = await get('/cgu')
+    expect(page.headers['strict-transport-security']).toMatch(/max-age=\d{8,}/)
+    expect(page.headers['x-frame-options']).toBe('DENY')
+    expect(page.headers['content-security-policy']).toContain("frame-ancestors 'none'")
+    expect(page.headers['permissions-policy']).toContain('camera=()')
+    expect((await get('/nulle-part')).headers['x-content-type-options']).toBe('nosniff')
+  })
+
   it('answers unknown pages with the 404 page, never files outside the site, and leaves /api alone', async () => {
     const missing = await get('/nulle-part')
     expect([missing.statusCode, missing.body]).toEqual([404, 'perdu'])

@@ -9,6 +9,19 @@ import { join, normalize, sep } from 'node:path'
  * rules as deploy/Caddyfile: pretty URLs (/cgu → cgu.html), the real 404
  * page, hashed assets cached for a year, pages never cached.
  */
+/** The same security headers as deploy/Caddyfile (D-248, D-271): HTTPS only, no framing, no sniffing. */
+export const SECURITY_HEADERS = {
+  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
+  'X-Frame-Options': 'DENY',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Permissions-Policy':
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  // Added to each page's own policy (which carries its script hashes).
+  'Content-Security-Policy': "frame-ancestors 'none'; base-uri 'none'; object-src 'none'",
+}
+
 export async function registerSite(app: FastifyInstance, root: string): Promise<void> {
   await app.register(fastifyStatic, { root, serve: false })
 
@@ -23,9 +36,7 @@ export async function registerSite(app: FastifyInstance, root: string): Promise<
     reply
       .status(status)
       .header('Cache-Control', immutable ? 'public, max-age=31536000, immutable' : 'no-cache')
-      .header('X-Content-Type-Options', 'nosniff')
-      .header('Referrer-Policy', 'no-referrer')
-      .header('X-Frame-Options', 'DENY')
+      .headers(SECURITY_HEADERS)
     return reply.sendFile(rel.split(sep).join('/'), { cacheControl: false })
   }
 

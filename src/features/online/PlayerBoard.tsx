@@ -17,6 +17,7 @@ export function PlayerBoard({
   rules,
   mine,
   activeEntityId,
+  activeEntityIds,
   canMove,
 }: {
   map: GameMap
@@ -24,6 +25,8 @@ export function PlayerBoard({
   rules: RulesConfig
   mine: string[]
   activeEntityId: string | null
+  /** Familiars sharing the active turn (D-269). */
+  activeEntityIds?: readonly string[]
   canMove: boolean
 }) {
   const labels = useCanvasLabels()
@@ -40,6 +43,7 @@ export function PlayerBoard({
       mode="view"
       labels={labels}
       activeEntityId={activeEntityId}
+      activeEntityIds={activeEntityIds}
       movableEntityIds={canMove ? mine : []}
       onTokenMove={(tokenId, cell) =>
         sendIntent({ type: 'move', mapId: map.id, tokenId, col: cell.col, row: cell.row })

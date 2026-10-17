@@ -2,6 +2,7 @@ import { toast } from 'sonner'
 import type { Campaign } from '@/db/types'
 import type { Rng } from '@/dice'
 import { entityName } from '@/domain/entity'
+import { familiarSpot, familiarsOf, masterOf } from '@/domain/familiars'
 import {
   arrivalCell,
   autoRevealFog,
@@ -18,6 +19,7 @@ import {
   type GameMap,
   type Token,
 } from '@/domain/maps'
+import { groupOf, removeMember } from '@/domain/turns'
 import type { StatKey } from '@/domain/types'
 import type { Messages } from '@/i18n/locales/fr'
 import { resolveCheck } from '@/rules'
@@ -127,6 +129,99 @@ export function createMapActions(t: Messages, campaign: Campaign, game: GameActi
         (m) => ({ ...m, tokens: m.tokens.filter((tk) => tk.id !== tokenId) }),
         label,
       )
+    },
+
+    // ---------------------------------------------------------------------
+    // The GM's board in play (D-269): each gesture is ONE undoable change.
+    // ---------------------------------------------------------------------
+
+    /**
+     * Takes a character off every map, with the familiars attached to it, and
+     * out of the turns when `fromTurns` is set. Never deletes the character.
+     */
+    removeFromBoard(entityId: string, options: { fromTurns?: boolean } = {}) {
+      const e = entity(entityId)
+      if (!e) return
+      const leaving = new Set([
+        entityId,
+        ...familiarsOf(Object.values(store().entities), entityId).map((f) => f.id),
+      ])
+      const label = t.crew.removedFromBoard(entityName(e))
+      campaignHistory.getState().transaction(label, () => {
+        for (const map of Object.values(store().maps))
+          if (map.tokens.some((tk) => leaving.has(tk.entityId)))
+            store().updateMap(
+              map.id,
+              (m) =>
+                withAutoReveal({
+                  ...m,
+                  tokens: m.tokens.filter((tk) => !leaving.has(tk.entityId)),
+                }),
+              label,
+            )
+        if (options.fromTurns && groupOf(store().play, entityId))
+          store().updatePlay((p) => removeMember(p, entityId), label)
+      })
+      toast(label)
+    },
+
+    /**
+     * Deletes an enemy (D-269): it leaves the campaign, the maps and the groups
+     * (the store does that); its familiars' tokens leave the board with it.
+     */
+    deleteEnemy(entityId: string) {
+      const e = entity(entityId)
+      if (!e || e.kind !== 'enemy') return
+      const label = t.crew.enemyDeleted(entityName(e))
+      campaignHistory.getState().transaction(label, () => {
+        const familiars = new Set(
+          familiarsOf(Object.values(store().entities), entityId).map((f) => f.id),
+        )
+        if (familiars.size)
+          for (const map of Object.values(store().maps))
+            if (map.tokens.some((tk) => familiars.has(tk.entityId)))
+              store().updateMap(
+                map.id,
+                (m) => ({ ...m, tokens: m.tokens.filter((tk) => !familiars.has(tk.entityId)) }),
+                label,
+              )
+        store().removeEntity(entityId, label)
+      })
+      toast(label)
+    },
+
+    /**
+     * Brings a familiar onto the map, next to its master's token (or at the
+     * default spot when the master has none). It plays at its master's turn.
+     */
+    addFamiliar(mapId: string, familiarId: string) {
+      const map = mapOf(mapId)
+      const familiar = entity(familiarId)
+      const master = masterOf(store().entities, familiar)
+      if (!map || !familiar || !master) return
+      const masterToken = map.tokens.find((tk) => tk.entityId === master.id)
+      const cell = masterToken ? familiarSpot(map, masterToken, familiarId) : null
+      const label = t.crew.familiarPlaced(entityName(familiar), entityName(master))
+      campaignHistory.getState().transaction(label, () => {
+        store().updateMap(
+          mapId,
+          (m) => {
+            const placed = withToken(m, familiar, cell ?? undefined)
+            // A familiar stays as discreet as its master.
+            if (!masterToken) return withAutoReveal(placed)
+            return withAutoReveal({
+              ...placed,
+              tokens: placed.tokens.map((tk) =>
+                tk.entityId === familiarId ? { ...tk, hidden: masterToken.hidden } : tk,
+              ),
+            })
+          },
+          label,
+        )
+        if (groupOf(store().play, familiarId))
+          store().updatePlay((p) => removeMember(p, familiarId), label)
+      })
+      toast(label)
     },
 
     /** Re-applies the automatic reveal (after opening a door, changing the vision…). */

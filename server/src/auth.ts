@@ -62,6 +62,8 @@ interface UserRow {
   password_hash: string
   failed_logins: number
   locked_until: Date | string | null
+  /** Set by the operator (moderation, D-271): the account can no longer sign in. */
+  suspended_at: Date | string | null
 }
 
 const toPublic = (row: { id: string; email: string; display_name: string }): PublicUser => ({
@@ -126,7 +128,9 @@ export function registerAuth(app: FastifyInstance, ctx: Ctx): void {
     },
   })
 
-  app.post('/api/auth/register', tight(10, 60), async (request, reply) => {
+  // Account creations per address and hour (launch checklist point 18).
+  const signupLimit = tight(10, 60)
+  app.post('/api/auth/register', signupLimit, async (request, reply) => {
     const body = request.body
     // Honeypot: a field people never see. Bots fill it in.
     if (isRecord(body) && typeof body.website === 'string' && body.website)
@@ -175,6 +179,8 @@ export function registerAuth(app: FastifyInstance, ctx: Ctx): void {
       ])
       throw new ApiError(401, 'wrongCredentials', until ? { retryAt: until } : {})
     }
+    // Suspended by the operator (CGU, D-271): told only once the password is right.
+    if (row.suspended_at) throw new ApiError(403, 'forbidden', { suspended: true })
     await ctx.db.query(
       'UPDATE users SET failed_logins = 0, locked_until = NULL, last_login_at = $2 WHERE id = $1',
       [row.id, new Date(ctx.now())],
@@ -225,6 +231,7 @@ export function registerAuth(app: FastifyInstance, ctx: Ctx): void {
       user.id,
       user.tokenHash,
     ])
+    await notifyPasswordChanged(ctx, row)
     return { ok: true }
   })
 
@@ -281,6 +288,7 @@ export function registerAuth(app: FastifyInstance, ctx: Ctx): void {
       await openSession(ctx, reply, row.id, q)
     })
     ctx.hub.closeUser(row.id)
+    await notifyPasswordChanged(ctx, row)
     return { user: toPublic(row) }
   })
 
@@ -302,6 +310,25 @@ export function registerAuth(app: FastifyInstance, ctx: Ctx): void {
     reply.clearCookie(SESSION_COOKIE, { path: '/api' })
     return { ok: true }
   })
+}
+
+/** CNIL délibération 2022-100: the owner is told when the password changes (D-271). */
+async function notifyPasswordChanged(ctx: Ctx, row: { email: string; display_name: string }) {
+  if (!ctx.mailer) return
+  await ctx.mailer
+    .send(
+      row.email,
+      'Codex : ton mot de passe a changé',
+      [
+        `Bonjour ${row.display_name},`,
+        '',
+        'Le mot de passe de ton compte Codex vient d’être changé, et tes autres appareils ont été déconnectés.',
+        'Si ce n’est pas toi, utilise tout de suite « Mot de passe oublié » sur l’écran de connexion et écris-nous à l’adresse de contact du site.',
+      ].join('\n'),
+    )
+    .catch(() => {
+      // The change is done; a mail failure must not undo or hide it.
+    })
 }
 
 /** Accounts unused for three years are deleted, with their campaigns (privacy notice). */

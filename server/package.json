@@ -1,7 +1,7 @@
 {
   "name": "codex-server",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0-alpha",
   "description": "Codex online server: accounts, campaigns, sync and live-game relay (D-262)",
   "type": "module",
   "engines": {

@@ -65,6 +65,8 @@ export function SettingsDialog({
     setAnimations,
     diceAnimation,
     setDiceAnimation,
+    diceStage,
+    setDiceStage,
     playDark,
     setPlayDark,
     paperGrain,
@@ -145,6 +147,12 @@ export function SettingsDialog({
             hint={t.settings.diceAnimationHint}
             checked={diceAnimation}
             onChange={setDiceAnimation}
+          />
+          <CheckboxField
+            label={t.settings.diceStage}
+            hint={t.settings.diceStageHint}
+            checked={diceStage}
+            onChange={setDiceStage}
           />
         </section>
 

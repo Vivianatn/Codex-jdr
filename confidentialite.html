@@ -34,79 +34,232 @@
           Un seul cookie, indispensable à ta connexion. La mesure d’audience est anonyme, sans
           cookie, et tu peux la refuser.
         </li>
-        <li>Tu peux exporter ou supprimer toutes tes données depuis l’application.</li>
+        <li>
+          Tu peux télécharger toutes tes données et supprimer ton compte depuis l’application, à
+          tout moment.
+        </li>
       </ul>
 
       <h2>Qui est responsable de tes données ?</h2>
       <p>
-        {{site.publisher.name}}, éditeur de Codex (voir les
+        Le responsable du traitement est {{site.publisher.name}}, éditeur de Codex (voir les
         <a href="/mentions-legales">mentions légales</a>). Pour toute question ou demande :
-        <a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a>.
+        <a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a>. Codex n’a pas
+        désigné de délégué à la protection des données.
       </p>
 
-      <h2>Quelles données, pourquoi, sur quelle base ?</h2>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Données</th>
-            <th scope="col">Pourquoi</th>
-            <th scope="col">Base légale</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              Compte en ligne : adresse e-mail, nom affiché, empreinte du mot de passe (jamais le
-              mot de passe lui-même), dates de création et de dernière connexion
-            </td>
-            <td>Te connecter, te reconnaître auprès de ta table, réinitialiser ton mot de passe</td>
-            <td>Exécution des conditions d’utilisation</td>
-          </tr>
-          <tr>
-            <td>
-              Profil (facultatif) : devise, photo de profil, bannière, code d’aventurier ; liste de
-              tes aventuriers et des demandes envoyées ou reçues ; tes aventuriers voient quand tu
-              es connecté
-            </td>
-            <td>
-              Te présenter aux autres comptes connectés, qui voient ton nom, ta devise et tes images
-              ; te permettre de retrouver tes compagnons de jeu
-            </td>
-            <td>Exécution des conditions d’utilisation</td>
-          </tr>
-          <tr>
-            <td>
-              Contenu des campagnes en ligne : fiches, cartes, images, sessions, jets de dés,
-              journal des modifications (chiffré sur le serveur)
-            </td>
-            <td>Les synchroniser entre tes appareils et avec les membres de la campagne</td>
-            <td>Exécution des conditions d’utilisation</td>
-          </tr>
-          <tr>
-            <td>
-              Informations de fonctionnement : nom et membres de chaque campagne, rôles, personnage
-              attribué, demandes pour rejoindre, lien d’invitation, présence en ligne
-            </td>
-            <td>Faire fonctionner les droits d’accès, les invitations et le temps réel</td>
-            <td>Exécution des conditions d’utilisation</td>
-          </tr>
-          <tr>
-            <td>Journaux techniques : adresse IP, date, action, compte</td>
-            <td>Sécurité, lutte contre le spam et les abus, obligations légales d’un hébergeur</td>
-            <td>Intérêt légitime et obligation légale</td>
-          </tr>
-          <tr>
-            <td>Mesure d’audience anonyme : page vue, site d’origine, type d’appareil, pays</td>
-            <td>Savoir quelles pages sont utiles</td>
-            <td>Intérêt légitime (tu peux t’y opposer)</td>
-          </tr>
-        </tbody>
-      </table>
+      <h2>Quelles données, pourquoi, sur quelle base, combien de temps ?</h2>
       <p>
-        Codex ne demande ni numéro de téléphone, ni date de naissance ; l’adresse e-mail n’est
-        demandée que pour un compte en ligne et ne sert qu’à la connexion et aux e-mails de
-        réinitialisation du mot de passe. Si une fiche contient le pseudo ou le portrait d’un vrai
-        joueur, c’est toi qui le saisis : demande-lui son accord et retire-le s’il le souhaite.
+        Chaque traitement est décrit ci-dessous (règlement (UE) 2016/679, dit RGPD, art. 13). Les
+        bases légales sont celles de l’article 6 du RGPD : l’exécution du contrat (les
+        <a href="/cgu">conditions d’utilisation</a> que tu acceptes en créant ton compte),
+        l’obligation légale et l’intérêt légitime. Aucun traitement ne repose sur ton consentement
+        et aucune décision n’est prise de façon automatisée à ton sujet (art. 22).
+      </p>
+
+      <section class="processing" aria-labelledby="t-compte">
+        <h3 id="t-compte">Ton compte</h3>
+        <dl>
+          <dt>Données</dt>
+          <dd>
+            Adresse e-mail, nom affiché, empreinte du mot de passe (scrypt, jamais le mot de passe
+            lui-même), dates de création et de dernière connexion, compteur d’échecs de connexion,
+            sessions ouvertes (seule l’empreinte de leur jeton est gardée), version des conditions
+            acceptée, date d’acceptation et âge déclaré (15 ans ou plus, ou accord parental).
+          </dd>
+          <dt>Pourquoi</dt>
+          <dd>
+            Te connecter, sécuriser ton compte, te reconnaître auprès de ta table, réinitialiser ton
+            mot de passe, prouver l’acceptation des conditions.
+          </dd>
+          <dt>Base légale</dt>
+          <dd>Exécution du contrat.</dd>
+          <dt>Durée</dt>
+          <dd>
+            Jusqu’à la suppression de ton compte. Un compte où personne ne s’est connecté depuis
+            <strong>3 ans</strong> est supprimé automatiquement, avec ses campagnes. Une session
+            dure 30 jours ; un lien de réinitialisation, une heure.
+          </dd>
+        </dl>
+      </section>
+
+      <section class="processing" aria-labelledby="t-profil">
+        <h3 id="t-profil">Ton profil et tes aventuriers</h3>
+        <dl>
+          <dt>Données</dt>
+          <dd>
+            Devise, photo de profil, bannière (facultatives), code d’aventurier, liste de tes
+            aventuriers et des demandes envoyées ou reçues, présence en ligne.
+          </dd>
+          <dt>Qui les voit</dt>
+          <dd>
+            Toute personne connectée à Codex voit ton nom, ta devise, tes images, ta date d’arrivée
+            et ton nombre d’aventuriers, ainsi que les campagnes que vous avez en commun. Ton
+            adresse e-mail n’est jamais montrée. Seuls tes aventuriers voient quand tu es connecté.
+            Ton code n’est montré qu’à toi.
+          </dd>
+          <dt>Pourquoi</dt>
+          <dd>Te présenter aux autres joueurs et retrouver tes compagnons de jeu.</dd>
+          <dt>Base légale</dt>
+          <dd>Exécution du contrat.</dd>
+          <dt>Durée</dt>
+          <dd>
+            Jusqu’à ce que tu les retires ou supprimes ton compte ; un lien d’aventurier, jusqu’à ce
+            que l’un de vous y mette fin. La présence n’est jamais enregistrée : elle n’existe que
+            dans la mémoire du serveur, le temps de ta connexion.
+          </dd>
+        </dl>
+      </section>
+
+      <section class="processing" aria-labelledby="t-campagnes">
+        <h3 id="t-campagnes">Tes campagnes et tes parties</h3>
+        <dl>
+          <dt>Données</dt>
+          <dd>
+            Contenu des campagnes : fiches, cartes, images, sessions, jets de dés, notes, journal
+            des modifications (les 300 dernières lignes, avec le nom de leur auteur). Ce contenu est
+            <strong>chiffré</strong> sur le serveur (AES-256-GCM). En clair, pour faire fonctionner
+            les droits d’accès : nom de chaque campagne, MJ, membres, rôles, personnage attribué,
+            lien d’invitation, visibilité dans la recherche, partie en cours (titre, MJ, heure de
+            début, affichage dans le catalogue des sessions), demandes pour rejoindre avec leur
+            message.
+          </dd>
+          <dt>Pourquoi</dt>
+          <dd>
+            Synchroniser tes campagnes entre tes appareils et avec les membres, faire jouer une
+            partie en direct.
+          </dd>
+          <dt>Qui les voit</dt>
+          <dd>
+            Le MJ et ses co-MJ voient toute la campagne ; un joueur ne reçoit que ce qui est visible
+            à la table, et seulement pendant une partie. Les messages d’une partie en direct passent
+            par le serveur sans y être enregistrés. Une partie affichée dans le catalogue (au choix
+            du MJ, jamais par défaut) montre à toute personne connectée son titre, sa campagne, le
+            nom du MJ et son heure de début.
+          </dd>
+          <dt>Base légale</dt>
+          <dd>Exécution du contrat.</dd>
+          <dt>Durée</dt>
+          <dd>
+            Jusqu’à ce que le MJ supprime la campagne ou son compte. Si tu quittes une campagne ou
+            supprimes ton compte, ce que tu y as écrit en tant que co-MJ reste dans la campagne du
+            MJ (avec ton nom dans son journal, jusqu’à ce que la ligne sorte des 300 dernières). Une
+            demande pour rejoindre disparaît une fois acceptée ou refusée.
+          </dd>
+        </dl>
+      </section>
+
+      <section class="processing" aria-labelledby="t-emails">
+        <h3 id="t-emails">E-mails</h3>
+        <dl>
+          <dt>Données</dt>
+          <dd>Ton adresse e-mail, ton nom affiché et le contenu du message.</dd>
+          <dt>Pourquoi</dt>
+          <dd>
+            Lien de réinitialisation du mot de passe, avis de changement de mot de passe, accusé de
+            réception et décision d’un signalement, décision de modération te concernant. Codex
+            n’envoie ni lettre d’information ni publicité.
+          </dd>
+          <dt>Base légale</dt>
+          <dd>
+            Exécution du contrat ; obligation légale pour les signalements et décisions de
+            modération (règlement (UE) 2022/2065 sur les services numériques, art. 16 et 17).
+          </dd>
+          <dt>Durée</dt>
+          <dd>Codex ne garde pas de copie des e-mails envoyés.</dd>
+        </dl>
+      </section>
+
+      <section class="processing" aria-labelledby="t-signalements">
+        <h3 id="t-signalements">Signalements et modération</h3>
+        <dl>
+          <dt>Données</dt>
+          <dd>
+            Pour un signalement : son auteur (sauf signalement anonyme d’abus sexuel sur mineur), le
+            profil visé, une copie de ce profil au moment du signalement (nom, devise, images), la
+            catégorie, l’explication, la décision. Pour une décision : profil masqué ou compte
+            suspendu, avec sa date.
+          </dd>
+          <dt>Pourquoi</dt>
+          <dd>
+            Traiter les signalements de contenus illicites, faire respecter les conditions
+            d’utilisation, répondre aux autorités, garder la preuve en cas de contestation. La
+            personne signalée n’apprend jamais qui l’a signalée.
+          </dd>
+          <dt>Base légale</dt>
+          <dd>
+            Obligation légale (DSA, art. 16 et 17 ; loi pour la confiance dans l’économie numérique,
+            art. 6) et intérêt légitime (sécurité de la communauté).
+          </dd>
+          <dt>Durée</dt>
+          <dd>
+            Un signalement est gardé jusqu’à sa décision, puis <strong>un an</strong>. Une mesure de
+            modération dure tant que le compte existe ou jusqu’à sa levée.
+          </dd>
+        </dl>
+      </section>
+
+      <section class="processing" aria-labelledby="t-journaux">
+        <h3 id="t-journaux">Journaux techniques</h3>
+        <dl>
+          <dt>Données</dt>
+          <dd>
+            Adresse IP, date et heure, adresse demandée, réponse du serveur, navigateur. Jamais ton
+            mot de passe, ton cookie de session ni le contenu de tes campagnes.
+          </dd>
+          <dt>Pourquoi</dt>
+          <dd>
+            Sécurité du service, lutte contre le spam et les abus (limites de tentatives),
+            diagnostic des pannes, réponse aux réquisitions judiciaires.
+          </dd>
+          <dt>Base légale</dt>
+          <dd>
+            Intérêt légitime (sécurité) et obligation légale (conservation des données
+            d’identification par les hébergeurs, décret n° 2021-1362 du 20 octobre 2021).
+          </dd>
+          <dt>Durée</dt>
+          <dd><strong>Un an</strong> au plus.</dd>
+        </dl>
+      </section>
+
+      <section class="processing" aria-labelledby="t-sauvegardes">
+        <h3 id="t-sauvegardes">Sauvegardes du serveur</h3>
+        <dl>
+          <dt>Données</dt>
+          <dd>Une copie de la base de données chaque nuit ; les campagnes y restent chiffrées.</dd>
+          <dt>Pourquoi</dt>
+          <dd>Pouvoir restaurer le service après une panne.</dd>
+          <dt>Base légale</dt>
+          <dd>Intérêt légitime (sécurité et disponibilité).</dd>
+          <dt>Durée</dt>
+          <dd>
+            14 jours ; une donnée supprimée disparaît donc des sauvegardes sous 14 jours, et sous 30
+            jours au plus de toute copie.
+          </dd>
+        </dl>
+      </section>
+
+      <section class="processing" aria-labelledby="t-audience">
+        <h3 id="t-audience">Mesure d’audience</h3>
+        <dl>
+          <dt>Données</dt>
+          <dd>
+            Page vue, site d’origine, type de navigateur, de système et d’appareil, langue, pays. Ni
+            cookie, ni adresse IP conservée, ni identifiant durable.
+          </dd>
+          <dt>Pourquoi</dt>
+          <dd>Savoir quelles pages sont utiles, en statistiques anonymes.</dd>
+          <dt>Base légale</dt>
+          <dd>Intérêt légitime ; tu peux t’y opposer à tout moment (voir plus bas).</dd>
+          <dt>Durée</dt>
+          <dd>13 mois au plus.</dd>
+        </dl>
+      </section>
+
+      <p>
+        Codex ne demande ni numéro de téléphone, ni date de naissance, ni nom réel. Si une fiche
+        contient le pseudo ou le portrait d’un vrai joueur, c’est toi qui le saisis : demande-lui
+        son accord et retire-le s’il le souhaite.
       </p>
 
       <h2 id="audience">Mesure d’audience</h2>
@@ -114,77 +267,157 @@
         Codex compte ses visites avec Umami, installé sur son propre serveur. Il ne dépose
         <strong>aucun cookie</strong>, ne conserve pas ton adresse IP et ne suit pas ton parcours
         d’un site à l’autre ; les adresses de l’application (qui contiennent les identifiants de
-        campagne) ne sont jamais envoyées. Rien n’est partagé avec un tiers. Elle s’arrête
-        d’elle-même si ton navigateur envoie « Do Not Track » ou « Global Privacy Control ».
+        campagne) ne sont jamais envoyées. Rien n’est partagé avec un tiers ni recoupé avec d’autres
+        données. Elle s’arrête d’elle-même si ton navigateur envoie « Do Not Track » ou « Global
+        Privacy Control ». Ces conditions sont celles qui dispensent une mesure d’audience de
+        consentement (recommandations de la CNIL) ; tu peux néanmoins la refuser :
       </p>
       <p>
         <button type="button" class="button" data-consent-open>
           Choisir pour la mesure d’audience
         </button>
       </p>
+      <p>
+        Dans l’application, le même choix se trouve dans Paramètres › Données et confidentialité.
+      </p>
 
-      <h2>Cookies et stockage sur ton appareil</h2>
+      <h2 id="cookies">Cookies et traceurs</h2>
+      <p>
+        Voici tout ce que Codex enregistre ou lit sur ton appareil (loi Informatique et Libertés,
+        art. 82). Tout est <strong>strictement nécessaire</strong> au service que tu demandes ou
+        relève de la mesure d’audience exemptée décrite plus haut : c’est pourquoi Codex n’affiche
+        pas de bandeau de consentement aux cookies, seulement une information sur la mesure
+        d’audience, avec la possibilité de la refuser.
+      </p>
       <dl>
-        <dt>Cookie de session</dt>
+        <dt>Cookie <code>codex_session</code></dt>
         <dd>
-          Indispensable pour rester connecté. Inaccessible aux scripts, envoyé seulement en HTTPS et
-          seulement à Codex. Il ne nécessite pas ton accord.
+          Te garde connecté (30 jours). Inaccessible aux scripts (HttpOnly), envoyé seulement en
+          HTTPS (Secure), seulement à Codex (SameSite=Strict) et seulement à son serveur
+          (<code>/api</code>). Strictement nécessaire : il ne demande pas ton accord.
         </dd>
-        <dt>Stockage local du navigateur</dt>
+        <dt>Stockage local <code>codex.settings</code> et <code>codex.ui</code></dt>
         <dd>
-          Tes préférences d’affichage, ton choix sur la mesure d’audience et une copie chiffrée de
-          tes campagnes pour fonctionner hors connexion. Rien de tout cela n’est envoyé à un tiers.
+          Tes préférences d’affichage (thème, taille du texte, sons, panneaux ouverts). Restent sur
+          ton appareil jusqu’à ce que tu les effaces.
+        </dd>
+        <dt>Stockage local <code>codex.analytics</code> et <code>umami.disabled</code></dt>
+        <dd>Ton choix sur la mesure d’audience, pour ne pas te le redemander.</dd>
+        <dt>Base IndexedDB <code>codex-accounts</code> et bases de chaque compte</dt>
+        <dd>
+          La liste des comptes ouverts sur cet appareil et une copie de tes campagnes,
+          <strong>chiffrée avec ton mot de passe</strong>, pour que l’application démarre vite et
+          continue pendant une coupure de réseau. La fenêtre des joueurs (second écran) en garde une
+          copie temporaire, effacée au verrouillage.
+        </dd>
+        <dt>Mesure d’audience (Umami)</dt>
+        <dd>
+          Aucun cookie, aucun stockage hormis ton choix ci-dessus ; les statistiques sont envoyées
+          au serveur de Codex lui-même.
         </dd>
       </dl>
+      <p>
+        Aucun cookie tiers, aucun bouton de réseau social, aucune publicité, aucune police ni
+        bibliothèque chargée depuis un autre site.
+      </p>
 
       <h2>Qui y a accès ?</h2>
+      <ul>
+        <li>Les membres d’une campagne, selon leur rôle (voir plus haut).</li>
+        <li>
+          Les autres personnes connectées, pour ton profil public et les parties affichées dans le
+          catalogue.
+        </li>
+        <li>
+          Nos sous-traitants, qui agissent sur nos instructions (RGPD, art. 28) : l’hébergeur
+          {{site.host.name}} (centre de données {{site.host.location}}) et le service d’envoi des
+          e-mails, {{site.mailProvider}}.
+        </li>
+        <li>
+          Les autorités judiciaires ou administratives qui le demandent dans le cadre de la loi.
+        </li>
+      </ul>
       <p>
-        Les membres d’une campagne : le MJ et ses co-MJ voient toute la campagne ; un joueur ne
-        reçoit que ce qui est visible à la table, et seulement pendant une partie. Les données sont
-        hébergées chez {{site.host.name}}, {{site.host.location}}, qui agit pour notre compte.
         L’administrateur du serveur peut techniquement accéder aux campagnes ; il ne le fait que si
-        la loi l’exige ou pour traiter un signalement. Aucune donnée n’est transférée hors de
-        l’Union européenne.
+        la loi l’exige ou pour traiter un signalement. Aucune donnée n’est vendue ni louée. Codex ne
+        transfère pas de données hors de l’Union européenne ; si un prestataire devait le faire, ce
+        transfert serait encadré (décision d’adéquation ou clauses contractuelles types de la
+        Commission européenne) et indiqué ici.
       </p>
 
       <h2>Combien de temps ?</h2>
+      <p>Chaque durée est donnée avec son traitement ci-dessus. En résumé :</p>
       <ul>
-        <li>Compte et contenu : jusqu’à ce que tu supprimes ton compte.</li>
+        <li>Compte, profil et campagnes : jusqu’à leur suppression, ou 3 ans sans connexion.</li>
         <li>
-          Après suppression : effacement immédiat (avec les campagnes dont tu es le MJ), puis
-          disparition des sauvegardes du serveur sous 30 jours.
+          Après suppression du compte : effacement immédiat (avec les campagnes dont tu es le MJ),
+          puis disparition des sauvegardes sous 14 jours.
         </li>
-        <li>Lien de réinitialisation du mot de passe : une heure.</li>
-        <li>Comptes inactifs depuis 3 ans : supprimés.</li>
-        <li>Journaux techniques : 1 an, durée imposée aux hébergeurs.</li>
-        <li>Mesure d’audience : statistiques conservées 13 mois au plus.</li>
+        <li>Signalements : un an après leur décision.</li>
+        <li>Journaux techniques : un an au plus.</li>
+        <li>Mesure d’audience : 13 mois au plus.</li>
       </ul>
 
       <h2>Tes droits</h2>
+      <p>Tu disposes des droits suivants sur tes données (RGPD, art. 15 à 22) :</p>
+      <ul>
+        <li>
+          <strong>Accès et portabilité</strong> :
+          <em>Paramètres › Données et confidentialité › Télécharger mes données</em> te donne un
+          fichier JSON avec tout ce que le serveur garde sur ton compte et le contenu complet des
+          campagnes dont tu es le MJ ; <em>Tout exporter</em> donne tes campagnes dans un format
+          réimportable.
+        </li>
+        <li>
+          <strong>Rectification</strong> : nom, devise et images se modifient depuis ton profil ;
+          pour changer d’adresse e-mail, écris-nous.
+        </li>
+        <li>
+          <strong>Effacement</strong> : <em>Paramètres › Compte › Supprimer mon compte en ligne</em>
+          efface ton compte, ton profil, tes liens d’aventurier, tes adhésions, tes demandes et les
+          campagnes dont tu es le MJ.
+        </li>
+        <li>
+          <strong>Opposition</strong> (aux traitements fondés sur l’intérêt légitime, comme la
+          mesure d’audience) et <strong>limitation</strong> du traitement.
+        </li>
+        <li>
+          <strong>Directives sur le sort de tes données après ton décès</strong> (loi Informatique
+          et Libertés, art. 85).
+        </li>
+      </ul>
       <p>
-        Tu peux accéder à tes données, les corriger, les effacer, les récupérer dans un format
-        réutilisable, t’opposer à leur traitement ou en demander la limitation. Dans l’application :
-        <em>Paramètres › Données et confidentialité</em> pour tout exporter, et
-        <em>Paramètres › Compte</em> pour supprimer ton compte. Pour le reste, écris à
-        <a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a> ; réponse sous un
-        mois.
+        Pour exercer un droit qui ne se fait pas dans l’application, écris à
+        <a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a> depuis l’adresse de
+        ton compte. Nous répondons sous un mois (prolongeable de deux mois pour une demande
+        complexe, en te prévenant). Nous pouvons te demander de confirmer ton identité.
       </p>
       <p>
-        Si tu estimes que tes droits ne sont pas respectés, tu peux saisir la CNIL :
-        <a href="https://www.cnil.fr/fr/plaintes">cnil.fr/fr/plaintes</a>.
+        Si tu estimes que tes droits ne sont pas respectés, tu peux adresser une réclamation à la
+        CNIL : <a href="https://www.cnil.fr/fr/plaintes">cnil.fr/fr/plaintes</a>.
       </p>
 
       <h2>Sécurité</h2>
       <p>
-        Connexion toujours chiffrée (HTTPS), mots de passe conservés sous forme d’empreinte
-        (scrypt), campagnes chiffrées sur le serveur et sur ton appareil, limitation des tentatives
-        de connexion, cookie de session inaccessible aux scripts.
+        Connexion toujours chiffrée (HTTPS, HSTS), mots de passe d’au moins 15 caractères conservés
+        sous forme d’empreinte (scrypt), tentatives de connexion limitées, avis par e-mail quand le
+        mot de passe change, campagnes chiffrées sur le serveur et sur ton appareil, cookie de
+        session inaccessible aux scripts, politique de sécurité des contenus stricte. En cas de
+        violation de données présentant un risque, nous prévenons la CNIL sous 72 heures et, si le
+        risque est élevé, les personnes concernées.
       </p>
 
       <h2>Mineurs</h2>
       <p>
-        Avant 15 ans, il faut l’accord d’un parent pour créer un compte, comme le prévoit la loi
-        française.
+        Avant 15 ans, il faut l’accord d’un parent ou d’un responsable légal pour créer un compte :
+        l’inscription le fait déclarer. Un parent peut nous écrire pour faire supprimer le compte de
+        son enfant.
+      </p>
+
+      <h2>Modifications</h2>
+      <p>
+        Si cette page change de façon importante, l’application te le signale à ta connexion
+        suivante. La date de dernière mise à jour figure en haut de la page.
       </p>
     </main>
     <!-- site:footer -->

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- site:head -->
+    <!-- site:icons -->
+    <meta name="theme-color" content="#ece0c6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#110d0a" media="(prefers-color-scheme: dark)" />
+    <script>
+      document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    </script>
+    <script type="module" src="/site/site.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <!-- site:header -->
+    <main id="contenu" class="prose">
+      <p class="eyebrow">Contact</p>
+      <h1>Contact et signalement</h1>
+      <p class="updated">Dernière mise à jour : {{site.legalUpdated}}</p>
+
+      <p>
+        Une seule adresse pour toutes les demandes :
+        <a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a>. Nous répondons en
+        français.
+      </p>
+
+      <h2 id="signaler">Signaler un contenu illicite</h2>
+      <p>
+        <strong>Dans l’application</strong>, le plus simple : ouvre le profil concerné et choisis
+        <strong>Signaler</strong>. Tu reçois un accusé de réception, puis la décision.
+      </p>
+      <p>
+        <strong>Par e-mail</strong>, si tu n’as pas de compte ou si le contenu n’est pas un profil,
+        indique (règlement (UE) 2022/2065 sur les services numériques, art. 16) :
+      </p>
+      <ol>
+        <li>pourquoi tu estimes que le contenu est illicite ;</li>
+        <li>
+          où il se trouve, aussi précisément que possible : nom affiché, code d’aventurier, lien
+          vers le profil ou la campagne ;
+        </li>
+        <li>
+          ton nom et ton adresse e-mail (sauf s’il s’agit d’un contenu pédopornographique, que tu
+          peux signaler anonymement) ;
+        </li>
+        <li>
+          une déclaration confirmant que tu crois, de bonne foi, que les informations données sont
+          exactes et complètes.
+        </li>
+      </ol>
+      <p>
+        Les signalements sont examinés par une personne. La personne visée ne connaît jamais
+        l’auteur du signalement ; elle reçoit les motifs de toute décision qui la concerne et peut
+        la contester, comme toi.
+      </p>
+      <p>
+        Pour un contenu pédopornographique, terroriste ou une menace grave, signale-le aussi
+        directement aux autorités sur
+        <a href="https://www.internet-signalement.gouv.fr">internet-signalement.gouv.fr</a>
+        (Pharos). Un enfant en danger : appelle le 119. Une urgence : le 17 ou le 112.
+      </p>
+
+      <h2 id="autorites">Point de contact unique (DSA)</h2>
+      <p>
+        L’adresse <a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a> est le
+        point de contact unique de Codex pour les utilisateurs (DSA, art. 12) et pour les autorités
+        des États membres, la Commission européenne et le comité européen des services numériques
+        (art. 11). Langue acceptée : français. Les réquisitions judiciaires peuvent aussi être
+        adressées par courrier à l’éditeur (voir les
+        <a href="/mentions-legales">mentions légales</a>).
+      </p>
+
+      <h2 id="donnees">Tes données personnelles</h2>
+      <p>
+        Accès, rectification, effacement, portabilité, opposition, limitation, directives
+        post-mortem : la plupart se font dans l’application (voir la page
+        <a href="/confidentialite">Confidentialité</a>). Sinon, écris-nous depuis l’adresse de ton
+        compte ; réponse sous un mois.
+      </p>
+
+      <h2 id="accessibilite">Accessibilité</h2>
+      <p>
+        Un contenu ou un service que tu n’arrives pas à utiliser ? Écris-nous : nous te proposerons
+        une alternative. Voir la <a href="/accessibilite">déclaration d’accessibilité</a>.
+      </p>
+
+      <h2 id="securite">Faille de sécurité</h2>
+      <p>
+        Si tu découvres une faille, écris-nous sans la rendre publique ni accéder aux données des
+        autres : nous te répondrons et corrigerons au plus vite.
+      </p>
+    </main>
+    <!-- site:footer -->
+  </body>
+</html>

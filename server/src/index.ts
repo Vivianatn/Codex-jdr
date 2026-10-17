@@ -1,5 +1,6 @@
 import { buildApp } from './app.ts'
 import { sweepInactive } from './auth.ts'
+import { sweepReports } from './compliance.ts'
 import { loadConfig } from './config.ts'
 import { openDb } from './db.ts'
 import { createMailer } from './mailer.ts'
@@ -18,7 +19,12 @@ const sweep = () =>
     (n) => n && app.log.info(`${n} compte(s) inactif(s) supprimé(s)`),
     (error: unknown) => app.log.error(error),
   )
+// Closed reports go one year after their decision (D-271).
+const sweepClosedReports = () =>
+  sweepReports({ db, now: Date.now }).catch((error: unknown) => app.log.error(error))
 void sweep()
+void sweepClosedReports()
+setInterval(sweepClosedReports, 86_400_000).unref()
 setInterval(sweep, 86_400_000).unref()
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const)

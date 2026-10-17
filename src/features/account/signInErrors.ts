@@ -7,6 +7,7 @@ import { accountErrorMessage } from './accountErrors'
 export function signInErrorMessage(t: Messages, error: unknown): string {
   if (error instanceof AccountError) return accountErrorMessage(t, error)
   if (error instanceof ApiError) {
+    if (error.code === 'forbidden' && error.extra.suspended === true) return t.legal.suspended
     if (error.code === 'weakPassword' && typeof error.extra.problem === 'string')
       return t.account.errors[error.extra.problem as keyof Messages['account']['errors']] as string
     return t.online.errors[error.code] ?? t.online.errors.server

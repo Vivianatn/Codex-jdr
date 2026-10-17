@@ -103,6 +103,26 @@ main {
   text-transform: uppercase;
 }
 
+/* Alpha status (D-271): small, next to the name, links to the CGU section about it. */
+.site-alpha {
+  margin-left: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--codex-line-strong);
+  border-radius: var(--codex-radius-pill);
+  background: var(--codex-warning-soft);
+  color: var(--codex-warning-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.site-alpha:hover {
+  color: var(--codex-warning-text);
+  border-color: var(--codex-gold-line);
+}
+
 main {
   flex: 1;
   padding-block: 2rem 4rem;
@@ -369,12 +389,52 @@ h3 {
   font-size: 0.875rem;
 }
 
+/* No horizontal scrolling, ever (D-246): long words wrap instead. */
 .prose table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9375rem;
-  display: block;
-  overflow-x: auto;
+  table-layout: fixed;
+  overflow-wrap: anywhere;
+}
+
+.prose h3 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.125rem;
+}
+
+/* One processing of personal data (privacy notice): a card instead of a wide table. */
+.prose .processing {
+  margin: 0 0 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--codex-line);
+  border-radius: var(--codex-radius);
+  background: var(--codex-surface);
+}
+
+.prose .processing h3 {
+  margin-top: 0;
+}
+
+.prose .processing dl {
+  display: grid;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+@media (min-width: 40rem) {
+  .prose .processing dl {
+    grid-template-columns: 10rem 1fr;
+  }
+}
+
+.prose .processing dd {
+  margin: 0 0 0.5rem;
+}
+
+.prose code {
+  overflow-wrap: anywhere;
+  font-size: 0.875em;
 }
 
 .prose th,

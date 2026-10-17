@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { campaignRepository } from '@/db/campaigns'
 import { activeDb } from '@/db/db'
 import { createEntity } from '@/domain/entity'
+import { withOwner } from '@/domain/familiars'
+import { newMap } from '@/domain/maps'
 import { configuredRules, startLocalGame } from '@/test/fixtures'
 import { renderApp } from '@/test/renderApp'
 import { campaignHistory, useCampaignStore } from '@/stores/campaignStore'
@@ -141,5 +143,106 @@ describe('quick panel (D-227)', () => {
 
     await user.type(within(panel).getByLabelText('Modifier les PV de Gobelin 1'), '-5{Enter}')
     expect(store().entities[gob.id]!.hp.current).toBe(10)
+  })
+})
+
+describe('familiars and the GM’s board in play (D-269)', () => {
+  async function withFamiliars() {
+    const c = await campaignRepository.create({ name: 'Familiers' })
+    const lyra = createEntity('player', c.id, rules, { identity: { pseudo: 'Lyra' }, hpRoll: 10 })
+    const gob = createEntity('enemy', c.id, rules, { identity: { pseudo: 'Gobelin' }, hpRoll: 4 })
+    const guard = createEntity('ally', c.id, rules, { identity: { pseudo: 'Garde' }, hpRoll: 4 })
+    const owl = withOwner(
+      createEntity('familiar', c.id, rules, { identity: { pseudo: 'Hibou' }, hpMax: 6 }),
+      lyra.id,
+    )
+    const rat = withOwner(
+      createEntity('familiar', c.id, rules, { identity: { pseudo: 'Rat' }, hpMax: 3 }),
+      gob.id,
+    )
+    const dog = withOwner(
+      createEntity('familiar', c.id, rules, { identity: { pseudo: 'Chien' }, hpMax: 5 }),
+      guard.id,
+    )
+    const stray = createEntity('familiar', c.id, rules, { identity: { pseudo: 'Chat errant' } })
+    await activeDb().entities.bulkAdd([lyra, gob, guard, owl, rat, dog, stray])
+    await startLocalGame(c.id)
+    const app = renderApp(`/c/${c.id}/play`)
+    await screen.findByRole('region', { name: 'Tours de jeu' })
+    return { ...app, campaign: c, lyra, gob, guard, owl, rat, dog, stray }
+  }
+
+  it('a familiar is listed under its master and plays at its turn', async () => {
+    const { user, lyra } = await withFamiliars()
+    // Not offered as a member of its own: it follows its master.
+    await createGroup(user, 'Héros', ['Lyra (Joueur)'])
+    const card = screen.getByRole('region', { name: 'Héros' })
+    const options = within(card)
+      .queryAllByRole('option')
+      .map((o) => o.textContent)
+    expect(options).not.toContain('Hibou (Familier)')
+    expect(within(card).getByRole('list', { name: 'Joue au tour de Lyra' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Commencer les tours' }))
+    expect(store().play.turn).toMatchObject({ memberId: lyra.id })
+    const banner = screen.getByRole('region', { name: 'Tours de jeu' })
+    expect(
+      within(banner).getByRole('button', { name: 'Manipuler Hibou — Joue au tour de Lyra' }),
+    ).toBeInTheDocument()
+    // One tap to roll for each actor.
+    const actors = within(banner).getByRole('list', { name: 'Qui joue' })
+    await user.click(within(actors).getByRole('button', { name: 'Lancer les dés pour Hibou' }))
+    const panel = await screen.findByRole('complementary', {
+      name: 'Manipulation rapide : Hibou',
+    })
+    expect(within(panel).getByText('Familier de Lyra')).toBeInTheDocument()
+    await user.click(within(panel).getByRole('button', { name: 'Tester Dextérité pour Hibou' }))
+    expect(store().play.groups[0]!.memberIds).toEqual([lyra.id])
+  })
+
+  it('adds only the familiars of player characters and enemies, next to their master', async () => {
+    const { user, campaign, lyra, owl } = await withFamiliars()
+    const map = newMap(campaign.id, { name: 'Crypte', cols: 8, rows: 8 })
+    map.tokens = [{ id: 'tk-lyra', entityId: lyra.id, col: 3, row: 3, size: 1, hidden: false }]
+    store().addMap(map, 'map')
+    store().updatePlay((p) => ({ ...p, mapId: map.id }), 'map')
+
+    const section = await screen.findByRole('region', { name: 'Ajouter un familier' })
+    // A rare gesture: folded until the GM opens it (D-272).
+    expect(within(section).queryByText('Rat')).toBeNull()
+    await user.click(within(section).getByRole('button', { name: 'Ajouter un familier' }))
+    expect(within(section).queryByText('Chien')).toBeNull()
+    expect(within(section).queryByText('Chat errant')).toBeNull()
+    expect(within(section).getByText('Rat')).toBeInTheDocument()
+    await user.click(within(section).getByRole('button', { name: 'Placer Hibou' }))
+    const placed = store().maps[map.id]!.tokens.find((tk) => tk.entityId === owl.id)!
+    expect(Math.max(Math.abs(placed.col - 3), Math.abs(placed.row - 3))).toBe(1)
+    expect(within(section).getByText('déjà sur le plateau')).toBeInTheDocument()
+  })
+
+  it('the GM deletes an enemy after confirming, and takes a player off the board', async () => {
+    const { user, campaign, lyra, gob } = await withFamiliars()
+    const map = newMap(campaign.id, { name: 'Crypte', cols: 8, rows: 8 })
+    map.tokens = [
+      { id: 'tk-lyra', entityId: lyra.id, col: 3, row: 3, size: 1, hidden: false },
+      { id: 'tk-gob', entityId: gob.id, col: 5, row: 5, size: 1, hidden: false },
+    ]
+    store().addMap(map, 'map')
+    store().updatePlay((p) => ({ ...p, mapId: map.id }), 'map')
+
+    await user.click(await screen.findByRole('button', { name: 'Manipuler Gobelin' }))
+    const panel = await screen.findByRole('complementary', {
+      name: 'Manipulation rapide : Gobelin',
+    })
+    await user.click(within(panel).getByRole('button', { name: 'Supprimer l’ennemi' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Supprimer Gobelin ?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Supprimer' }))
+    expect(store().entities[gob.id]).toBeUndefined()
+    expect(store().maps[map.id]!.tokens.map((tk) => tk.id)).toEqual(['tk-lyra'])
+
+    await user.click(screen.getByRole('button', { name: 'Plateau et tours : Lyra' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Retirer du plateau' }))
+    expect(store().maps[map.id]!.tokens).toEqual([])
+    expect(store().entities[lyra.id]).toBeDefined()
   })
 })

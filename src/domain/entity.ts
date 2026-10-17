@@ -1,6 +1,7 @@
 import { effectiveStat, hpMaxAt, type RulesConfig } from '@/rules'
 import { normalizeCondition } from './conditions'
 import { equippedItems, isOverloaded, normalizeItem } from './items'
+import { playerColorOf } from './playerColors'
 import {
   STAT_KEYS,
   type DetailsByKind,
@@ -40,7 +41,7 @@ export function uniformStats(value: number): Stats {
 
 export function defaultDetails<K extends EntityKind>(kind: K): DetailsByKind[K] {
   const details: DetailsByKind = {
-    player: { xp: 0 },
+    player: { xp: 0, color: null },
     enemy: { templateId: null, copyNumber: null, xpReward: 0, loot: '' },
     familiar: { ownerId: null, loyalty: 50, actsOnOwnerTurn: true },
     ally: { disposition: 'neutral', controlledBy: '' },
@@ -292,5 +293,8 @@ export function normalizeEntityShape<E extends Entity>(entity: E): E {
     skills: entity.skills.map(normalizeSkill),
     conditions: entity.conditions.map(normalizeCondition),
     inventory: entity.inventory.map(normalizeItem),
+    ...(entity.kind === 'player' && {
+      details: { ...entity.details, color: playerColorOf(entity) },
+    }),
   }
 }

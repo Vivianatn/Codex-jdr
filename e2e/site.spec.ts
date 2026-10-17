@@ -10,7 +10,17 @@ import { expectNoSeriousA11yViolations } from './support/a11y'
  */
 
 const BUILD = `http://localhost:${BUILD_PORT}`
-const PAGES = ['/', '/confidentialite', '/cgu', '/mentions-legales', '/une-page-qui-nexiste-pas']
+const PAGES = [
+  '/',
+  '/confidentialite',
+  '/cgu',
+  '/mentions-legales',
+  '/accessibilite',
+  '/contact',
+  '/une-page-qui-nexiste-pas',
+]
+/** The real pages (not the 404). */
+const REAL_PAGES = PAGES.slice(0, -1)
 const WIDTHS = [320, 390, 768, 1024, 1440]
 
 function scrollsSideways(page: Page) {
@@ -62,7 +72,7 @@ test('unknown addresses get the custom 404 page with a 404 status (point 15)', a
 test('every internal link and resource answers (point 16)', async ({ page, request }) => {
   const seen = new Set<string>()
   const broken: string[] = []
-  for (const path of PAGES.slice(0, 4)) {
+  for (const path of REAL_PAGES) {
     await page.goto(`${BUILD}${path}`)
     const refs = await page.evaluate(() =>
       [...document.querySelectorAll<HTMLElement>('[href], [src]')]
@@ -107,5 +117,47 @@ test('forms refuse invalid input and say why (point 17)', async ({ page }) => {
   await expect(page.getByRole('alert').filter({ hasText: 'au moins 15 caractères' })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'pas identiques' })).toBeVisible()
   await expect(page.getByLabel(/^Mot de passe/)).toHaveAttribute('aria-invalid', 'true')
+  // Age and terms are asked explicitly, unticked by default (D-271). The errors above appear
+  // when the field is left (the button moves under the pointer): submit with Enter to be sure.
+  await page.getByLabel('Confirme le mot de passe').press('Enter')
+  await expect(page.getByRole('alert').filter({ hasText: 'Indique ton âge' })).toBeVisible()
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'Accepte les conditions d’utilisation' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('checkbox', { name: /J’accepte les conditions d’utilisation/ }),
+  ).not.toBeChecked()
   await expect(page.getByTestId('lock-screen')).toBeVisible()
+})
+
+test('every page shows the alpha badge and the legal footer (D-271)', async ({ page }) => {
+  for (const path of PAGES) {
+    await page.goto(`${BUILD}${path}`)
+    await expect(page.getByRole('link', { name: 'Alpha' })).toHaveAttribute('href', '/cgu#alpha')
+    const footer = page.getByRole('navigation', { name: 'Informations légales' })
+    for (const [name, href] of [
+      ['Mentions légales', '/mentions-legales'],
+      ['Confidentialité', '/confidentialite'],
+      ['Cookies', '/confidentialite#cookies'],
+      ['Conditions d’utilisation', '/cgu'],
+      ['Contact et signalement', '/contact'],
+    ])
+      await expect(footer.getByRole('link', { name, exact: true })).toHaveAttribute('href', href)
+    await expect(
+      footer.getByRole('link', { name: /^Accessibilité : .*conforme$/ }),
+    ).toHaveAttribute('href', '/accessibilite')
+  }
+})
+
+test('the legal anchors the footer and the app point to exist', async ({ page }) => {
+  for (const [path, id] of [
+    ['/confidentialite', 'cookies'],
+    ['/confidentialite', 'audience'],
+    ['/cgu', 'alpha'],
+    ['/cgu', 'signaler'],
+    ['/contact', 'signaler'],
+  ]) {
+    await page.goto(`${BUILD}${path}#${id}`)
+    await expect(page.locator(`#${id}`)).toBeVisible()
+  }
 })

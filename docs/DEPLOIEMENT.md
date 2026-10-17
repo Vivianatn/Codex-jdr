@@ -21,7 +21,26 @@ Seul Caddy est joignable depuis Internet (ports 80 et 443) ; le reste ne parle q
 
 ## 2. Renseigner les informations du site
 
-Sur ton ordinateur, copie `.env.example` en `.env.production.local` et remplis-le : adresse du site, éditeur, contact, hébergeur (nom, adresse, contact, pays du centre de données). Ces informations apparaissent dans les mentions légales et la page Confidentialité ; tant qu'il en manque une, `npm run launch:check` refuse la mise en ligne.
+Sur ton ordinateur, copie `.env.example` en `.env.production.local` et remplis-le. Ces informations apparaissent dans les mentions légales, la page Confidentialité, les CGU et la page Contact ; tant qu'il en manque une, `npm run launch:check` refuse la mise en ligne (D-271) :
+
+| Variable                     | Ce qu'il faut écrire                                                                                                                          |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CODEX_SITE_URL`             | L'adresse du site, `https://…`                                                                                                                |
+| `CODEX_PUBLISHER_NAME`       | Ton nom (ou celui de ta société)                                                                                                              |
+| `CODEX_PUBLISHER_STATUS`     | « Particulier », « Entreprise individuelle, SIREN … », « SAS au capital de … €, RCS …, TVA … »                                                |
+| `CODEX_PUBLISHER_ADDRESS`    | Adresse postale (domicile ou siège)                                                                                                           |
+| `CODEX_PUBLISHER_PHONE`      | Numéro de téléphone                                                                                                                           |
+| `CODEX_CONTACT_EMAIL`        | L'adresse de contact : questions, droits RGPD, signalements, point de contact unique du DSA                                                   |
+| `CODEX_PUBLICATION_DIRECTOR` | Le directeur ou la directrice de la publication (toi, en général)                                                                             |
+| `CODEX_HOST_ADDRESS`         | Adresse de l'hébergeur (PulseHeberg)                                                                                                          |
+| `CODEX_HOST_PHONE`           | Téléphone de l'hébergeur                                                                                                                      |
+| `CODEX_HOST_LOCATION`        | Pays du centre de données, en phrase : « en France » (dans l'Union européenne)                                                                |
+| `CODEX_MAIL_PROVIDER`        | Le service d'envoi derrière `SMTP_URL`, avec son pays : « Brevo (France) ». Choisis-le dans l'UE, sinon la page Confidentialité serait fausse |
+| `CODEX_CONSUMER_MEDIATOR`    | Si tu agis en professionnel : le nom et le site de ton médiateur de la consommation ; sinon, une phrase qui explique pourquoi il n'y en a pas |
+
+- **Éditeur particulier** : la loi (LCEN, art. 6-III-2) permet à une personne qui édite à titre non professionnel de ne publier que les coordonnées de l'hébergeur, à condition de lui avoir donné son identité. Si tu fais ce choix, écris-le explicitement dans les champs de l'éditeur (par exemple « Éditeur non professionnel, identité communiquée à l'hébergeur (LCEN, art. 6-III-2) ») ; Codex ne le décide pas à ta place.
+- **Accessibilité** : `CODEX_ACCESSIBILITY_STATUS` vaut « non conforme » tant qu'aucun audit RGAA complet n'a été fait (c'est la règle du RGAA) ; ne le passe à « partiellement conforme » (50 % des critères au moins) ou « totalement conforme » qu'après un audit.
+- **Changer les CGU ou la page Confidentialité** : mets à jour `legalUpdated` dans `site/config.ts` et, si le changement est important, `TERMS_VERSION` dans `shared/legal.ts` : chaque compte devra accepter la nouvelle version à sa connexion suivante.
 
 ## 3. Préparer le paquet à envoyer
 
@@ -54,6 +73,7 @@ Remplis :
 | `CODEX_DATA_KEY`                        | `openssl rand -hex 32` — **garde-en une copie hors du serveur** (gestionnaire de mots de passe, papier) : sans elle, ni la base ni les sauvegardes ne se relisent |
 | `SMTP_URL`                              | `smtps://utilisateur:motdepasse@serveur-smtp:465` (un `@` dans l'identifiant s'écrit `%40`)                                                                       |
 | `MAIL_FROM`                             | L'expéditeur des e-mails, par exemple `Codex <ne-pas-repondre@codex-jdr.fr>`                                                                                      |
+| `MODERATION_EMAIL`                      | Où arrivent les nouveaux signalements, et l'adresse à laquelle les e-mails de modération demandent de répondre (en général `CODEX_CONTACT_EMAIL`)                 |
 
 Puis :
 
@@ -121,7 +141,7 @@ Sans Docker, le serveur Codex sert aussi le site et l'application lui-même (D-2
 
 1. `npm run deploy:bundle` sur ton ordinateur, puis envoie `release/server/` et `release/site/` côte à côte dans le dossier du sous-domaine (par exemple `codex.antoine-vivian.fr/server` et `codex.antoine-vivian.fr/site`).
 2. Dans Plesk › Node.js : version **22.x** (22.12 ou plus), racine de l'application `server`, fichier de démarrage `dist/server/src/index.js`, mode production. Clique « NPM install » (installe les dépendances de `package.json`).
-3. Variables d'environnement de l'application : `NODE_ENV=production`, `DATABASE_URL` (une base **PostgreSQL**), `CODEX_DATA_KEY`, `CODEX_SITE_URL=https://codex.antoine-vivian.fr`, `SMTP_URL`, `MAIL_FROM`. Si le site n'est pas dans `../site`, indique son dossier avec `CODEX_SITE_DIR`.
+3. Variables d'environnement de l'application : `NODE_ENV=production`, `DATABASE_URL` (une base **PostgreSQL**), `CODEX_DATA_KEY`, `CODEX_SITE_URL=https://codex.antoine-vivian.fr`, `SMTP_URL`, `MAIL_FROM`, `MODERATION_EMAIL`. Si le site n'est pas dans `../site`, indique son dossier avec `CODEX_SITE_DIR`.
 4. Active HTTPS (Let's Encrypt) sur le sous-domaine et redémarre l'application. `https://codex.antoine-vivian.fr/api/health` doit répondre `{"ok":true}`, et les pages s'afficher avec leur style.
 
 ## 10. Essayer en local
@@ -133,3 +153,36 @@ npm run dev              # l'application, qui relaie /api vers le serveur
 ```
 
 Les e-mails de réinitialisation s'affichent alors dans la console du serveur au lieu de partir.
+
+## 11. Signalements et modération (DSA, D-271)
+
+Toute personne connectée peut signaler un profil (bouton « Signaler ») ; on peut aussi t'écrire à l'adresse de contact (page `/contact`). Chaque signalement est enregistré avec une copie du profil tel qu'il était ; son auteur reçoit un accusé de réception, et `MODERATION_EMAIL` est prévenu. **Tu dois l'examiner toi-même** (aucune décision automatique) et décider sans tarder, surtout pour un contenu manifestement illicite.
+
+Les décisions se prennent en ligne de commande, sur le serveur (mêmes variables d'environnement que lui). Avec Docker :
+
+```sh
+docker compose exec server node dist/server/src/moderate.js reports            # signalements ouverts (--all : tous)
+docker compose exec server node dist/server/src/moderate.js show <signalement> # le détail et la copie du profil
+```
+
+Puis, selon le cas :
+
+```sh
+# Retirer la devise et les images d'un profil et en bloquer la modification (--rename "Aventurier" remplace aussi le nom).
+docker compose exec server node dist/server/src/moderate.js hide-profile <compte> --report <signalement> --reason "Ta devise contient des insultes envers d'autres joueurs."
+# Contenu illicite (et non seulement contraire aux CGU) : ajoute --illegal.
+docker compose exec server node dist/server/src/moderate.js suspend <compte> --report <signalement> --reason "…" --illegal
+# Aucune mesure : le signalement est classé et son auteur reçoit la raison.
+docker compose exec server node dist/server/src/moderate.js dismiss <signalement> --reason "La devise ne contrevient à aucune règle."
+# Après une contestation fondée :
+docker compose exec server node dist/server/src/moderate.js restore-profile <compte>
+docker compose exec server node dist/server/src/moderate.js unsuspend <compte>
+```
+
+- La personne visée reçoit par e-mail l'**exposé des motifs** (DSA, art. 17) : la mesure, les faits que tu écris dans `--reason`, le signalement s'il y en a un, le motif (loi ou CGU), et comment contester. Écris `--reason` pour elle : clair, factuel, sans le nom de l'auteur du signalement.
+- L'auteur du signalement reçoit la décision (sauf signalement anonyme).
+- Une suspension ferme toutes les sessions du compte et refuse sa connexion ; une connexion temps réel déjà ouverte se coupe au plus tard à sa reconnexion.
+- Sur Plesk, lance les mêmes commandes depuis le dossier `server` (`node dist/server/src/moderate.js …`) avec les variables de l'application (`DATABASE_URL`, `SMTP_URL`, `MAIL_FROM`, `MODERATION_EMAIL`).
+- Contenu pédocriminel ou terroriste : masque-le immédiatement, garde la copie (le signalement la conserve) et signale-le sur [internet-signalement.gouv.fr](https://www.internet-signalement.gouv.fr) ; une autorité peut aussi t'adresser une injonction de retrait (sous une heure pour un contenu terroriste).
+- Les signalements traités sont effacés un an après leur décision (balayage quotidien du serveur).
+- En secours, la table se lit en SQL : `docker compose exec codex-db psql -U codex -d codex -c "SELECT id, created_at, status, category, target_id FROM reports ORDER BY created_at"`.

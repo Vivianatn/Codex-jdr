@@ -14,6 +14,7 @@ import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
+import { BoardMenu } from './BoardMenu'
 
 /**
  * Mini sheet above a token (D-234): HP, the seven characteristics and the
@@ -101,6 +102,7 @@ export function MiniSheet({
         <h2 className="min-w-0 flex-1 truncate font-title text-base font-semibold text-ink">
           {name}
         </h2>
+        <BoardMenu entity={entity} />
         <IconButton size="sm" label={t.mini.full} icon={<FileText />} onClick={onFull} />
         <IconButton size="sm" label={t.mini.close} icon={<X />} onClick={onClose} />
       </header>

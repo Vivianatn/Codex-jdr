@@ -8,6 +8,7 @@ import {
   emptyPlayState,
   normalizePlayState,
   pruneMembers,
+  withoutAttachedFamiliars,
   removeMember,
   type PlayState,
 } from '@/domain/turns'
@@ -100,7 +101,11 @@ export const useCampaignStore = create<CampaignDataState>()(
         const adopted = adoptSkills(list.map(normalizeEntityShape), stored, campaignId)
         const entities = Object.fromEntries(adopted.entities.map((e) => [e.id, e]))
         const skills = { ...stored, ...Object.fromEntries(adopted.added.map((d) => [d.id, d])) }
-        const play = pruneMembers(normalizePlayState(record?.play), new Set(Object.keys(entities)))
+        // Familiars attached to a master share its turn (D-269): no slot of their own.
+        const play = withoutAttachedFamiliars(
+          pruneMembers(normalizePlayState(record?.play), new Set(Object.keys(entities))),
+          entities,
+        )
         lastSavedPlay = play
         const maps = Object.fromEntries(mapList.map((m) => [m.id, normalizeMap(m)]))
         lastSavedMaps = Object.fromEntries(mapList.map((m) => [m.id, m]))

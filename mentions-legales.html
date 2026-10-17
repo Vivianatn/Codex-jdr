@@ -23,14 +23,20 @@
       <p class="updated">Dernière mise à jour : {{site.legalUpdated}}</p>
 
       <h2>Éditeur</h2>
+      <p>
+        Le site et l’application Codex sont édités par (loi n° 2004-575 du 21 juin 2004 pour la
+        confiance dans l’économie numérique, art. 1-1 et 6-III) :
+      </p>
       <dl>
-        <dt>Nom</dt>
+        <dt>Nom ou dénomination</dt>
         <dd>{{site.publisher.name}}</dd>
-        <dt>Statut</dt>
+        <dt>Statut et immatriculation</dt>
         <dd>{{site.publisher.status}}</dd>
         <dt>Adresse</dt>
         <dd>{{site.publisher.address}}</dd>
-        <dt>Contact</dt>
+        <dt>Téléphone</dt>
+        <dd>{{site.publisher.phone}}</dd>
+        <dt>Adresse électronique</dt>
         <dd><a href="mailto:{{site.publisher.email}}">{{site.publisher.email}}</a></dd>
         <dt>Directeur ou directrice de la publication</dt>
         <dd>{{site.publisher.director}}</dd>
@@ -42,19 +48,63 @@
         <dd>{{site.host.name}}</dd>
         <dt>Adresse</dt>
         <dd>{{site.host.address}}</dd>
-        <dt>Contact</dt>
-        <dd>{{site.host.contact}}</dd>
+        <dt>Téléphone</dt>
+        <dd>{{site.host.phone}}</dd>
+        <dt>Lieu d’hébergement des données</dt>
+        <dd>{{site.host.location}}</dd>
       </dl>
 
-      <h2>Propriété intellectuelle et crédits</h2>
+      <h2>Version</h2>
       <p>
-        Le nom, le logo et le code de Codex sont protégés. Polices Alegreya, Alegreya SC et Source
-        Sans 3 sous licence SIL Open Font License 1.1 ; icônes Lucide (licence ISC) et
-        game-icons.net (CC BY 3.0, auteurs crédités dans l’application).
+        Codex est en <strong>version alpha</strong> ({{site.version}}) : voir
+        <a href="/cgu#alpha">ce que cela implique</a>.
       </p>
 
-      <h2>Données personnelles</h2>
-      <p>Voir la page <a href="/confidentialite">Confidentialité</a>.</p>
+      <h2>Contact et signalement</h2>
+      <p>
+        Pour écrire à l’éditeur, signaler un contenu illicite ou exercer tes droits : page
+        <a href="/contact">Contact et signalement</a>. C’est aussi le point de contact unique des
+        autorités et des utilisateurs au sens du règlement européen sur les services numériques
+        (DSA, art. 11 et 12).
+      </p>
+
+      <h2>Propriété intellectuelle</h2>
+      <p>
+        Le nom Codex, son logo, ses textes, ses illustrations et son code sont protégés par le Code
+        de la propriété intellectuelle. Toute reproduction ou réutilisation sans autorisation est
+        interdite, sauf exceptions prévues par la loi. Les contenus créés par les utilisateurs
+        (campagnes, profils, images) restent à leurs auteurs : voir les
+        <a href="/cgu">conditions d’utilisation</a>.
+      </p>
+
+      <h2>Crédits</h2>
+      <ul>
+        <li>
+          Polices Alegreya et Alegreya SC (Juan Pablo del Peral, Huerta Tipográfica) et Source Sans
+          3 (Paul D. Hunt, Adobe), sous licence
+          <a href="https://openfontlicense.org">SIL Open Font License 1.1</a>, servies depuis le
+          serveur de Codex (aucun appel à un service de polices externe).
+        </li>
+        <li>
+          Icônes de jeu de <a href="https://game-icons.net">game-icons.net</a>, dessinées par Lorc,
+          Delapouite et les autres auteurs du projet, sous licence
+          <a href="https://creativecommons.org/licenses/by/3.0/deed.fr">Creative Commons BY 3.0</a>
+          ; Codex les modifie (fond retiré, couleur adaptée au thème).
+        </li>
+        <li>Icônes d’interface <a href="https://lucide.dev">Lucide</a>, sous licence ISC.</li>
+        <li>
+          Logiciels libres : React, React Router, Radix UI, Konva, Zustand, Framer Motion, Sonner,
+          Tailwind CSS, Noble Ciphers, Fastify, node-postgres (licence MIT), Dexie (licence Apache
+          2.0), Nodemailer (licence MIT-0).
+        </li>
+        <li>Sons et musiques : synthétisés par Codex lui-même, sans enregistrement tiers.</li>
+      </ul>
+
+      <h2>Données personnelles et cookies</h2>
+      <p>
+        Voir la page <a href="/confidentialite">Confidentialité</a> et sa section
+        <a href="/confidentialite#cookies">Cookies et traceurs</a>.
+      </p>
     </main>
     <!-- site:footer -->
   </body>
