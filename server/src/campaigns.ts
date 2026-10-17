@@ -18,8 +18,9 @@ import { newInviteCode } from './secrets.ts'
 /**
  * Campaigns on the server (D-262): who belongs to which campaign and how one
  * joins. A player asks to join (invitation link, or search when the GM lists
- * the campaign); the owner or a co-GM accepts, chooses the role and the
- * character.
+ * the campaign); a GM accepts, chooses the role and the character. Every GM
+ * (owner or editor) has the same rights (D-274), except that only the owner
+ * deletes the campaign or hands it over, and nobody demotes or removes the owner.
  */
 
 export async function roleOf(
@@ -160,19 +161,17 @@ export function registerCampaigns(app: FastifyInstance, ctx: Ctx): void {
     return { members }
   })
 
-  /** Role and character of a member. Co-GMs manage players; only the owner names co-GMs. */
+  /** Role and character of a member. Any GM names or demotes GMs (D-274), never the owner. */
   app.patch<P>('/api/campaigns/:id/members/:userId', authed, async (request) => {
     const id = param(request.params.id)
     const target = param(request.params.userId)
-    const mine = await requireRole(ctx, id, request.user!.id, isManager)
+    await requireRole(ctx, id, request.user!.id, isManager)
     const theirs = await roleOf(ctx.db, id, target)
     if (!theirs) throw new ApiError(404, 'notFound')
     if (theirs === 'owner') throw new ApiError(403, 'forbidden')
     const body = isRecord(request.body) ? request.body : {}
     const role = body.role === undefined ? theirs : body.role
     if (role !== 'player' && role !== 'editor') throw new ApiError(400, 'invalid')
-    if ((role === 'editor' || theirs === 'editor') && mine !== 'owner')
-      throw new ApiError(403, 'forbidden')
     const characterId =
       body.characterId === undefined
         ? undefined
@@ -186,11 +185,13 @@ export function registerCampaigns(app: FastifyInstance, ctx: Ctx): void {
     )
     // A player who became co-GM, or changed character, enters the game again.
     ctx.hub.removeFromGame(id, target)
-    ctx.hub.notifyCampaigns([target, request.user!.id])
+    // A demoted GM who was running the game stops serving it.
+    if (role !== theirs) await ctx.hub.liveChanged(id)
+    else ctx.hub.notifyCampaigns([target, request.user!.id])
     return { ok: true }
   })
 
-  /** Removes a member (owner: anyone; co-GM: players; anyone: themselves, except the owner). */
+  /** Removes a member (a GM: anyone; anyone: themselves), never the owner (D-274). */
   app.delete<P>('/api/campaigns/:id/members/:userId', authed, async (request) => {
     const id = param(request.params.id)
     const self = request.user!.id
@@ -198,15 +199,44 @@ export function registerCampaigns(app: FastifyInstance, ctx: Ctx): void {
     const mine = await requireRole(ctx, id, self, () => true)
     const theirs = await roleOf(ctx.db, id, target)
     if (!theirs) throw new ApiError(404, 'notFound')
-    const allowed =
-      theirs !== 'owner' &&
-      (target === self || mine === 'owner' || (mine === 'editor' && theirs === 'player'))
+    const allowed = theirs !== 'owner' && (target === self || isManager(mine))
     if (!allowed) throw new ApiError(403, 'forbidden')
     const members = await ctx.hub.membersOf([id])
     await ctx.db.query('DELETE FROM members WHERE campaign_id = $1 AND user_id = $2', [id, target])
     ctx.hub.removeFromGame(id, target)
     ctx.hub.notifyCampaigns(members)
+    if (theirs === 'editor') await ctx.hub.liveChanged(id)
     void ctx.hub.presence(id)
+    return { ok: true }
+  })
+
+  /** The owner hands the campaign over to another GM and stays GM (D-274). */
+  app.post<P>('/api/campaigns/:id/transfer', authed, async (request) => {
+    const id = param(request.params.id)
+    const self = request.user!.id
+    const target = param(isRecord(request.body) ? request.body.userId : undefined)
+    await ctx.db.tx(async (q) => {
+      const [campaign] = await q.query<{ owner_id: string }>(
+        'SELECT owner_id FROM campaigns WHERE id = $1 FOR UPDATE',
+        [id],
+      )
+      const mine = campaign ? await roleOf(q, id, self) : null
+      if (!campaign || !mine) throw new ApiError(404, 'notFound')
+      if (mine !== 'owner' || campaign.owner_id !== self) throw new ApiError(403, 'forbidden')
+      if (target === self || (await roleOf(q, id, target)) !== 'editor')
+        throw new ApiError(400, 'invalid')
+      await q.query(`UPDATE members SET role = 'editor' WHERE campaign_id = $1 AND user_id = $2`, [
+        id,
+        self,
+      ])
+      await q.query(`UPDATE members SET role = 'owner' WHERE campaign_id = $1 AND user_id = $2`, [
+        id,
+        target,
+      ])
+      await q.query('UPDATE campaigns SET owner_id = $2 WHERE id = $1', [id, target])
+    })
+    ctx.hub.notifyCampaigns(await ctx.hub.membersOf([id]))
+    ctx.hub.sessionsChanged()
     return { ok: true }
   })
 
@@ -234,7 +264,7 @@ export function registerCampaigns(app: FastifyInstance, ctx: Ctx): void {
 
   app.patch<P>('/api/campaigns/:id/sharing', authed, async (request) => {
     const id = param(request.params.id)
-    await requireRole(ctx, id, request.user!.id, (r) => r === 'owner')
+    await requireRole(ctx, id, request.user!.id, isManager)
     const listed = isRecord(request.body) && request.body.listed === true
     await ctx.db.query('UPDATE campaigns SET listed = $2 WHERE id = $1', [id, listed])
     return { listed }
@@ -436,14 +466,13 @@ export function registerCampaigns(app: FastifyInstance, ctx: Ctx): void {
     }
   })
 
-  /** Accepts a request: the GM chooses the role (co-GM: owner only) and the character. */
+  /** Accepts a request: the GM chooses the role (player or GM) and the character. */
   app.post<P>('/api/campaigns/:id/requests/:requestId/accept', authed, async (request) => {
     const id = param(request.params.id)
-    const mine = await requireRole(ctx, id, request.user!.id, isManager)
+    await requireRole(ctx, id, request.user!.id, isManager)
     const body = isRecord(request.body) ? request.body : {}
     const role = body.role ?? 'player'
     if (role !== 'player' && role !== 'editor') throw new ApiError(400, 'invalid')
-    if (role === 'editor' && mine !== 'owner') throw new ApiError(403, 'forbidden')
     const characterId = body.characterId == null ? null : param(body.characterId)
     const userId = await ctx.db.tx(async (q) => {
       const [req] = await q.query<{ user_id: string }>(

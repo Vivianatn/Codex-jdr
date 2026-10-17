@@ -4,6 +4,39 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Tableau d'administration (2026-10-17)
+
+### D-275 · Un tableau `/admin` pour voir la plateforme et modérer à la souris
+
+Demande du MJ : un tableau de bord à `https://codex.antoine-vivian.fr/admin`, protégé par identifiant et mot de passe, pour voir les données de la plateforme et modérer très simplement (jusqu'ici : ligne de commande `moderate.js`, D-271).
+
+- **Identifiants uniquement dans l'environnement du serveur** : `ADMIN_USERNAME` et `ADMIN_PASSWORD_HASH` (empreinte scrypt au format des mots de passe des comptes, `secrets.ts`). Absents : toute connexion est refusée (503, « administration non configurée »). Rien n'est écrit en dur. `npm run admin:hash` (`server/src/adminHash.ts`) lit le mot de passe (saisie masquée, entrée standard ou argument ; 12 caractères au moins) et imprime `ADMIN_PASSWORD_HASH='…'`, entre apostrophes pour que Docker Compose ne lise pas les `$` ; `config.ts` retire ces apostrophes si on les colle.
+- **Session séparée, stockée côté serveur** : nouvelle migration 4, table `admin_sessions` (empreinte SHA-256 du jeton, comme les sessions des comptes) plutôt qu'un jeton signé en mémoire — elle se révoque (déconnexion), survit à un redémarrage et ne demande pas de clé de plus. Cookie `codex_admin` HttpOnly, SameSite=Strict, Secure en production, chemin `/api/admin`, 8 heures fixes. Changer `ADMIN_USERNAME` invalide les sessions ouvertes.
+- **Connexion** : identifiant comparé en temps constant (SHA-256 + `timingSafeEqual`), vérification scrypt faite même si l'identifiant est faux (empreinte factice). Limite par adresse : 5 essais libres puis attente de 30 s doublée jusqu'à 15 min ; 30 échecs en 15 min toutes adresses confondues ferment la connexion 15 min ; plus `@fastify/rate-limit` (10 par 15 min). Compteurs en mémoire : un redémarrage les remet à zéro, acceptable pour un seul administrateur.
+- **CSRF** : SameSite=Strict, contrôle d'origine global (app.ts) et, sous `/api/admin`, toute requête qui modifie doit être en `application/json` (415 sinon). Toutes les réponses : `Cache-Control: no-store`, `X-Robots-Tag: noindex, nofollow`.
+- **Journal** : table `admin_audit` (qui, action, cible, libellé de la cible, motif, adresse IP, date) pour chaque connexion, échec, déconnexion et décision ; un identifiant raté n'y est pas recopié (ce pourrait être un mot de passe tapé dans le mauvais champ). Gardé un an (balayage quotidien `sweepAdmin`, avec les sessions expirées).
+- **Modération** : les routes appellent `moderation.ts` (`hideProfile`, `suspendAccount`, `dismissReport`…) pour garder les exposés des motifs (DSA art. 17) et la réponse à l'auteur du signalement ; une suspension coupe aussi les connexions temps réel. **Supprimer un compte** réutilise la suppression de `auth.ts` (extraite en `deleteAccount`), exige un motif et le pseudo exact retapé, et envoie un exposé des motifs (`deleteAccountFor`, nouvelle restriction « deletion »).
+- **Données montrées** : comptes, campagnes, parties en cours (`live` non nul, dont en ligne), membres, signalements ouverts, inscriptions par jour sur 30 jours (barres CSS + tableau pour lecteurs d'écran). Les campagnes ne montrent que leurs métadonnées (nom, MJ, membres, partie, catalogue, date) : leurs enregistrements restent scellés et ne sont jamais lus.
+- **Page** : entrée Vite `admin/index.html` (comme `app/`) avec son propre petit arbre React (`src/admin/`, ~6 kB gzip hors React et styles partagés) qui réutilise `Button`, `TextField`, les jetons et styles typographiques ; pas de store, pas de base locale, thème selon le système. Les textes sont dans `fr.ts` (`admin`), importés directement (pas `useT`, qui chargerait le store des réglages). Pas de modale : les confirmations s'ouvrent dans la carte. Même CSP que les autres pages (hash du script de thème). Servie par Caddy (`try_files {path}/index.html`) comme par le serveur Node (`site.ts`), et par `npm run dev` (`site/plugin.ts`) ; `noindex` (meta + `X-Robots-Tag`), `Disallow: /admin`, hors sitemap — le point 9 de `launch:check` le vérifie désormais.
+
+## Plusieurs MJ à égalité (2026-10-17)
+
+### D-274 · Un MJ donne les mêmes droits à un autre MJ
+
+Demande du MJ : « qu'un MJ donne les mêmes droits à un autre utilisateur en MJ sur une campagne, pour avoir plusieurs MJ ». Jusqu'ici, seul le propriétaire nommait ou retirait les co-MJ, listait la campagne dans la recherche ; un co-MJ ne gérait que les joueurs.
+
+- Tous les MJ (`owner` et `editor`) ont les mêmes droits : accepter une demande en tant que MJ ou joueur, nommer un joueur MJ, repasser un MJ joueur, retirer n'importe quel membre, gérer le lien d'invitation et l'inscription à la recherche, mener la partie, modifier toute la campagne.
+- Le propriétaire devient le « MJ principal » (libellés : MJ principal / MJ / Joueur ; « Co-MJ » disparaît). Lui seul supprime la campagne et la transmet ; personne ne peut le repasser joueur ni le retirer.
+- Transmission : `POST /api/campaigns/:id/transfer { userId }`, réservée au MJ principal, vers un autre membre déjà MJ ; en une transaction (`FOR UPDATE` sur la campagne), l'ancien propriétaire devient MJ, la cible propriétaire, `campaigns.owner_id` suit.
+- Panneau En ligne › Membres : « Nommer MJ » (sans confirmation, réversible), « Repasser joueur » et « Transmettre la campagne » après confirmation ; chaque action laisse un toast et une ligne au journal d'activité.
+- Un MJ repassé joueur ou retiré pendant qu'il mène la partie en ligne cesse de la servir (`mayServe` vérifie aussi le rôle) : ses joueurs sont sortis de la partie.
+
+Raison : le MJ veut des MJ égaux ; garder un MJ principal évite qu'une campagne se retrouve sans personne pour la supprimer et qu'un MJ en écarte un autre de sa propre campagne.
+
+À suivre :
+- Supprimer le compte du MJ principal supprime ses campagnes en cascade, même s'il reste d'autres MJ : lui conseiller de transmettre d'abord (ou transmettre automatiquement au plus ancien MJ).
+- Si le MJ qui menait la partie est repassé joueur ou retiré, la partie reste à son nom : les autres MJ ne peuvent ni la terminer ni la reprendre (règle « seul l'opérateur termine ou transmet », D-244). Il faudra permettre à un MJ de reprendre une partie dont l'opérateur n'est plus MJ.
+
 ## Version alpha (2026-10-17)
 
 ### D-273 · Codex passe en 0.1.0-alpha

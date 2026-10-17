@@ -3,6 +3,9 @@ import { relative, resolve } from 'node:path'
 import type { Connect, Plugin } from 'vite'
 import { APP_PATH, PAGES, SITE, type SitePage } from './config.ts'
 
+/** The administration dashboard (D-275), its own Vite entry admin/index.html. */
+export const ADMIN_PATH = '/admin'
+
 /**
  * Builds the public website (D-248) around the app: shared head (title,
  * description, canonical, social cards), icons, header and footer injected
@@ -96,6 +99,8 @@ export function robotsTxt(): string {
     'User-agent: *',
     'Allow: /',
     `Disallow: ${APP_PATH}`,
+    // Administration dashboard (D-275): never indexed.
+    `Disallow: ${ADMIN_PATH}`,
     '',
     `Sitemap: ${SITE.url}/sitemap.xml`,
     '',
@@ -123,6 +128,12 @@ function prettyUrls(root: string): Connect.NextHandleFunction {
       res.setHeader('Content-Type', path.endsWith('.xml') ? 'application/xml' : 'text/plain')
       res.end(path === '/robots.txt' ? robotsTxt() : sitemapXml())
       return
+    }
+    // Administration dashboard (D-275): /admin and /admin/ serve its page, never indexed.
+    if (path === ADMIN_PATH || path === `${ADMIN_PATH}/`) {
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow')
+      req.url = `${ADMIN_PATH}/index.html${url.search}`
+      return next()
     }
     const page = PAGES.find((p) => p.path === path && p.path !== '/')
     if (page) {
@@ -193,5 +204,6 @@ export function siteInputs(root: string): Record<string, string> {
   return {
     ...Object.fromEntries(PAGES.map((p) => [p.file.replace(/\.html$/, ''), resolve(root, p.file)])),
     app: resolve(root, 'app/index.html'),
+    admin: resolve(root, 'admin/index.html'),
   }
 }

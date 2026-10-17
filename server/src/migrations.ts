@@ -108,4 +108,25 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX reports_status ON reports (status, created_at)
   `,
+  // 4: administration dashboard (D-275): admin sessions and the audit log of every admin action.
+  `
+  CREATE TABLE admin_sessions (
+    token_hash text PRIMARY KEY,
+    username text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL
+  );
+  CREATE TABLE admin_audit (
+    id bigserial PRIMARY KEY,
+    actor text NOT NULL,
+    action text NOT NULL,
+    target_type text,
+    target_id text,
+    target_label text,
+    detail jsonb,
+    ip text,
+    at timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE INDEX admin_audit_at ON admin_audit (at)
+  `,
 ]

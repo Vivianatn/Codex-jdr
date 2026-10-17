@@ -45,12 +45,16 @@
 		reverse_proxy server:3000
 	}
 
+	# Administration dashboard (D-275): its page is never indexed; its API (/api/admin) goes to the server above.
+	@admin path /admin /admin/*
+	header @admin X-Robots-Tag "noindex, nofollow"
+
 	handle {
 		root * /srv/site
 		# Hashed bundle files never change: cache them for a year (point 12).
 		@hashed path /assets/*
 		header @hashed Cache-Control "public, max-age=31536000, immutable"
-		@pages path / /app/ *.html /confidentialite /cgu /mentions-legales /accessibilite /contact
+		@pages path / /app/ *.html /confidentialite /cgu /mentions-legales /accessibilite /contact /admin /admin/
 		header @pages Cache-Control "no-cache"
 		# Pretty URLs: /cgu serves cgu.html.
 		try_files {path} {path}.html {path}/index.html

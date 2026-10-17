@@ -9,6 +9,8 @@ let server: Awaited<ReturnType<typeof testServer>>
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'codex-site-'))
   mkdirSync(join(dir, 'app'))
+  mkdirSync(join(dir, 'admin'))
+  writeFileSync(join(dir, 'admin', 'index.html'), 'admin')
   mkdirSync(join(dir, 'assets'))
   writeFileSync(join(dir, 'index.html'), 'accueil')
   writeFileSync(join(dir, 'cgu.html'), 'cgu')
@@ -33,6 +35,15 @@ describe('the server serves the built site (Plesk, D-263)', () => {
     expect(css.headers['content-type']).toMatch(/text\/css/)
     expect(css.headers['cache-control']).toContain('immutable')
     expect((await get('/cgu')).headers['cache-control']).toBe('no-cache')
+  })
+
+  it('serves the administration dashboard at /admin, never indexed (D-275)', async () => {
+    for (const url of ['/admin', '/admin/']) {
+      const page = await get(url)
+      expect([page.statusCode, page.body]).toEqual([200, 'admin'])
+      expect(page.headers['x-robots-tag']).toContain('noindex')
+    }
+    expect((await get('/cgu')).headers['x-robots-tag']).toBeUndefined()
   })
 
   it('sends the same security headers as Caddy (D-271)', async () => {

@@ -3,6 +3,7 @@ import rateLimit from '@fastify/rate-limit'
 import websocket from '@fastify/websocket'
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify'
 import type { ApiErrorCode } from '../../shared/sync.ts'
+import { registerAdmin } from './admin.ts'
 import { registerAuth } from './auth.ts'
 import { registerCampaigns } from './campaigns.ts'
 import { registerCompliance } from './compliance.ts'
@@ -106,6 +107,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   registerRecords(app, ctx)
   registerSocial(app, ctx)
   registerHub(app, ctx)
+  registerAdmin(app, ctx)
   if (options.config.siteDir) await registerSite(app, options.config.siteDir)
   app.addHook('onClose', async () => ctx.hub.closeAll())
   return app

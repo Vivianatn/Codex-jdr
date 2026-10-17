@@ -258,7 +258,13 @@ export class Hub {
 
   private async mayServe(campaignId: string, userId: string): Promise<boolean> {
     const live = await this.live(campaignId)
-    return live?.mode === 'online' && live.operatorId === userId
+    if (live?.mode !== 'online' || live.operatorId !== userId) return false
+    // A GM named back player mid-game stops serving (D-274).
+    const [row] = await this.db.query<{ role: MemberRole }>(
+      'SELECT role FROM members WHERE campaign_id = $1 AND user_id = $2',
+      [campaignId, userId],
+    )
+    return row?.role === 'owner' || row?.role === 'editor'
   }
 
   private dropHost(campaignId: string, host: Conn): void {

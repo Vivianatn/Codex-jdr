@@ -36,6 +36,9 @@ services:
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
       MODERATION_EMAIL: ${MODERATION_EMAIL:-}
+      # Administration dashboard at /admin (D-275); empty = nobody can sign in.
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
     depends_on:
       codex-db:
         condition: service_healthy

@@ -186,3 +186,27 @@ docker compose exec server node dist/server/src/moderate.js unsuspend <compte>
 - Contenu pédocriminel ou terroriste : masque-le immédiatement, garde la copie (le signalement la conserve) et signale-le sur [internet-signalement.gouv.fr](https://www.internet-signalement.gouv.fr) ; une autorité peut aussi t'adresser une injonction de retrait (sous une heure pour un contenu terroriste).
 - Les signalements traités sont effacés un an après leur décision (balayage quotidien du serveur).
 - En secours, la table se lit en SQL : `docker compose exec codex-db psql -U codex -d codex -c "SELECT id, created_at, status, category, target_id FROM reports ORDER BY created_at"`.
+
+## 12. Tableau d'administration (D-275)
+
+`https://codex.antoine-vivian.fr/admin` ouvre le tableau d'administration : vue d'ensemble (comptes, campagnes, parties en cours, signalements, inscriptions des 30 derniers jours), signalements à traiter, recherche de comptes, liste des campagnes (nom, MJ, membres : leur contenu reste chiffré et privé) et journal d'administration. Il fait la même modération que `moderate.js` (section 11), avec les mêmes e-mails d'exposé des motifs, et permet en plus de supprimer un compte.
+
+Il est fermé tant que l'identifiant et le mot de passe ne sont pas configurés sur le serveur.
+
+1. Sur ton ordinateur, choisis un mot de passe long (12 caractères au moins, une phrase de passe de préférence) et calcule son empreinte :
+
+   ```sh
+   npm run admin:hash
+   ```
+
+   La commande demande le mot de passe sans l'afficher et imprime une ligne `ADMIN_PASSWORD_HASH='scrypt$32768$8$1$…'`. (Sur le serveur, depuis le dossier `server` : `node dist/server/src/adminHash.js`.) Le mot de passe lui-même n'est écrit nulle part.
+2. Renseigne deux variables :
+   - **Docker** : dans `deploy/.env`, `ADMIN_USERNAME=ton-identifiant` et la ligne `ADMIN_PASSWORD_HASH='…'` telle quelle, **apostrophes comprises** (sans elles, Docker Compose interprète les `$`). Puis `docker compose up -d server`.
+   - **Plesk** : Node.js › Variables d'environnement, `ADMIN_USERNAME` et `ADMIN_PASSWORD_HASH` avec la valeur **entre les apostrophes** (sans elles). Puis « Redémarrer l'application ».
+3. Ouvre `/admin` et connecte-toi. Sans ces variables, la page dit que l'administration n'est pas configurée.
+
+- Session de 8 heures, dans un cookie réservé à `/api/admin` (HttpOnly, Secure, SameSite=Strict) ; « Se déconnecter » la ferme. Après 5 essais ratés depuis une adresse, il faut attendre 30 s, puis le double à chaque échec (15 min au plus) ; 30 échecs en 15 minutes, toutes adresses confondues, ferment la connexion pour 15 minutes.
+- Changer de mot de passe : refais l'étape 1, remplace `ADMIN_PASSWORD_HASH` et redémarre. Changer d'identifiant ferme les sessions ouvertes.
+- Chaque connexion (réussie ou non) et chaque décision est inscrite au journal d'administration (onglet « Journal »), gardé un an.
+- Supprimer un compte demande un motif (envoyé à la personne) et de retaper son pseudo exact ; ses campagnes disparaissent avec lui. C'est définitif.
+- La page n'est jamais indexée (`noindex`, `X-Robots-Tag`, `robots.txt`) et n'apparaît pas dans le plan du site.

@@ -1,3 +1,4 @@
+import { sweepAdmin } from './admin.ts'
 import { buildApp } from './app.ts'
 import { sweepInactive } from './auth.ts'
 import { sweepReports } from './compliance.ts'
@@ -22,8 +23,17 @@ const sweep = () =>
 // Closed reports go one year after their decision (D-271).
 const sweepClosedReports = () =>
   sweepReports({ db, now: Date.now }).catch((error: unknown) => app.log.error(error))
+// Expired admin sessions, audit lines older than a year (D-275).
+const sweepAdminData = () =>
+  sweepAdmin({ db, now: Date.now }).catch((error: unknown) => app.log.error(error))
+if (!config.adminUsername || !config.adminPasswordHash)
+  console.warn(
+    'ADMIN_USERNAME / ADMIN_PASSWORD_HASH absents : le tableau /admin refuse toute connexion.',
+  )
 void sweep()
 void sweepClosedReports()
+void sweepAdminData()
+setInterval(sweepAdminData, 86_400_000).unref()
 setInterval(sweepClosedReports, 86_400_000).unref()
 setInterval(sweep, 86_400_000).unref()
 

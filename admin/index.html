@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr" data-theme="light" data-motion="full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Tableau d’administration de Codex : statistiques et modération, réservé à l’administrateur." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#110d0a" />
+    <!-- site:icons -->
+    <title>Codex · Administration</title>
+    <script>
+      // Follow the system theme before first paint (no settings here: D-275).
+      try {
+        document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/admin/main.tsx"></script>
+  </body>
+</html>

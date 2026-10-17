@@ -32,6 +32,10 @@ export default defineConfig({
         NODE_ENV: 'test',
         // Every scenario creates an online account (D-266).
         CODEX_RELAX_LIMITS: 'true',
+        // Administration dashboard (D-275, e2e/admin.spec.ts): a test-only admin, password E2E_ADMIN_PASSWORD.
+        ADMIN_USERNAME: 'admin-e2e',
+        ADMIN_PASSWORD_HASH:
+          'scrypt$32768$8$1$mCvjCsoyEZAXlb+abQgt8g==$Wm2BtTW1U1Kq8dOopvRiIklZ4fOQbQufawTDd/cfMyk=',
       },
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

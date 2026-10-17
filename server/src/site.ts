@@ -47,6 +47,9 @@ export async function registerSite(app: FastifyInstance, root: string): Promise<
       file(path === '/' ? 'index.html' : path) ??
       file(`${path}.html`) ??
       file(join(path, 'index.html'))
+    // Administration dashboard (D-275): never indexed.
+    if (path === '/admin' || path.startsWith('/admin/'))
+      reply.header('X-Robots-Tag', 'noindex, nofollow')
     if (found) return send(reply, found)
     return send(reply, '404.html', 404)
   })

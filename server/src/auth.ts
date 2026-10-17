@@ -299,17 +299,21 @@ export function registerAuth(app: FastifyInstance, ctx: Ctx): void {
     const [row] = await ctx.db.query<UserRow>('SELECT * FROM users WHERE id = $1', [user.id])
     if (!row || !(await verifyPassword(password, row.password_hash)))
       throw new ApiError(401, 'wrongCredentials')
-    const owned = await ctx.db.query<{ id: string }>(
-      'SELECT id FROM campaigns WHERE owner_id = $1',
-      [user.id],
-    )
-    const affected = await ctx.hub.membersOf(owned.map((c) => c.id))
-    await ctx.db.query('DELETE FROM users WHERE id = $1', [user.id])
-    ctx.hub.closeUser(user.id)
-    ctx.hub.notifyCampaigns(affected)
+    await deleteAccount(ctx, user.id)
     reply.clearCookie(SESSION_COOKIE, { path: '/api' })
     return { ok: true }
   })
+}
+
+/** Deletes an account, its campaigns and everything in them; their members' lists refresh. */
+export async function deleteAccount(ctx: Pick<Ctx, 'db' | 'hub'>, userId: string): Promise<void> {
+  const owned = await ctx.db.query<{ id: string }>('SELECT id FROM campaigns WHERE owner_id = $1', [
+    userId,
+  ])
+  const affected = await ctx.hub.membersOf(owned.map((c) => c.id))
+  await ctx.db.query('DELETE FROM users WHERE id = $1', [userId])
+  ctx.hub.closeUser(userId)
+  ctx.hub.notifyCampaigns(affected)
 }
 
 /** CNIL délibération 2022-100: the owner is told when the password changes (D-271). */

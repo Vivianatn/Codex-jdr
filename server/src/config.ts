@@ -27,7 +27,14 @@ export interface Config {
   dev: boolean
   /** Built site served by the server itself (Plesk, D-263), or null (Caddy serves it). */
   siteDir: string | null
+  /** Administration dashboard (D-275): empty = nobody can sign in at /admin. */
+  adminUsername: string
+  /** scrypt hash of the admin password (`npm run admin:hash`), same format as account passwords. */
+  adminPasswordHash: string
 }
+
+/** A value pasted with its quotes (`'scrypt$…'`, as `admin:hash` prints it for .env files) is unquoted. */
+const unquote = (value: string | undefined) => (value ?? '').trim().replace(/^(['"])(.*)\1$/, '$2')
 
 /** The server/ folder, from src/ or from the compiled dist/server/src/. */
 function serverDir(): string {
@@ -60,5 +67,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     secureCookies: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : !dev,
     dev,
     siteDir: env.CODEX_SERVE_SITE === 'false' ? null : siteDir(env, serverDir()),
+    adminUsername: unquote(env.ADMIN_USERNAME),
+    adminPasswordHash: unquote(env.ADMIN_PASSWORD_HASH),
   }
 }

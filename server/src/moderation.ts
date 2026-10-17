@@ -51,12 +51,13 @@ export interface Decision {
   reportId?: string
 }
 
-type Restriction = 'profile' | 'suspension'
+type Restriction = 'profile' | 'suspension' | 'deletion'
 
 const RESTRICTIONS: Record<Restriction, string> = {
   profile:
     'ta devise, ta photo de profil et ta bannière ont été retirées, et ne peuvent plus être modifiées pour le moment',
   suspension: 'ton compte est suspendu : tu ne peux plus t’y connecter',
+  deletion: 'ton compte a été supprimé, avec les campagnes dont tu étais le MJ',
 }
 
 async function userOf(db: Queryable, userId: string) {
@@ -178,6 +179,28 @@ export async function suspendAccount(
     statement(user.display_name, 'suspension', decision, ctx.contact),
   )
   await closeReport(ctx, decision.reportId, 'actioned', 'Le compte a été suspendu.')
+}
+
+/**
+ * Deletes an account as a moderation decision (admin dashboard, D-275): `erase`
+ * is the account deletion of auth.ts; the statement of reasons goes to the
+ * address the account had, then the report (if any) is closed.
+ */
+export async function deleteAccountFor(
+  ctx: ModerationCtx,
+  userId: string,
+  decision: Decision,
+  erase: (userId: string) => Promise<void>,
+): Promise<void> {
+  const user = await userOf(ctx.db, userId)
+  await erase(user.id)
+  await inform(
+    ctx,
+    user.email,
+    'Codex : ton compte a été supprimé',
+    statement(user.display_name, 'deletion', decision, ctx.contact),
+  )
+  await closeReport(ctx, decision.reportId, 'actioned', 'Le compte a été supprimé.')
 }
 
 export async function unsuspendAccount(ctx: ModerationCtx, userId: string): Promise<void> {

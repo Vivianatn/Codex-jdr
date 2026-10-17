@@ -171,6 +171,24 @@ describe('real time', () => {
     l.close()
   })
 
+  it('a GM named back player mid-game stops serving (D-274)', async () => {
+    await startGame(gm, 'Gm')
+    await startGame(gm, 'Gm', 'online', { operator: { id: cogm.userId, name: 'Cogm' } })
+    const c = await socket(server.app, cogm)
+    const l = await socket(server.app, lyra)
+    c.send({ t: 'serve', campaignId: 'camp-1' })
+    expect((await c.next('serving')).ok).toBe(true)
+    l.send({ t: 'enter', campaignId: 'camp-1' })
+    await l.next('entered')
+    await gm.request('PATCH', `/api/campaigns/camp-1/members/${cogm.userId}`, { role: 'player' })
+    expect((await c.next('serving', (f) => !f.ok)).ok).toBe(false)
+    await l.next('hostGone')
+    c.send({ t: 'serve', campaignId: 'camp-1' })
+    expect((await c.next('serving', (f) => !f.ok)).ok).toBe(false)
+    c.close()
+    l.close()
+  })
+
   it('a removed player is put out of the game', async () => {
     await startGame(gm, 'Gm')
     const g = await socket(server.app, gm)

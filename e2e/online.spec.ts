@@ -113,12 +113,12 @@ test('a GM puts a campaign online, a player plays her character, a co-GM prepare
   await request.getByRole('button', { name: 'Accepter' }).click()
   await expect(panel.getByTestId('members')).toContainText('Chloé')
 
-  // --- A co-GM joins the same way --------------------------------------------
+  // --- A second GM joins the same way --------------------------------------------
   const cogm = await device(browser)
   await registerOnline(cogm, 'Bastien')
   await requestToJoin(cogm, link, '')
   await expect(request).toContainText('Bastien', { timeout: 20_000 })
-  await request.getByLabel('Rôle').selectOption({ label: 'Co-MJ' })
+  await request.getByLabel('Rôle').selectOption({ label: 'MJ' })
   await request.getByRole('button', { name: 'Accepter' }).click()
   await expect(panel.getByTestId('members')).toContainText('Bastien')
   await gm.keyboard.press('Escape')
@@ -129,7 +129,7 @@ test('a GM puts a campaign online, a player plays her character, a co-GM prepare
     .getByRole('radiogroup', { name: 'Je joue en tant que' })
     .getByRole('radio', { name: 'MJ' })
     .click()
-  await expect(cogm.getByTestId('campaign-online')).toContainText('Co-MJ · campagne de MJ', {
+  await expect(cogm.getByTestId('campaign-online')).toContainText('MJ · campagne de MJ', {
     timeout: 20_000,
   })
 

@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server/src/index.js",
-    "dev": "node --watch --experimental-strip-types src/index.ts"
+    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "admin:hash": "node --experimental-strip-types --no-warnings src/adminHash.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.3",

@@ -27,6 +27,7 @@
     "server:install": "npm --prefix server install",
     "server:dev": "npm --prefix server run dev",
     "server:build": "npm --prefix server run build",
+    "admin:hash": "npm --prefix server run --silent admin:hash --",
     "deploy:bundle": "vite build && npm --prefix server run build && node scripts/deploy-bundle.ts",
     "prepare": "husky"
   },

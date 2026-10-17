@@ -139,6 +139,9 @@ export const server = {
     patch: { role?: Exclude<MemberRole, 'owner'>; characterId?: string | null },
   ) => api('PATCH', `/campaigns/${id}/members/${userId}`, patch),
   removeMember: (id: string, userId: string) => api('DELETE', `/campaigns/${id}/members/${userId}`),
+  /** The owner hands the campaign over to another GM (D-274). */
+  transferCampaign: (id: string, userId: string) =>
+    api('POST', `/campaigns/${id}/transfer`, { userId }),
   sharing: (id: string) =>
     api<{ inviteCode: string | null; listed: boolean }>('GET', `/campaigns/${id}/sharing`),
   newInvite: (id: string, disable = false) =>

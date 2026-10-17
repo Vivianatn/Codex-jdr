@@ -1,10 +1,11 @@
 import * as Popover from '@radix-ui/react-popover'
-import { Copy, Link2, RefreshCw, Unlink, UserMinus, Wifi, WifiOff, X } from 'lucide-react'
+import { Copy, Crown, Link2, RefreshCw, Unlink, UserMinus, Wifi, WifiOff, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { GameIcon } from '@/components/GameIcon'
 import { Button, IconButton } from '@/components/ui/Button'
+import { Dialog } from '@/components/ui/Dialog'
 import { CheckboxField, SelectField } from '@/components/ui/fields'
 import { createLiveActions } from '@/features/game/liveActions'
 import { PlayerColorDot, PlayerColorPicker } from '@/features/characters/PlayerColorPicker'
@@ -21,6 +22,7 @@ import { useOnlineStore } from '@/online/onlineStore'
 import { server } from '@/online/server/api'
 import { inviteUrl, onlineErrorMessage } from './onlineMessages'
 import { useIsOnlineCampaign, useServerCampaign, useServerStore } from '@/online/server/serverStore'
+import { recordActivity } from '@/stores/activityLog'
 import { selectEntitiesOfKinds, useCampaignStore } from '@/stores/campaignStore'
 import type { JoinRequestInfo, MemberInfo, MemberRole } from '@shared/sync'
 
@@ -70,8 +72,8 @@ export function OnlinePanel() {
               <LiveSection />
               {summary?.role === 'owner' || summary?.role === 'editor' ? (
                 <>
-                  <Requests campaignId={campaign.id} role={summary.role} />
-                  <Sharing campaignId={campaign.id} role={summary.role} />
+                  <Requests campaignId={campaign.id} />
+                  <Sharing campaignId={campaign.id} />
                   <Members campaignId={campaign.id} role={summary.role} />
                 </>
               ) : null}
@@ -240,7 +242,7 @@ function LiveSection() {
   )
 }
 
-function Requests({ campaignId, role }: { campaignId: string; role: MemberRole }) {
+function Requests({ campaignId }: { campaignId: string }) {
   const t = useT()
   const pending = useServerCampaign(campaignId)?.pendingRequests ?? 0
   const [data, reload] = useServerData(
@@ -256,13 +258,7 @@ function Requests({ campaignId, role }: { campaignId: string; role: MemberRole }
       ) : (
         <ul className="space-y-2">
           {requests.map((r) => (
-            <RequestRow
-              key={r.id}
-              campaignId={campaignId}
-              request={r}
-              role={role}
-              onDone={reload}
-            />
+            <RequestRow key={r.id} campaignId={campaignId} request={r} onDone={reload} />
           ))}
         </ul>
       )}
@@ -273,12 +269,10 @@ function Requests({ campaignId, role }: { campaignId: string; role: MemberRole }
 function RequestRow({
   campaignId,
   request,
-  role,
   onDone,
 }: {
   campaignId: string
   request: JoinRequestInfo
-  role: MemberRole
   onDone: () => void
 }) {
   const t = useT()
@@ -322,17 +316,15 @@ function RequestRow({
         <RelationButton user={{ id: request.userId, displayName: request.displayName }} compact />
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        {role === 'owner' && (
-          <SelectField<'player' | 'editor'>
-            label={t.online.role}
-            value={as}
-            onChange={setAs}
-            options={[
-              { value: 'player', label: t.online.rolePlayer },
-              { value: 'editor', label: t.online.roleEditor },
-            ]}
-          />
-        )}
+        <SelectField<'player' | 'editor'>
+          label={t.online.role}
+          value={as}
+          onChange={setAs}
+          options={[
+            { value: 'player', label: t.online.rolePlayer },
+            { value: 'editor', label: t.online.roleEditor },
+          ]}
+        />
         {as === 'player' && (
           <SelectField<string>
             label={t.online.character}
@@ -376,7 +368,7 @@ function RequestRow({
   )
 }
 
-function Sharing({ campaignId, role }: { campaignId: string; role: MemberRole }) {
+function Sharing({ campaignId }: { campaignId: string }) {
   const t = useT()
   const [data, reload] = useServerData(() => server.sharing(campaignId), campaignId)
   const [busy, setBusy] = useState(false)
@@ -447,7 +439,7 @@ function Sharing({ campaignId, role }: { campaignId: string; role: MemberRole })
           </Button>
         </>
       )}
-      {role === 'owner' && data && (
+      {data && (
         <CheckboxField
           label={t.online.listed}
           hint={t.online.listedHint}
@@ -459,7 +451,10 @@ function Sharing({ campaignId, role }: { campaignId: string; role: MemberRole })
   )
 }
 
-function Members({ campaignId, role }: { campaignId: string; role: MemberRole }) {
+type MemberAction = { kind: 'demote' | 'transfer'; member: MemberInfo }
+
+/** Members of the campaign. Every GM manages them; only the main GM hands it over (D-274). */
+export function Members({ campaignId, role }: { campaignId: string; role: MemberRole }) {
   const t = useT()
   const summary = useServerCampaign(campaignId)
   const selfId = useOnlineStore((s) => s.selfId)
@@ -470,26 +465,47 @@ function Members({ campaignId, role }: { campaignId: string; role: MemberRole })
     () => server.members(campaignId),
     `${campaignId}:${summary?.pendingRequests}:${presence?.length}`,
   )
+  const [confirm, setConfirm] = useState<MemberAction | null>(null)
+  const [busy, setBusy] = useState(false)
   const online = new Set((presence ?? []).map((u) => u.id))
   const roleName = (r: MemberRole) =>
     r === 'owner' ? t.online.roleOwner : r === 'editor' ? t.online.roleEditor : t.online.rolePlayer
-  const canManage = (m: MemberInfo) =>
-    m.role !== 'owner' && m.userId !== selfId && (role === 'owner' || m.role === 'player')
+  const canManage = (m: MemberInfo) => m.role !== 'owner' && m.userId !== selfId
   const run = async (task: () => Promise<unknown>, done?: string) => {
+    setBusy(true)
     try {
       await task()
-      if (done) toast.success(done)
+      if (done) {
+        toast.success(done)
+        recordActivity(campaignId, done)
+      }
       reload()
+      refreshOnline()
     } catch (error) {
       toast.error(onlineErrorMessage(t, error))
+    } finally {
+      setBusy(false)
     }
+  }
+  const confirmAction = async () => {
+    if (!confirm) return
+    const { kind, member: m } = confirm
+    setConfirm(null)
+    await run(
+      () =>
+        kind === 'demote'
+          ? server.updateMember(campaignId, m.userId, { role: 'player' })
+          : server.transferCampaign(campaignId, m.userId),
+      kind === 'demote' ? t.online.demoted(m.displayName) : t.online.transferred(m.displayName),
+    )
   }
   return (
     <section className="space-y-2">
       <p className="text-sm font-semibold text-ink">{t.online.membersTitle}</p>
+      <p className="text-xs text-ink-muted">{t.online.gmRightsHint}</p>
       <ul className="divide-y divide-line rounded-lg border border-line" data-testid="members">
         {(data?.members ?? []).map((m) => (
-          <li key={m.userId} className="space-y-2 px-3 py-2 text-sm">
+          <li key={m.userId} className="space-y-2 px-3 py-2 text-sm" data-testid="member">
             <div className="flex items-center gap-2">
               <span
                 className={cn(
@@ -529,6 +545,7 @@ function Members({ campaignId, role }: { campaignId: string; role: MemberRole })
                   size="sm"
                   label={t.online.removeMember(m.displayName)}
                   icon={<UserMinus />}
+                  disabled={busy}
                   onClick={() =>
                     run(
                       () => server.removeMember(campaignId, m.userId),
@@ -539,38 +556,84 @@ function Members({ campaignId, role }: { campaignId: string; role: MemberRole })
               )}
             </div>
             {canManage(m) && (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {role === 'owner' && (
-                  <SelectField<'player' | 'editor'>
-                    label={t.online.role}
-                    value={m.role === 'editor' ? 'editor' : 'player'}
-                    onChange={(next) =>
-                      run(() => server.updateMember(campaignId, m.userId, { role: next }))
+              <div className="flex flex-wrap gap-2">
+                {m.role === 'player' ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      run(
+                        () => server.updateMember(campaignId, m.userId, { role: 'editor' }),
+                        t.online.promoted(m.displayName),
+                      )
                     }
-                    options={[
-                      { value: 'player', label: t.online.rolePlayer },
-                      { value: 'editor', label: t.online.roleEditor },
-                    ]}
-                  />
+                  >
+                    {t.online.promoteGm}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => setConfirm({ kind: 'demote', member: m })}
+                  >
+                    {t.online.demoteGm}
+                  </Button>
                 )}
-                {m.role === 'player' && (
-                  <SelectField<string>
-                    label={t.online.characterOf(m.displayName)}
-                    value={m.characterId ?? ''}
-                    onChange={(id) =>
-                      run(async () => {
-                        await server.updateMember(campaignId, m.userId, { characterId: id || null })
-                        if (id) ensurePlayerColor(t, campaignId, id)
-                      })
-                    }
-                    options={characters}
-                  />
+                {role === 'owner' && m.role === 'editor' && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={<Crown />}
+                    disabled={busy}
+                    onClick={() => setConfirm({ kind: 'transfer', member: m })}
+                  >
+                    {t.online.transfer}
+                  </Button>
                 )}
               </div>
+            )}
+            {canManage(m) && m.role === 'player' && (
+              <SelectField<string>
+                label={t.online.characterOf(m.displayName)}
+                value={m.characterId ?? ''}
+                onChange={(id) =>
+                  run(async () => {
+                    await server.updateMember(campaignId, m.userId, { characterId: id || null })
+                    if (id) ensurePlayerColor(t, campaignId, id)
+                  })
+                }
+                options={characters}
+              />
             )}
           </li>
         ))}
       </ul>
+      <Dialog
+        open={confirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirm(null)
+        }}
+        title={
+          confirm?.kind === 'transfer'
+            ? t.online.transferConfirmTitle(confirm.member.displayName)
+            : t.online.demoteConfirmTitle(confirm?.member.displayName ?? '')
+        }
+        description={
+          confirm?.kind === 'transfer' ? t.online.transferConfirmBody : t.online.demoteConfirmBody
+        }
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirm(null)}>
+              {t.common.cancel}
+            </Button>
+            <Button variant="primary" onClick={() => void confirmAction()}>
+              {t.common.confirm}
+            </Button>
+          </>
+        }
+      />
     </section>
   )
 }

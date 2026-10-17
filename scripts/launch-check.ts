@@ -206,7 +206,7 @@ check(6, 'Meta title et description', () => {
       out.push(`${rel(f)} : titre de ${title.length} caractères`)
     if (titles.has(title)) out.push(`${rel(f)} : titre en double « ${title} »`)
     titles.add(title)
-    const description = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? ''
+    const description = html.match(/<meta\s+name="description"\s+content="([^"]*)"/)?.[1] ?? ''
     if (description.length < 30 || description.length > 170)
       out.push(`${rel(f)} : description de ${description.length} caractères`)
     if (!/<html lang="fr"/.test(html)) out.push(`${rel(f)} : langue non déclarée`)
@@ -257,11 +257,18 @@ check(9, 'Sitemap et robots.txt', () => {
   if (!robots.includes(`Sitemap: ${SITE.url}/sitemap.xml`))
     out.push('robots.txt ne cite pas le sitemap')
   if (!robots.includes('Disallow: /app/')) out.push('robots.txt laisse indexer l’application')
+  // Administration dashboard (D-275): out of robots, sitemap and indexes.
+  if (!robots.includes('Disallow: /admin')) out.push('robots.txt laisse indexer l’administration')
+  const admin = join(dist, 'admin', 'index.html')
+  if (!existsSync(admin)) out.push('admin/index.html absente du build')
+  else if (!read(admin).includes('name="robots" content="noindex'))
+    out.push('administration indexable')
+  if (!/X-Robots-Tag "noindex/.test(caddy)) out.push('deploy/Caddyfile : /admin sans X-Robots-Tag')
   const sitemap = read(join(dist, 'sitemap.xml'))
   for (const p of PAGES.filter((p) => p.indexed))
     if (!sitemap.includes(`<loc>${SITE.url}${p.path}</loc>`))
       out.push(`sitemap : ${p.path} manquant`)
-  if (sitemap.includes('/404') || sitemap.includes('/app/'))
+  if (sitemap.includes('/404') || sitemap.includes('/app/') || sitemap.includes('/admin'))
     out.push('sitemap : page non indexable listée')
   return out
 })
