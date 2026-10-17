@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { emptyLibrary, type Campaign } from '@/db/types'
 import { createEntity } from '@/domain/entity'
-import { newElement, newMap, type GameMap } from '@/domain/maps'
+import { newElement, newMap, teleport, type GameMap } from '@/domain/maps'
 import type { RollRecord } from '@/domain/rolls'
 import { emptyPlayState } from '@/domain/turns'
 import type { Entity } from '@/domain/types'
@@ -70,6 +70,14 @@ describe('players each see the map their character is on (D-256)', () => {
     }
     expect(projectForPlayer(hidden, [ayla.id]).maps.map((m) => m.id)).toEqual([hall.id])
     expect(projectForPlayer(data, []).maps.map((m) => m.id)).toEqual([hall.id])
+  })
+
+  it('a player teleported by the GM sees the destination map (D-276)', () => {
+    const moved = teleport(Object.fromEntries(data.maps.map((m) => [m.id, m])), [
+      { entityId: brann.id, toMapId: cellar.id },
+    ])
+    const after = { ...data, maps: Object.values(moved) }
+    expect(projectForPlayer(after, [brann.id]).maps.map((m) => m.id)).toEqual([cellar.id])
   })
 })
 

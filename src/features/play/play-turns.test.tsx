@@ -245,4 +245,53 @@ describe('familiars and the GM’s board in play (D-269)', () => {
     expect(store().maps[map.id]!.tokens).toEqual([])
     expect(store().entities[lyra.id]).toBeDefined()
   })
+
+  it('the GM teleports one character from its menu, and several from the panel (D-276)', async () => {
+    const { user, campaign, lyra, gob, owl } = await withFamiliars()
+    const hall = newMap(campaign.id, { name: 'Hall', cols: 8, rows: 8 })
+    hall.tokens = [
+      { id: 'tk-lyra', entityId: lyra.id, col: 3, row: 3, size: 1, hidden: false },
+      { id: 'tk-owl', entityId: owl.id, col: 4, row: 3, size: 1, hidden: false },
+      { id: 'tk-gob', entityId: gob.id, col: 5, row: 5, size: 1, hidden: false },
+    ]
+    const crypt = newMap(campaign.id, { name: 'Crypte', cols: 8, rows: 8 })
+    const cave = newMap(campaign.id, { name: 'Cave', cols: 8, rows: 8 })
+    store().addMap(hall, 'map')
+    store().addMap(crypt, 'map')
+    store().addMap(cave, 'map')
+    store().updatePlay((p) => ({ ...p, mapId: hall.id }), 'map')
+    const where = (id: string) =>
+      Object.values(store().maps).find((m) => m.tokens.some((tk) => tk.entityId === id))?.name
+
+    // Quick path: one click in the character's menu; its familiar follows.
+    await user.click(await screen.findByRole('button', { name: 'Plateau et tours : Lyra' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Téléporter Lyra vers…' }))
+    // Radix closes a submenu when the pointer leaves its trigger in jsdom: pick by keyboard.
+    ;(await screen.findByRole('menuitem', { name: 'Crypte' })).focus()
+    await user.keyboard('{Enter}')
+    expect(where(lyra.id)).toBe('Crypte')
+    expect(where(owl.id)).toBe('Crypte')
+    expect(store().play.mapId).toBe(hall.id)
+
+    // Multi path: tick, pick each destination, go.
+    await user.click(screen.getByRole('button', { name: 'Téléporter des personnages' }))
+    const panel = await screen.findByRole('dialog', { name: 'Téléporter des personnages' })
+    await user.click(within(panel).getByRole('button', { name: 'Ennemis' }))
+    expect(within(panel).getByRole('checkbox', { name: /Gobelin/ })).toBeChecked()
+    expect(within(panel).getByRole('checkbox', { name: /Lyra/ })).not.toBeChecked()
+    await user.click(within(panel).getByRole('checkbox', { name: /Lyra/ }))
+    await user.selectOptions(
+      within(panel).getByRole('combobox', { name: 'Tout envoyer vers' }),
+      'Cave',
+    )
+    await user.selectOptions(
+      within(panel).getByRole('combobox', { name: 'Destination de Gobelin' }),
+      'Crypte',
+    )
+    await user.click(within(panel).getByRole('button', { name: 'Téléporter (2)' }))
+    expect(where(lyra.id)).toBe('Cave')
+    expect(where(owl.id)).toBe('Cave')
+    expect(where(gob.id)).toBe('Crypte')
+    expect(campaignHistory.getState().past.at(-1)?.label).toBe('2 personnages téléportés')
+  })
 })

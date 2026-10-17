@@ -4,6 +4,22 @@ Choix techniques et UX non couverts par le cahier des charges ([SPEC.md](SPEC.md
 
 ---
 
+## Téléportation par le MJ (2026-10-17)
+
+### D-276 · Le MJ téléporte qui il veut, où il veut, sans condition
+
+Demande du MJ : « Un MJ peut téléporter les personnages qu'il souhaite, de force, sur une autre carte, sans condition ; il choisit la destination de chacun ; simple et rapide à utiliser. »
+
+- **Domaine pur** : `teleport(maps, moves)` (`src/domain/maps.ts`). Chaque jeton quitte toutes les cartes où il se trouve et atterrit sur la cible, à `at` s'il est donné, sinon à côté du point d'arrivée de la carte (`arrivalCell` : à côté du passage qui ramène d'où il vient, sinon au centre), sur une case libre et jamais sur un passage. Plusieurs personnages vers la même carte partagent ce point d'ancrage : ils atterrissent sur des cases distinctes et voisines, le groupe reste groupé. Taille et état caché conservés ; un personnage sans jeton en reçoit un (un ennemi naît caché sous le brouillard, comme `withToken`). Murs, portes, brouillard et passages ne comptent pas. Cible = sa propre carte → il va au point par défaut. Les cartes non touchées gardent leur identité (pas d'écriture inutile ni de synchro).
+- **Familiers** : `withFollowingFamiliars` (`src/domain/familiars.ts`) ajoute, juste après leur maître, les familiers reliés qui sont sur un plateau ; un familier non posé reste hors plateau, un familier qui a sa propre destination la garde. Case « Les familiers suivent », cochée par défaut.
+- **Action** : `teleportCharacters(moves, { familiarsFollow })` (`mapActions.ts`) = UNE entrée d'annulation pour toutes les cartes touchées, brouillard révélé automatiquement comme `placeToken`. Toast « Lyra et Gorak téléportés vers « Crypte » » (ou « N personnages téléportés » si plusieurs destinations) avec l'action « Aller sur « Crypte » » : le plateau du MJ ne bascule jamais tout seul.
+- **Chemin rapide** : sous-menu « Téléporter vers… » dans le menu du personnage (`BoardMenu` : rangées des groupes, familiers, mini-fiche du jeton), cartes triées par nom, coche sur la carte où il se trouve, « en jeu » sur celle du plateau. Un clic = téléporté.
+- **Chemin multiple** : bouton « Téléporter » (baguette) dans les options du plateau, à côté du choix de carte ; popover non bloquant (`TeleportPanel`). Liste : tous les personnages joueurs + quiconque a un jeton (joueurs, alliés, familiers, ennemis), chacun avec sa case à cocher, la carte où il est et son propre choix de destination (changer la destination coche la ligne). Raccourcis « Joueurs », « Ennemis », « Sélection » (jetons sélectionnés sur le plateau, déjà cochés à l'ouverture), « Tous », « Aucun » ; « Tout envoyer vers » règle d'un coup les lignes cochées ; un seul bouton « Téléporter (n) ». Les lignes se replient à 390 px, le popover défile verticalement s'il le faut.
+- **Réservé à l'opérateur** : le plateau du MJ n'existe que sur l'écran de jeu, déjà `inert` pour les non-opérateurs (D-244) ; les joueurs (écran invité) ne le voient jamais.
+- **En ligne** : rien de spécial — la modification des cartes se synchronise comme les autres, et chaque joueur voit la carte où se trouve son personnage (`projectForPlayer`, D-256) : un joueur téléporté suit donc sa destination (test de projection).
+
+---
+
 ## Tableau d'administration (2026-10-17)
 
 ### D-275 · Un tableau `/admin` pour voir la plateforme et modérer à la souris

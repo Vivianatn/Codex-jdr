@@ -22,12 +22,14 @@ import {
   pointInArea,
   segmentsIntersect,
   setFog,
+  teleport,
   tokenCenter,
   tokensInArea,
   visibleCells,
   visibleToPlayers,
   withPassage,
   type GameMap,
+  type Token,
   type Wall,
 } from './maps'
 
@@ -320,5 +322,101 @@ describe('doors placed from the session editor (D-258)', () => {
     expect(passagesTo(again, 'crypt')).toHaveLength(1)
     // And a token stepping on it travels.
     expect(passageAt(again, { col: 2, row: 3 })?.link?.mapId).toBe('crypt')
+  })
+})
+
+describe('teleportation by the GM (D-276)', () => {
+  const tk = (entityId: string, col: number, row: number, extra: Partial<Token> = {}): Token => ({
+    id: `tk-${entityId}`,
+    entityId,
+    col,
+    row,
+    size: 1,
+    hidden: false,
+    ...extra,
+  })
+  const world = () => {
+    const hall = {
+      ...square(),
+      id: 'hall',
+      name: 'Hall',
+      tokens: [tk('lyra', 1, 1), tk('gorak', 2, 1)],
+    }
+    const crypt = { ...square(), id: 'crypt', name: 'Crypte', tokens: [tk('ghoul', 5, 4)] }
+    const cave = { ...square(), id: 'cave', name: 'Cave' }
+    // A wall and fog everywhere: no condition applies to a teleport.
+    crypt.walls = [{ id: 'w', x1: 0, y1: 0, x2: 500, y2: 400, kind: 'wall' } as Wall]
+    crypt.fog = { ...crypt.fog, enabled: true }
+    return { hall, crypt, cave } as Record<string, GameMap>
+  }
+  const cells = (map: GameMap) => map.tokens.map((t) => `${t.col},${t.row}`)
+
+  it('moves several characters from any map to the same map on distinct adjacent cells', () => {
+    const maps = world()
+    const next = teleport(maps, [
+      { entityId: 'lyra', toMapId: 'crypt' },
+      { entityId: 'gorak', toMapId: 'crypt' },
+    ])
+    expect(next.hall!.tokens).toEqual([])
+    const crypt = next.crypt!
+    expect(crypt.tokens.map((t) => t.entityId)).toEqual(['ghoul', 'lyra', 'gorak'])
+    expect(new Set(cells(crypt)).size).toBe(3)
+    const [lyra, gorak] = crypt.tokens.slice(1)
+    expect(Math.max(Math.abs(lyra!.col - gorak!.col), Math.abs(lyra!.row - gorak!.row))).toBe(1)
+    // The untouched map keeps its identity.
+    expect(next.cave).toBe(maps.cave)
+  })
+
+  it('sends characters to different maps at once, keeping size and hidden flag', () => {
+    const maps = world()
+    maps.hall = {
+      ...maps.hall!,
+      tokens: [tk('lyra', 1, 1, { size: 2, hidden: true }), tk('gorak', 2, 1)],
+    }
+    const next = teleport(maps, [
+      { entityId: 'lyra', toMapId: 'cave' },
+      { entityId: 'ghoul', toMapId: 'hall' },
+    ])
+    expect(next.cave!.tokens).toMatchObject([{ id: 'tk-lyra', size: 2, hidden: true }])
+    expect(next.crypt!.tokens).toEqual([])
+    expect(next.hall!.tokens.map((t) => t.entityId)).toEqual(['gorak', 'ghoul'])
+  })
+
+  it('lands at the chosen cell when free, else next to it', () => {
+    const next = teleport(world(), [
+      { entityId: 'lyra', toMapId: 'crypt', at: { col: 7, row: 6 } },
+      { entityId: 'gorak', toMapId: 'crypt', at: { col: 5, row: 4 } },
+    ])
+    const crypt = next.crypt!
+    expect(crypt.tokens.find((t) => t.entityId === 'lyra')).toMatchObject({ col: 7, row: 6 })
+    expect(cells(crypt).filter((c) => c === '5,4')).toHaveLength(1)
+  })
+
+  it('places a character with no token yet; an enemy starts hidden under fog', () => {
+    const next = teleport(world(), [
+      { entityId: 'newbie', toMapId: 'cave', kind: 'player' },
+      { entityId: 'orc', toMapId: 'crypt', kind: 'enemy' },
+    ])
+    expect(next.cave!.tokens).toMatchObject([{ entityId: 'newbie', size: 1, hidden: false }])
+    expect(next.crypt!.tokens.find((t) => t.entityId === 'orc')?.hidden).toBe(true)
+  })
+
+  it('teleporting to its own map moves it to the default spot; never onto a passage', () => {
+    const maps = world()
+    const centre = { col: 5, row: 4 }
+    maps.hall = {
+      ...maps.hall!,
+      elements: [newElement('link', centre, { link: { mapId: 'cave' } })],
+    }
+    const next = teleport(maps, [{ entityId: 'lyra', toMapId: 'hall' }])
+    const lyra = next.hall!.tokens.find((t) => t.entityId === 'lyra')!
+    expect(lyra).not.toMatchObject({ col: 1, row: 1 })
+    expect(passageAt(next.hall!, lyra)).toBeUndefined()
+    expect(next.hall!.tokens).toHaveLength(2)
+  })
+
+  it('ignores moves to an unknown map', () => {
+    const maps = world()
+    expect(teleport(maps, [{ entityId: 'lyra', toMapId: 'nowhere' }])).toEqual(maps)
   })
 })

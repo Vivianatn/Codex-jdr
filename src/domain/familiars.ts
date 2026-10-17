@@ -8,6 +8,7 @@ import {
   tokenCenter,
   type Cell,
   type GameMap,
+  type TeleportMove,
   type Token,
 } from './maps'
 import type { Entity, EntityKind, EntityOfKind } from './types'
@@ -136,6 +137,28 @@ export function playableFamiliars(entities: EntityList): FamiliarChoice[] {
         order[a.master.kind]! - order[b.master.kind]! ||
         compareText(entityName(a.master), entityName(b.master)),
     )
+}
+
+/**
+ * Teleport moves with the familiars that follow their master (D-276): those
+ * attached to a moved character and standing on a map go with it, right after
+ * it so they land beside it. A familiar moved on its own keeps its own move.
+ */
+export function withFollowingFamiliars(
+  moves: readonly TeleportMove[],
+  entities: EntityList,
+  maps: Readonly<Record<string, GameMap>>,
+): TeleportMove[] {
+  const list = listOf(entities)
+  const chosen = new Set(moves.map((m) => m.entityId))
+  const onBoard = (id: string) =>
+    Object.values(maps).some((m) => m.tokens.some((tk) => tk.entityId === id))
+  return moves.flatMap((move) => [
+    move,
+    ...familiarsOf(list, move.entityId)
+      .filter((f) => !chosen.has(f.id) && onBoard(f.id))
+      .map((f) => ({ entityId: f.id, toMapId: move.toMapId, at: move.at, kind: f.kind })),
+  ])
 }
 
 /**

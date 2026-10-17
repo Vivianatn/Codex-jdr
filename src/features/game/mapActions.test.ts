@@ -338,3 +338,67 @@ describe('the GM’s board in play (D-269)', () => {
     expect(mapOf(map.id).tokens).toHaveLength(0)
   })
 })
+
+describe('teleportation by the GM (D-276)', () => {
+  const crew = () => {
+    const lyra = character('player', 'Lyra')
+    const gorak = character('player', 'Gorak')
+    const owl = withOwner(
+      createEntity('familiar', 'c1', rules, { identity: { pseudo: 'Chouette' } }),
+      lyra.id,
+    )
+    const hall = newMap('c1', { name: 'Hall', cols: 10, rows: 10 })
+    hall.tokens = [
+      { id: 'tk-lyra', entityId: lyra.id, col: 2, row: 2, size: 1, hidden: false },
+      { id: 'tk-owl', entityId: owl.id, col: 3, row: 2, size: 1, hidden: false },
+      { id: 'tk-gorak', entityId: gorak.id, col: 5, row: 5, size: 1, hidden: false },
+    ]
+    const crypt = newMap('c1', { name: 'Crypte', cols: 10, rows: 10 })
+    crypt.fog.enabled = true
+    crypt.vision = { autoReveal: true, radius: 2, wallsBlockSight: true }
+    return { lyra, gorak, owl, hall, crypt }
+  }
+  const labels = () => campaignHistory.getState().past.map((e) => e.label)
+
+  it('sends characters and their familiars in ONE undoable step, revealing the fog', async () => {
+    const { lyra, gorak, owl, hall, crypt } = crew()
+    const actions = await setup([lyra, gorak, owl], hall)
+    store().addMap(crypt, 'map')
+    campaignHistory.getState().clear()
+
+    actions.teleportCharacters([
+      { entityId: lyra.id, toMapId: crypt.id },
+      { entityId: gorak.id, toMapId: crypt.id },
+    ])
+    expect(mapOf(hall.id).tokens).toEqual([])
+    expect(mapOf(crypt.id).tokens.map((tk) => tk.id)).toEqual(['tk-lyra', 'tk-owl', 'tk-gorak'])
+    const at = mapOf(crypt.id).tokens[0]!
+    expect(isRevealed(mapOf(crypt.id), at)).toBe(true)
+    expect(labels()).toEqual([t.teleport.done('Lyra et Gorak', 2, 'Crypte')])
+
+    campaignHistory.getState().undo()
+    expect(mapOf(hall.id).tokens).toHaveLength(3)
+    expect(mapOf(crypt.id).tokens).toEqual([])
+  })
+
+  it('leaves the familiars behind when asked, and sends each to its own map', async () => {
+    const { lyra, gorak, owl, hall, crypt } = crew()
+    const cave = newMap('c1', { name: 'Cave', cols: 10, rows: 10 })
+    const actions = await setup([lyra, gorak, owl], hall)
+    store().addMap(crypt, 'map')
+    store().addMap(cave, 'map')
+    campaignHistory.getState().clear()
+
+    actions.teleportCharacters(
+      [
+        { entityId: lyra.id, toMapId: crypt.id },
+        { entityId: gorak.id, toMapId: cave.id },
+      ],
+      { familiarsFollow: false },
+    )
+    expect(mapOf(hall.id).tokens.map((tk) => tk.id)).toEqual(['tk-owl'])
+    expect(mapOf(crypt.id).tokens.map((tk) => tk.id)).toEqual(['tk-lyra'])
+    expect(mapOf(cave.id).tokens.map((tk) => tk.id)).toEqual(['tk-gorak'])
+    expect(labels()).toEqual([t.teleport.doneMany(2)])
+  })
+})

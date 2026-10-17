@@ -18,6 +18,7 @@ import { assetRepository } from '@/db/assets'
 import { turnActors, type PlayerDisplay } from '@/domain/turns'
 import { useMapActions } from '@/features/game/useMapActions'
 import { useBoardSlots } from '@/features/play/boardSlots'
+import { TeleportPanel } from '@/features/play/TeleportPanel'
 import { useCampaign } from '@/features/shell/campaignContext'
 import { useT } from '@/i18n'
 import { fitImage, imageFromFile } from '@/lib/images'
@@ -167,6 +168,7 @@ export function PlayMap() {
       className="codex-glass flex flex-wrap items-center gap-0.5 !rounded-xl p-1"
     >
       <MapTreeMenu />
+      <TeleportPanel />
       <label className={toggle} title={t.maps.followTurn}>
         <input
           type="checkbox"

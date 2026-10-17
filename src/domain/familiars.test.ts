@@ -7,6 +7,7 @@ import {
   familiarSpot,
   masterOf,
   playableFamiliars,
+  withFollowingFamiliars,
   withOwner,
 } from './familiars'
 import { newElement, newMap, type GameMap, type Token } from './maps'
@@ -145,5 +146,42 @@ describe('adding familiars in play (D-269)', () => {
     const map = newMap('c1', { name: 'Placard', cols: 1, rows: 1 })
     const master: Token = { id: 'm', entityId: 'master', col: 0, row: 0, size: 1, hidden: false }
     expect(familiarSpot({ ...map, tokens: [master] }, master, 'fam')).toBeNull()
+  })
+})
+
+describe('familiars follow a teleported master (D-276)', () => {
+  it('adds the attached familiars on the board right after their master', () => {
+    const lyra = named('player', 'Lyra')
+    const owl = withOwner(named('familiar', 'Chouette'), lyra.id)
+    const cat = withOwner(named('familiar', 'Chat'), lyra.id)
+    const map: GameMap = {
+      ...newMap('c1', { name: 'Hall', cols: 10, rows: 10 }),
+      tokens: [
+        { id: 'a', entityId: lyra.id, col: 1, row: 1, size: 1, hidden: false },
+        { id: 'b', entityId: owl.id, col: 2, row: 1, size: 1, hidden: false },
+      ],
+    }
+    const moves = withFollowingFamiliars(
+      [{ entityId: lyra.id, toMapId: 'crypt' }],
+      [lyra, owl, cat],
+      {
+        [map.id]: map,
+      },
+    )
+    // The cat is not on the board: it stays where it is.
+    expect(moves).toEqual([
+      { entityId: lyra.id, toMapId: 'crypt' },
+      { entityId: owl.id, toMapId: 'crypt', at: undefined, kind: 'familiar' },
+    ])
+    // A familiar given its own destination keeps it.
+    const own = withFollowingFamiliars(
+      [
+        { entityId: lyra.id, toMapId: 'crypt' },
+        { entityId: owl.id, toMapId: 'cave' },
+      ],
+      [lyra, owl],
+      { [map.id]: map },
+    )
+    expect(own.map((m) => m.toMapId)).toEqual(['crypt', 'cave'])
   })
 })

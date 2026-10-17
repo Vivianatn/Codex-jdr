@@ -1,6 +1,8 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
+  Check,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   EllipsisVertical,
   MapPinOff,
@@ -8,9 +10,10 @@ import {
   Skull,
   Trash,
   UserMinus,
+  WandSparkles,
   X,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button, IconButton } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { entityName } from '@/domain/entity'
@@ -21,6 +24,7 @@ import { useMapActions } from '@/features/game/useMapActions'
 import { useT } from '@/i18n'
 import { cn } from '@/lib/cn'
 import { useCampaignStore } from '@/stores/campaignStore'
+import { sortedMaps } from './teleport'
 
 /** A group member order and removal, folded into the same menu (D-272). */
 export interface MemberGestures {
@@ -59,6 +63,13 @@ export function BoardMenu({
   const grouped = useCampaignStore((s) => Boolean(groupOf(s.play, entity.id)))
   const entities = useCampaignStore((s) => s.entities)
   const map = useCampaignStore((s) => (mapId ? s.maps[mapId] : undefined))
+  const maps = useCampaignStore((s) => s.maps)
+  const mapList = useMemo(() => sortedMaps(maps), [maps])
+  // Where it stands now (the board in play first), marked in « Téléporter vers… ».
+  const hereId =
+    mapId && maps[mapId]?.tokens.some((tk) => tk.entityId === entity.id)
+      ? mapId
+      : mapList.find((m) => m.tokens.some((tk) => tk.entityId === entity.id))?.id
   // Only player characters and enemies bring familiars in play (the GM's choice, D-269).
   const familiars =
     map && (entity.kind === 'player' || entity.kind === 'enemy')
@@ -67,7 +78,7 @@ export function BoardMenu({
         )
       : []
   const enemy = entity.kind === 'enemy'
-  if (!member && !onBoard && !grouped && !familiars.length && !enemy) return null
+  if (!member && !onBoard && !grouped && !familiars.length && !enemy && !mapList.length) return null
 
   return (
     <>
@@ -101,10 +112,44 @@ export function BoardMenu({
                 <DropdownMenu.Item className={MENU_ITEM} onSelect={member.leave}>
                   <X /> {t.turns.removeMember(name)}
                 </DropdownMenu.Item>
-                {(onBoard || familiars.length > 0 || enemy) && (
+                {(onBoard || familiars.length > 0 || enemy || mapList.length > 0) && (
                   <DropdownMenu.Separator className="my-1 h-px bg-line" />
                 )}
               </>
+            )}
+            {mapList.length > 0 && (
+              <DropdownMenu.Sub>
+                <DropdownMenu.SubTrigger
+                  className={MENU_ITEM}
+                  aria-label={t.teleport.menuLabel(name)}
+                >
+                  <WandSparkles /> <span className="flex-1">{t.teleport.to}</span>
+                  <ChevronRight />
+                </DropdownMenu.SubTrigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.SubContent
+                    sideOffset={4}
+                    collisionPadding={16}
+                    className="z-50 max-h-[60vh] max-w-[calc(100vw-2rem)] min-w-48 overflow-y-auto rounded-xl border border-line bg-surface-raised p-1 shadow-lifted"
+                  >
+                    {mapList.map((m) => (
+                      <DropdownMenu.Item
+                        key={m.id}
+                        className={MENU_ITEM}
+                        onSelect={() =>
+                          actions.teleportCharacters([{ entityId: entity.id, toMapId: m.id }])
+                        }
+                      >
+                        <Check className={cn(m.id !== hereId && 'invisible')} aria-hidden />
+                        <span className="min-w-0 flex-1 break-words">{m.name}</span>
+                        {m.id === mapId && (
+                          <span className="text-xs text-ink-muted">{t.teleport.current}</span>
+                        )}
+                      </DropdownMenu.Item>
+                    ))}
+                  </DropdownMenu.SubContent>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Sub>
             )}
             {onBoard && (
               <DropdownMenu.Item

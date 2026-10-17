@@ -228,3 +228,86 @@ test('every roll of a live game shows big, in the roller colour (D-268)', async 
   // It leaves by itself.
   await expect(stage).toHaveCount(0, { timeout: 6000 })
 })
+
+test('the GM teleports characters to other maps, one by menu or several at once (D-276)', async ({
+  page,
+}) => {
+  test.setTimeout(150_000)
+  await createCampaign(page, 'Portails')
+  await importCharacter(page, 'Joueurs', { name: 'Lyra', hp: 25 })
+  await page.getByRole('link', { name: 'Cartes', exact: true }).click()
+  await page.getByRole('button', { name: 'Nouvelle carte' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Nouvelle carte' })
+  await dialog.getByLabel('Nom').fill('Hall')
+  await dialog.getByRole('button', { name: 'Nouvelle carte' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Hall' })).toBeVisible()
+  await page.getByRole('button', { name: 'Retour aux campagnes' }).click()
+
+  // An enemy and two more maps, written like the app would.
+  const [lyra] = (await dumpTable(page, 'entities')) as Record<string, unknown>[]
+  const goblinId = crypto.randomUUID()
+  await putRows(page, 'entities', [
+    {
+      ...lyra,
+      id: goblinId,
+      kind: 'enemy',
+      identity: { ...(lyra!.identity as object), pseudo: 'Gobelin' },
+      details: { templateId: null, copyNumber: null, xpReward: 0, loot: '' },
+    },
+  ])
+  const [hall] = (await dumpTable(page, 'maps')) as Record<string, unknown>[]
+  const cryptId = crypto.randomUUID()
+  const caveId = crypto.randomUUID()
+  await putRows(page, 'maps', [
+    {
+      ...hall,
+      tokens: [
+        { id: 'tk-lyra', entityId: lyra!.id, col: 3, row: 3, size: 1, hidden: false },
+        { id: 'tk-gob', entityId: goblinId, col: 8, row: 8, size: 1, hidden: false },
+      ],
+    },
+    { ...hall, id: cryptId, name: 'Crypte', tokens: [] },
+    { ...hall, id: caveId, name: 'Cave', tokens: [] },
+  ])
+  const [record] = (await dumpTable(page, 'campaigns')) as Record<string, unknown>[]
+  await putRows(page, 'campaigns', [
+    { ...record, play: { ...(record!.play as object), mapId: hall!.id } },
+  ])
+  await reloadAndUnlock(page)
+  await page.getByRole('link', { name: /Portails/ }).click()
+  await page
+    .getByRole('radiogroup', { name: 'Mode' })
+    .getByRole('radio', { name: 'En jeu' })
+    .click()
+  await startGame(page)
+
+  const mapOf = async (entityId: string) => {
+    const maps = (await dumpTable(page, 'maps')) as {
+      name: string
+      tokens: { entityId: string }[]
+    }[]
+    return maps.find((m) => m.tokens.some((tk) => tk.entityId === entityId))?.name ?? null
+  }
+
+  // Quick path: Lyra's board menu › Téléporter vers… › Crypte.
+  await page.getByRole('button', { name: 'Plateau et tours : Lyra' }).first().click()
+  await page.getByRole('menuitem', { name: 'Téléporter Lyra vers…' }).click()
+  await page.getByRole('menuitem', { name: 'Crypte' }).click()
+  await expect.poll(() => mapOf(lyra!.id as string)).toBe('Crypte')
+  // The GM's board stays where it was; the toast offers to go and look.
+  await expect(page.getByTestId('map-tree')).toContainText('Hall')
+  await expect(page.getByRole('button', { name: 'Aller sur « Crypte »' })).toBeVisible()
+
+  // Multi path: Lyra to the cave, the goblin to the crypt, in one go.
+  await page.getByRole('button', { name: 'Téléporter des personnages' }).click()
+  const panel = page.getByRole('dialog', { name: 'Téléporter des personnages' })
+  await panel.getByRole('button', { name: 'Tous' }).click()
+  await panel.getByRole('combobox', { name: 'Destination de Lyra' }).selectOption({ label: 'Cave' })
+  await panel
+    .getByRole('combobox', { name: 'Destination de Gobelin' })
+    .selectOption({ label: 'Crypte' })
+  await expectNoSeriousA11yViolations(page)
+  await panel.getByRole('button', { name: 'Téléporter (2)' }).click()
+  await expect.poll(() => mapOf(lyra!.id as string)).toBe('Cave')
+  await expect.poll(() => mapOf(goblinId)).toBe('Crypte')
+})

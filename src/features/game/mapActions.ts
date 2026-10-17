@@ -2,7 +2,7 @@ import { toast } from 'sonner'
 import type { Campaign } from '@/db/types'
 import type { Rng } from '@/dice'
 import { entityName } from '@/domain/entity'
-import { familiarSpot, familiarsOf, masterOf } from '@/domain/familiars'
+import { familiarSpot, familiarsOf, masterOf, withFollowingFamiliars } from '@/domain/familiars'
 import {
   arrivalCell,
   autoRevealFog,
@@ -12,11 +12,13 @@ import {
   passageAt,
   PERCEPTION_STAT,
   tokenCenter,
+  teleport,
   tokensInArea,
   withToken,
   type AreaShape,
   type Cell,
   type GameMap,
+  type TeleportMove,
   type Token,
 } from '@/domain/maps'
 import { groupOf, removeMember } from '@/domain/turns'
@@ -222,6 +224,57 @@ export function createMapActions(t: Messages, campaign: Campaign, game: GameActi
           store().updatePlay((p) => removeMember(p, familiarId), label)
       })
       toast(label)
+    },
+
+    /**
+     * Sends characters to other maps by force (D-276): ONE undoable change for
+     * every map touched. Attached familiars on the board follow their master
+     * unless `familiarsFollow` is false. The GM's board stays where it is; the
+     * toast offers to go and look.
+     */
+    teleportCharacters(
+      moves: readonly TeleportMove[],
+      options: { familiarsFollow?: boolean } = {},
+    ) {
+      const valid = moves
+        .filter((m) => entity(m.entityId) && mapOf(m.toMapId))
+        .map((m) => ({ ...m, kind: entity(m.entityId)!.kind }))
+      if (!valid.length) return
+      const before = store().maps
+      const all =
+        options.familiarsFollow === false
+          ? valid
+          : withFollowingFamiliars(valid, store().entities, before)
+      const after = teleport(before, all)
+      const targets = [...new Set(valid.map((m) => m.toMapId))]
+      const target = targets.length === 1 ? mapOf(targets[0]!)! : null
+      const label = target
+        ? t.teleport.done(
+            new Intl.ListFormat('fr').format(valid.map((m) => entityName(entity(m.entityId)!))),
+            valid.length,
+            target.name,
+          )
+        : t.teleport.doneMany(valid.length)
+      campaignHistory.getState().transaction(label, () => {
+        for (const id of Object.keys(after))
+          if (after[id] !== before[id])
+            store().updateMap(id, () => withAutoReveal(after[id]!), label)
+      })
+      toast(
+        label,
+        target && target.id !== store().play.mapId
+          ? {
+              action: {
+                label: t.teleport.goTo(target.name),
+                onClick: () =>
+                  store().updatePlay(
+                    (p) => ({ ...p, mapId: target.id }),
+                    t.maps.wentTo(target.name),
+                  ),
+              },
+            }
+          : undefined,
+      )
     },
 
     /** Re-applies the automatic reveal (after opening a door, changing the vision…). */

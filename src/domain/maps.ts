@@ -863,3 +863,82 @@ export function withToken(map: GameMap, entity: { id: string; kind: string }, at
         ],
   }
 }
+
+// ---------------------------------------------------------------------------
+// Teleportation by the GM (D-276)
+// ---------------------------------------------------------------------------
+
+export interface TeleportMove {
+  entityId: string
+  toMapId: string
+  /** Where to land; by default beside the target's arrival point. */
+  at?: Cell
+  /** Kind of a character with no token yet (enemies start hidden under fog). */
+  kind?: string
+}
+
+/**
+ * Sends characters to other maps by force (D-276): no wall, door, fog or
+ * passage matters. Each token leaves every map it stands on and lands on its
+ * target at `at` or beside the target's arrival point, on a free cell; those
+ * going to the same map land next to each other (a group stays together).
+ * Size and hidden flag are kept; a character with no token gets one.
+ * Maps left untouched keep their identity.
+ */
+export function teleport(
+  maps: Readonly<Record<string, GameMap>>,
+  moves: readonly TeleportMove[],
+): Record<string, GameMap> {
+  const next: Record<string, GameMap> = { ...maps }
+  const anchors = new Map<string, Cell>()
+  for (const move of moves) {
+    if (!next[move.toMapId]) continue
+    let token: Token | undefined
+    let fromId: string | null = null
+    for (const map of Object.values(next)) {
+      const found = map.tokens.find((tk) => tk.entityId === move.entityId)
+      if (!found) continue
+      if (!token) {
+        token = found
+        fromId = map.id
+      }
+      next[map.id] = { ...map, tokens: map.tokens.filter((tk) => tk.entityId !== move.entityId) }
+    }
+    const target = next[move.toMapId]!
+    const avoid = (cell: Cell) => passageAt(target, cell) !== undefined
+    let cell: Cell
+    if (move.at && inBounds(target, move.at)) cell = freeCellNear(target, move.at)
+    else {
+      const anchor = anchors.get(target.id) ?? arrivalCell(target, fromId ?? target.id)
+      anchors.set(target.id, anchor)
+      cell = freeCellNear(target, anchor, { avoid })
+    }
+    next[target.id] = {
+      ...target,
+      tokens: [
+        ...target.tokens,
+        token
+          ? { ...token, ...cell }
+          : {
+              id: crypto.randomUUID(),
+              entityId: move.entityId,
+              ...cell,
+              size: 1,
+              hidden: move.kind === 'enemy' && target.fog.enabled,
+            },
+      ],
+    }
+  }
+  // Maps whose tokens did not actually change keep their identity.
+  for (const id of Object.keys(next))
+    if (next[id] !== maps[id] && sameTokens(next[id]!.tokens, maps[id]!.tokens))
+      next[id] = maps[id]!
+  return next
+}
+
+const sameTokens = (a: readonly Token[], b: readonly Token[]) =>
+  a.length === b.length &&
+  a.every((tk) => {
+    const o = b.find((x) => x.id === tk.id)
+    return o !== undefined && o.col === tk.col && o.row === tk.row
+  })

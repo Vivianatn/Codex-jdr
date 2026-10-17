@@ -679,6 +679,32 @@ export const fr = {
     familiarPlaced: (name: string, master: string) => `${name} rejoint ${master}`,
     yourFamiliars: 'Tes familiers',
   },
+  /** The GM sends characters to another map by force (D-276). */
+  teleport: {
+    title: 'Téléporter',
+    open: 'Téléporter des personnages',
+    hint: 'Sans condition : murs, portes et brouillard ne comptent pas.',
+    to: 'Téléporter vers…',
+    menuLabel: (name: string) => `Téléporter ${name} vers…`,
+    current: 'en jeu',
+    done: (names: string, n: number, map: string) =>
+      `${names} ${n > 1 ? 'téléportés' : 'téléporté'} vers « ${map} »`,
+    doneMany: (n: number) => `${n} personnages téléportés`,
+    goTo: (map: string) => `Aller sur « ${map} »`,
+    filters: 'Cocher',
+    filterPlayers: 'Joueurs',
+    filterEnemies: 'Ennemis',
+    filterSelection: 'Sélection',
+    filterAll: 'Tous',
+    filterNone: 'Aucun',
+    allTo: 'Tout envoyer vers',
+    destination: (name: string) => `Destination de ${name}`,
+    familiarsFollow: 'Les familiers suivent',
+    submit: (n: number) => (n > 1 ? `Téléporter (${n})` : 'Téléporter'),
+    nobody: 'Aucun personnage dans la campagne.',
+    noMaps: 'Crée d’abord une carte dans Préparation › Cartes.',
+    nowhere: 'hors plateau',
+  },
   /** The players at the table, always in view (D-272). */
   party: {
     title: 'Joueurs à la table',
